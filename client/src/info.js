@@ -1,0 +1,6 @@
+export const ProjectName = 'Planly'
+export const NameOf = ''
+export const AddressOf = 'Ўзбекистон, Наманган, Наманган шаҳар …'
+export const PhoneOf = '+998 (77) 777 77 77'
+export const EmailOf = 'medlan.info@gmail.com'
+export const WebsiteOf = 'www.medlan.uz'
