@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 const OrderSchema = new mongoose.Schema({
   customer: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Stockman',
+    ref: 'Users',
     required: true
   },
   products: [
@@ -13,10 +13,15 @@ const OrderSchema = new mongoose.Schema({
         ref: 'Product',
         required: true
       },
-      quantity: {
+      amount: {
         type: Number,
         required: true,
         default: 1
+      },
+      unit: {
+        type: String,
+        enum: ['дона', 'кг', 'метр', 'литр', 'м²', 'м³', 'сет', 'упаковка'],
+        default: 'дона'
       },
       price: {
         type: Number,

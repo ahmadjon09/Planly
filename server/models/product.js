@@ -6,8 +6,11 @@ const ProductSchema = new mongoose.Schema(
     price: { type: Number, required: true },
     ID: { type: Number, required: true, unique: true },
     stock: { type: Number, default: 1 },
-    size: { type: String },
-    count: { type: Number },
+    unit: {
+      type: String,
+      enum: ['дона', 'кг', 'метр', 'литр', 'м²', 'м³', 'сет', 'упаковка'],
+      default: 'дона'
+    },
     poundage: { type: String }
   },
   { timestamps: true }

@@ -25,7 +25,16 @@ app.get('/api/', (_, res) => res.send('Server is running!'))
 app.use('/api/users', UserRoutes)
 app.use('/api/products', ProductRoutes)
 app.use('/api/orders', OrderRoutes)
+const keepServerAlive = () => {
+  setInterval(() => {
+    axios
+      .get(process.env.RENDER_URL)
+      .then(() => console.log('🔄 Server active'))
+      .catch(() => console.log('⚠️ Ping failed'))
+  }, 10 * 60 * 1000)
+}
 
+keepServerAlive()
 const startApp = async () => {
   const PORT = process.env.PORT || 3000
   try {
