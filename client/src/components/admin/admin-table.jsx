@@ -1,6 +1,6 @@
 import { AlertTriangleIcon, Trash2 } from 'lucide-react'
 import { useContext } from 'react'
-import { ContextData } from '../../Context/Context'
+import { ContextData } from '../../context/Context'
 
 export const AdminTable = ({ admins, handleDelete }) => {
   const { user } = useContext(ContextData)

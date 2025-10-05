@@ -14,7 +14,7 @@ import {
   ReceiptText
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
-import { ContextData } from '../Context/Context'
+import { ContextData } from '../context/Context'
 import '../assets/css/nav.css'
 
 export const Nav = () => {

@@ -8,7 +8,7 @@ import { ErrorState } from '../components/error-state'
 import { EmptyState } from '../components/admin/empty-state'
 import { Link } from 'react-router-dom'
 import { useContext } from 'react'
-import { ContextData } from '../Context/Context'
+import { ContextData } from '../context/Context'
 
 export const Admins = () => {
   const { user } = useContext(ContextData)
