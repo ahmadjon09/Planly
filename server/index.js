@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
-
+import axios from 'axios'
 import ProductRoutes from './routes/product.js'
 import OrderRoutes from './routes/order.js'
 import UserRoutes from './routes/user.js'

@@ -2,7 +2,7 @@ import { createContext, useState } from 'react'
 import Cookies from 'js-cookie'
 export const ContextData = createContext()
 
-export default function ContextProvider ({ children }) {
+export const ContextProvider = ({ children }) => {
   const [user, setUser] = useState({})
   const [openX, setOpenX] = useState(false)
   const person =
