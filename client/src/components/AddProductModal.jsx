@@ -1,15 +1,25 @@
 import { X, Loader2, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import Fetch from '../middlewares/fetcher'
-import { useContext } from 'react'
 import { ContextData } from '../Context/Context'
 
 export default function AddProductModal ({ open, setOpen, mutate }) {
-  const { setOpenX } = useContext(ContextData)
+  const { setOpenX, user } = useContext(ContextData)
   const [products, setProducts] = useState([
-    { title: '', price: '', stock: 1, size: '', poundage: '' }
+    { title: '', price: 0, stock: 1, unit: 'дона' }
   ])
   const [loading, setLoading] = useState(false)
+
+  const availableUnits = [
+    'дона',
+    'кг',
+    'метр',
+    'литр',
+    'м²',
+    'м³',
+    'сет',
+    'упаковка'
+  ]
 
   const handleChange = (i, field, value) => {
     const newProducts = [...products]
@@ -18,10 +28,8 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
   }
 
   const addRow = () =>
-    setProducts([
-      ...products,
-      { title: '', price: '', stock: 1, size: '', poundage: '' }
-    ])
+    setProducts([...products, { title: '', price: '', stock: 1, unit: 'дона' }])
+
   const removeRow = i => setProducts(products.filter((_, idx) => idx !== i))
 
   const handleSubmit = async () => {
@@ -30,7 +38,7 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
       await Fetch.post('/products/create', products)
       mutate()
       setOpen(false)
-      setProducts([{ title: '', price: '', stock: 1, size: '', poundage: '' }])
+      setProducts([{ title: '', price: 0, stock: 1, unit: 'дона' }])
     } catch (e) {
       console.error(e)
     } finally {
@@ -41,7 +49,7 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
   if (!open) return null
 
   return (
-    <div className='fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-99'>
+    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-99'>
       <div className='bg-white w-full max-w-4xl rounded-2xl shadow-lg p-6 space-y-6 relative'>
         <button
           onClick={() => setOpen(false)}
@@ -49,13 +57,14 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
         >
           <X size={22} />
         </button>
+
         <h2 className='text-xl font-bold'>🆕 Янги маҳсулот(лар) қўшиш</h2>
 
         <div className='space-y-4 max-h-[60vh] overflow-y-auto'>
           {products.map((p, i) => (
             <div
               key={i}
-              className='grid grid-cols-5 gap-3 items-end border-b pb-3'
+              className='grid grid-cols-6 gap-3 items-end border-b pb-3'
             >
               <div>
                 <label className='text-sm font-medium'>
@@ -76,27 +85,31 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
                   required
                 />
               </div>
+
+              {user.role === 'admin' && (
+                <div>
+                  <label className='text-sm font-medium'>
+                    Нархи{' '}
+                    <button
+                      type='button'
+                      onClick={() => setOpenX(true)}
+                      className='text-red-500 font-bold'
+                    >
+                      *
+                    </button>
+                  </label>
+                  <input
+                    type='number'
+                    value={p.price}
+                    onChange={e => handleChange(i, 'price', e.target.value)}
+                    className='border rounded px-3 py-2 w-full'
+                    required
+                  />
+                </div>
+              )}
+
               <div>
-                <label className='text-sm font-medium'>
-                  Нархи{' '}
-                  <button
-                    type='button'
-                    onClick={() => setOpenX(true)}
-                    className='text-red-500 font-bold'
-                  >
-                    *
-                  </button>
-                </label>
-                <input
-                  type='number'
-                  value={p.price}
-                  onChange={e => handleChange(i, 'price', e.target.value)}
-                  className='border rounded px-3 py-2 w-full'
-                  required
-                />
-              </div>
-              <div>
-                <label className='text-sm font-medium'>Сони</label>
+                <label className='text-sm font-medium'>Миқдор</label>
                 <input
                   type='number'
                   value={p.stock}
@@ -104,34 +117,34 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
                   className='border rounded px-3 py-2 w-full'
                 />
               </div>
+
               <div>
-                <label className='text-sm font-medium'>Ўлчам</label>
-                <input
-                  type='text'
-                  value={p.size}
-                  onChange={e => handleChange(i, 'size', e.target.value)}
+                <label className='text-sm font-medium'>Бирлик</label>
+                <select
+                  value={p.unit}
+                  onChange={e => handleChange(i, 'unit', e.target.value)}
                   className='border rounded px-3 py-2 w-full'
-                />
-              </div>
-              <div>
-                <label className='text-sm font-medium'>Оғирлиги</label>
-                <input
-                  type='text'
-                  value={p.poundage}
-                  onChange={e => handleChange(i, 'poundage', e.target.value)}
-                  className='border rounded px-3 py-2 w-full'
-                />
-              </div>
-              {products.length > 1 && (
-                <button
-                  onClick={() => removeRow(i)}
-                  className='text-red-600 text-sm col-span-5 text-right'
                 >
-                  <p className='flex items-center gap-1'>
-                    <Trash2 size={15} /> Ўчириш
-                  </p>
-                </button>
-              )}
+                  {availableUnits.map(u => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className='flex col-span-6'>
+                {products.length > 1 && (
+                  <button
+                    onClick={() => removeRow(i)}
+                    className='text-red-600 hover:bg-red-300 p-1 rounded text-sm cursor-pointer ml-auto'
+                  >
+                    <p className='flex items-center gap-1'>
+                      <Trash2 size={15} /> Ўчириш
+                    </p>
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

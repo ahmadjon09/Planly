@@ -1,164 +1,113 @@
-import { useState, useEffect } from 'react'
-import { Plus } from 'lucide-react'
-import useSWR, { mutate } from 'swr'
-import Axios from '../Axios'
-import '../assets/css/home.css'
-import { SearchBar } from '../components/Order/search-bar'
-import { OrderTable } from '../components/Order/order-table'
-import { EmptyState } from '../components/Order/empty-state'
-import { LoadingState } from '../components/loading-state'
-import { ErrorState } from '../components/error-state'
-import { Month } from './Month'
-import { OrderModal } from '../modules/OrderModal'
+import { useState } from 'react'
+import Fetch from '../middlewares/fetcher'
+import useSWR from 'swr'
+import { Plus, Boxes, ScrollText } from 'lucide-react'
+import { AddNewOrder } from '../mod/OrderModal'
 
-export const Orders = () => {
-  const { data, isLoading, error } = useSWR('/client', Axios)
-  const products = data?.data.data || []
+export const ViewOrders = () => {
+  const { data, error, isLoading } = useSWR('/orders', Fetch)
+  const [isOpen, setIsOpen] = useState(false)
 
-  const [activeTab, setActiveTab] = useState('Буюртмалар')
+  // Buyurtmalarni sanaga ko‘ra yangi birinchi qilib tartiblash
+  const orders = (data?.data?.data || []).sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  )
 
-  const [filteredProducts, setFilteredProducts] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [searchBy, setSearchBy] = useState('name')
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  if (isLoading)
+    return <div className='text-center mt-10 text-gray-700'>Юкланмоқда...</div>
 
-  useEffect(() => {
-    if (!products.length) {
-      if (filteredProducts.length !== 0) {
-        setFilteredProducts([])
-      }
-      return
-    }
-
-    if (!searchTerm.trim()) {
-      if (filteredProducts !== products) {
-        setFilteredProducts(products)
-      }
-      return
-    }
-
-    const lowercasedTerm = searchTerm.toLowerCase()
-
-    const filtered = products.filter(product => {
-      switch (searchBy) {
-        case 'name':
-          return (
-            product.name && product.name.toLowerCase().includes(lowercasedTerm)
-          )
-        case 'phone':
-          return product.phoneNumber.toString().includes(searchTerm)
-
-        case 'date':
-          const createdAt = new Date(product.createdAt)
-          const formattedDate = createdAt.toLocaleDateString('uz-UZ')
-          const isoDate = createdAt.toISOString().split('T')[0]
-
-          return (
-            formattedDate.includes(searchTerm) || isoDate.includes(searchTerm)
-          )
-
-        case 'count':
-          return product.count.toString().includes(searchTerm)
-
-        default:
-          return false
-      }
-    })
-
-    setFilteredProducts(filtered)
-  }, [searchTerm, searchBy, products])
-
-  const handleDelete = async id => {
-    if (!window.confirm('Буюртмани ўчиришга ишончингиз комилми?')) return
-    try {
-      await Axios.delete(`goods/${id}`)
-      mutate('/goods')
-    } catch (error) {
-      alert(error.response?.data?.message || 'Буюртмани ўчириб бўлмади')
-    }
-  }
-
-  const openAddModal = () => {
-    setIsModalOpen(true)
-  }
-
-  const openEditModal = id => {
-    setEditProductId(id)
-    setIsModalOpen(true)
-  }
-
-  const clearSearch = () => {
-    setSearchTerm('')
-  }
+  if (error)
+    return (
+      <div className='text-center mt-10 text-red-500'>
+        Буюртмаларни юклашда хатолик юз берди
+      </div>
+    )
 
   return (
-    <div className='container min-h-screen overflow-y-auto px-4'>
-      <br />
-      <br />
+    <div className='container mx-auto p-6'>
+      {/* Header */}
       <div className='w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6'>
-        <h1 className='text-2xl font-bold text-gray-800 mb-2 md:mb-0'>
-          Буюртмалар
+        <h1 className='text-2xl font-bold flex items-center gap-2'>
+          <ScrollText size={30} /> Буюртмалар
         </h1>
-
-        <SearchBar
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          searchBy={searchBy}
-          setSearchBy={setSearchBy}
-        />
-
         <button
-          onClick={openAddModal}
-          className='w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:cursor-pointer hover:bg-blue-700 transition-colors flex items-center justify-center gap-2'
+          onClick={() => setIsOpen(true)}
+          className='flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600'
         >
-          <Plus className='h-4 w-4' />
-          Янги буюртма
+          <Plus size={18} /> Янги буюртма
         </button>
       </div>
-      <div className='flex border-b border-blue-200 bg-white'>
-        <button
-          onClick={() => setActiveTab('Буюртмалар')}
-          className={`px-6 hover:cursor-pointer py-3 font-medium text-sm transition-colors ${
-            activeTab === 'Буюртмалар'
-              ? 'border-b-2 border-blue-600 text-blue-700'
-              : 'text-gray-500 hover:text-blue-600'
-          }`}
-        >
-          Буюртмалар
-        </button>
-        <button
-          onClick={() => setActiveTab('Ойлик ҳисобот')}
-          className={`px-6 hover:cursor-pointer py-3 font-medium text-sm transition-colors ${
-            activeTab === 'Ойлик ҳисобот'
-              ? 'border-b-2 border-blue-600 text-blue-700'
-              : 'text-gray-500 hover:text-blue-600'
-          }`}
-        >
-          Ойлик ҳисобот
-        </button>
-      </div>
-      <br />
-      {activeTab === 'Буюртмалар' ? (
-        <>
-          {isLoading ? (
-            <LoadingState />
-          ) : error ? (
-            <ErrorState message={error.response.data.message} />
-          ) : filteredProducts.length > 0 ? (
-            <OrderTable
-              products={filteredProducts}
-              openEditModal={openEditModal}
-              handleDelete={handleDelete}
-            />
-          ) : (
-            <EmptyState searchTerm={searchTerm} onClearSearch={clearSearch} />
-          )}
-        </>
+
+      {/* Jadval yoki bo‘sh xabar */}
+      {orders.length === 0 ? (
+        <div className='text-center mt-10 text-gray-600'>
+          Ҳозирча буюртмалар мавжуд эмас.
+        </div>
       ) : (
-        <Month data={products} />
+        <div className='overflow-x-auto shadow-md rounded-lg border border-gray-200'>
+          <table className='min-w-full bg-white'>
+            <thead>
+              <tr className='bg-gray-100 text-left'>
+                <th className='py-2 px-4 border-b'>Буюртма ID</th>
+                <th className='py-2 px-4 border-b'>Мижоз</th>
+                <th className='py-2 px-4 border-b'>Маҳсулотлар</th>
+                <th className='py-2 px-4 border-b'>Ҳолат</th>
+                <th className='py-2 px-4 border-b'>Тўлов тури</th>
+                <th className='py-2 px-4 border-b'>Умумий нарх</th>
+                <th className='py-2 px-4 border-b'>Буюртма санаси</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map(order => (
+                <tr
+                  key={order._id}
+                  className='hover:bg-gray-50 transition-colors duration-150'
+                >
+                  <td className='py-2 px-4 border-b text-gray-700'>
+                    {order._id}
+                  </td>
+                  <td className='py-2 px-4 border-b text-gray-700'>
+                    {order.customer?.name || 'Мавжуд эмас'}
+                  </td>
+                  <td className='py-2 px-4 border-b text-gray-700'>
+                    {order.products.map((item, index) => (
+                      <div key={index} className='mb-1'>
+                        {item.product?.name || 'Мавжуд эмас'} (
+                        <span className='font-semibold'>Сони:</span>{' '}
+                        {item.quantity},{' '}
+                        <span className='font-semibold'>Нарх:</span>{' '}
+                        {item.price || item.product?.price || 0} сўм)
+                      </div>
+                    ))}
+                  </td>
+                  <td className='py-2 px-4 border-b text-gray-700'>
+                    {order.status || 'Аниқланмаган'}
+                  </td>
+                  <td className='py-2 px-4 border-b text-gray-700'>
+                    {order.payType || '—'}
+                  </td>
+                  <td className='py-2 px-4 border-b text-gray-700'>
+                    {order.totalPrice?.toLocaleString('uz-UZ')} сўм
+                  </td>
+                  <td className='py-2 px-4 border-b text-gray-700'>
+                    {new Date(
+                      order.createdAt || order.orderDate
+                    ).toLocaleDateString('uz-UZ', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      {isModalOpen && (
-        <OrderModal isOpen={isModalOpen} setIsOpen={setIsModalOpen} />
+
+      {/* Modal ochilsa */}
+      {isOpen && (
+        <AddNewOrder onClose={() => setIsOpen(false)} isOpen={isOpen} />
       )}
     </div>
   )

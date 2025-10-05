@@ -1,19 +1,32 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import useSWR from 'swr'
-import { Boxes, Loader2, Plus, Save } from 'lucide-react'
+import { Boxes, Loader2, Plus, Save, Search, Trash2 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import AddProductModal from '../components/AddProductModal'
+import { ContextData } from '../Context/Context'
 
 export const ProductsPage = () => {
+  const { user } = useContext(ContextData)
   const { data, error, isLoading, mutate } = useSWR('/products', Fetch)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState({})
   const [loading, setLoading] = useState(null)
+  const [deleting, setDeleting] = useState(null) // 🆕 delete loader
 
-  // Qidiruv inputlari
   const [searchID, setSearchID] = useState('')
   const [searchTitle, setSearchTitle] = useState('')
   const [searchDate, setSearchDate] = useState('')
+
+  const availableUnits = [
+    'дона',
+    'кг',
+    'метр',
+    'литр',
+    'м²',
+    'м³',
+    'сет',
+    'упаковка'
+  ]
 
   const handleChange = (id, field, value) => {
     setEditing(prev => ({
@@ -42,36 +55,42 @@ export const ProductsPage = () => {
     }
   }
 
-  // Filterlangan mahsulotlar
+  // 🧹 Delete product
+  const handleDelete = async id => {
+    if (!confirm('Ростдан ҳам ушбу маҳсулотни ўчирмоқчимисиз?')) return
+    try {
+      setDeleting(id)
+      await Fetch.delete(`/products/${id}`)
+      mutate()
+    } catch (err) {
+      console.error('Delete error:', err)
+      alert('Ўчиришда хатолик юз берди ❌')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   const filteredProducts =
     data?.data.data.filter(p => {
       let match = true
-
-      // ID bo‘yicha (boshlanishiga qaraydi)
       if (searchID) {
         match =
           match &&
           p.ID?.toString().toLowerCase().startsWith(searchID.toLowerCase())
       }
-
-      // Nomi bo‘yicha (boshlanishiga qaraydi)
       if (searchTitle) {
         match =
           match && p.title?.toLowerCase().startsWith(searchTitle.toLowerCase())
       }
-
-      // Sana bo‘yicha (aniq kun)
       if (searchDate) {
         const createdDate = new Date(p.createdAt).toISOString().split('T')[0]
         match = match && createdDate === searchDate
       }
-
       return match
     }) || []
 
   return (
     <div className='p-6 space-y-6'>
-      {/* Сарлавҳа */}
       <div className='w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6'>
         <h1 className='text-2xl font-bold flex items-center gap-2'>
           <Boxes size={30} /> Маҳсулотлар
@@ -84,47 +103,40 @@ export const ProductsPage = () => {
         </button>
       </div>
 
-      {/* Qidiruv paneli */}
-      <div className='flex flex-wrap gap-4 bg-gray-50 p-4 rounded-lg shadow'>
+      <div className='flex flex-wrap items-center gap-4 bg-gray-50 p-4 rounded-lg shadow'>
+        <span className='text-gray-600 font-medium flex items-center gap-2'>
+          <Search /> <span>Қидирув:</span>
+        </span>
         <input
-          type='text'
+          type='number'
           placeholder='ID бўйича'
           value={searchID}
           onChange={e => setSearchID(e.target.value)}
-          className='border rounded px-3 py-2'
+          className='border rounded px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none'
         />
         <input
           type='text'
           placeholder='Номи бўйича'
           value={searchTitle}
           onChange={e => setSearchTitle(e.target.value)}
-          className='border rounded px-3 py-2'
+          className='border rounded px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none'
         />
         <input
           type='date'
           value={searchDate}
           onChange={e => setSearchDate(e.target.value)}
-          className='border rounded px-3 py-2'
+          className='border rounded px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none'
         />
       </div>
 
-      {/* Kontent */}
       {isLoading ? (
         <div className='flex justify-center items-center h-64'>
           <Loader2 className='animate-spin' size={32} />
         </div>
       ) : error ? (
-        error.response?.status === 404 ? (
-          <div className='flex justify-center items-center h-64'>
-            <p className='text-gray-500 text-lg font-medium'>
-              ❌ Маҳсулот топилмади
-            </p>
-          </div>
-        ) : (
-          <div className='p-4 text-red-500'>
-            Хатолик юз берди: {error.response?.data?.message || error.message}
-          </div>
-        )
+        <div className='p-4 text-red-500'>
+          Хатолик юз берди: {error.response?.data?.message || error.message}
+        </div>
       ) : (
         <div className='overflow-x-auto rounded-xl shadow'>
           <table className='w-full border-collapse'>
@@ -133,23 +145,19 @@ export const ProductsPage = () => {
                 <th className='px-4 py-3'>ID</th>
                 <th className='px-4 py-3'>Номи</th>
                 <th className='px-4 py-3'>Нархи</th>
-                <th className='px-4 py-3'>Сони</th>
-                <th className='px-4 py-3'>Ўлчам</th>
-                <th className='px-4 py-3'>Оғирлиги</th>
+                <th className='px-4 py-3'>Миқдори</th>
+                <th className='px-4 py-3'>Бирлик</th>
                 <th className='px-4 py-3'>Яратилган сана</th>
-                <th className='px-4 py-3'>Амалиёт</th>
+                <th className='px-4 py-3 text-center'>Амалиёт</th>
               </tr>
             </thead>
             <tbody className='text-sm'>
               {filteredProducts.map(p => {
                 const isEdited = Boolean(editing[p._id])
-
                 return (
                   <tr key={p._id} className='border-b hover:bg-gray-50'>
                     <td className='px-4 py-3'>{p.ID}</td>
-                    <td className='px-4 py-3'>{p.title}</td>
-
-                    {/* price */}
+                    <td className='px-4 py-3 font-bold'>{p.title}</td>
                     <td className='px-4 py-3'>
                       <input
                         type='number'
@@ -159,57 +167,42 @@ export const ProductsPage = () => {
                           handleChange(p._id, 'price', Number(e.target.value))
                         }
                       />
+                      <span className='ml-1 text-gray-600'>сўм</span>
                     </td>
-
-                    {/* stock */}
                     <td className='px-4 py-3'>
                       <input
                         type='number'
                         defaultValue={p.stock}
-                        className='border rounded px-2 py-1 w-20'
+                        className='border rounded px-2 py-1 w-24'
                         onChange={e =>
                           handleChange(p._id, 'stock', Number(e.target.value))
                         }
                       />
                     </td>
-
-                    {/* size */}
                     <td className='px-4 py-3'>
-                      <input
-                        type='text'
-                        defaultValue={p.size || ''}
-                        placeholder='--'
-                        className='border rounded px-2 py-1 w-20'
+                      <select
+                        defaultValue={p.unit || 'дона'}
                         onChange={e =>
-                          handleChange(p._id, 'size', e.target.value)
+                          handleChange(p._id, 'unit', e.target.value)
                         }
-                      />
+                        className='border rounded px-2 py-1 w-28'
+                      >
+                        {availableUnits.map(u => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
                     </td>
-
-                    {/* poundage */}
-                    <td className='px-4 py-3'>
-                      <input
-                        type='text'
-                        placeholder='--'
-                        defaultValue={p.poundage || ''}
-                        className='border rounded px-2 py-1 w-20'
-                        onChange={e =>
-                          handleChange(p._id, 'poundage', e.target.value)
-                        }
-                      />
-                    </td>
-
                     <td className='px-4 py-3'>
                       {new Date(p.createdAt).toLocaleDateString()}
                     </td>
-
-                    {/* Saqlash tugmasi */}
-                    <td className='px-4 py-3'>
+                    <td className='px-4 py-3 flex items-center gap-2 justify-center'>
                       {isEdited && (
                         <button
                           onClick={() => handleSave(p._id)}
                           disabled={loading === p._id}
-                          className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed'
+                          className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
                         >
                           {loading === p._id ? (
                             <Loader2 className='animate-spin' size={16} />
@@ -219,6 +212,19 @@ export const ProductsPage = () => {
                           Сақлаш
                         </button>
                       )}
+
+                      <button
+                        onClick={() => handleDelete(p._id)}
+                        disabled={deleting === p._id}
+                        className='flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50'
+                      >
+                        {deleting === p._id ? (
+                          <Loader2 className='animate-spin' size={16} />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
+                        Ўчириш
+                      </button>
                     </td>
                   </tr>
                 )
@@ -228,7 +234,6 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {/* Модал */}
       <AddProductModal open={open} setOpen={setOpen} mutate={mutate} />
     </div>
   )

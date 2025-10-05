@@ -13,6 +13,7 @@ import { AuthModals } from './components/AuthModals'
 import { Admins } from './pages/Admins'
 import { Workers } from './pages/Workers'
 import { StatsPage } from './pages/StatsPage'
+import { ViewOrders } from './pages/Orders'
 
 export default function App () {
   const { setUser, user, netErr } = useContext(ContextData)
@@ -59,6 +60,7 @@ export default function App () {
     isAdmin && { path: 'user/:admin', element: <UserManagement /> },
     isAdmin && { path: 'user', element: <UserManagement /> },
     isAdmin && { path: 'static', element: <StatsPage /> },
+    isAdmin && { path: 'orders', element: <ViewOrders /> },
     { path: 'admin', element: <Admins /> },
     { path: 'workers', element: <Workers /> },
     { path: '*', element: <Err /> }

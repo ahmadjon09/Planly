@@ -27,11 +27,39 @@ export const StatsPage = () => {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+
+  // Generate year options (e.g., from 2020 to current year)
+  const currentYear = new Date().getFullYear()
+  const yearOptions = Array.from(
+    { length: currentYear - 2019 },
+    (_, i) => currentYear - i
+  )
+
+  // Month options
+  const monthOptions = [
+    { value: 1, label: 'Январ' },
+    { value: 2, label: 'Феврал' },
+    { value: 3, label: 'Март' },
+    { value: 4, label: 'Апрел' },
+    { value: 5, label: 'Май' },
+    { value: 6, label: 'Июн' },
+    { value: 7, label: 'Июл' },
+    { value: 8, label: 'Август' },
+    { value: 9, label: 'Сентябр' },
+    { value: 10, label: 'Октябр' },
+    { value: 11, label: 'Ноябр' },
+    { value: 12, label: 'Декабр' }
+  ]
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await Fetch.get('/products/stats')
+        setLoading(true)
+        const res = await Fetch.get(
+          `/products/stats?year=${selectedYear}&month=${selectedMonth}`
+        )
         setStats(res.data)
       } catch (err) {
         setError('Маълумот олиб бўлмади')
@@ -40,28 +68,34 @@ export const StatsPage = () => {
       }
     }
     fetchStats()
-  }, [])
+  }, [selectedYear, selectedMonth])
 
-  // Combined chart data for price comparison
+  // Combined chart data for price comparison, including previous year
   const combinedChartData = stats
     ? [
         {
           name: 'Кунлик',
-          products: stats.daily.totalProducts,
-          stock: stats.daily.totalStock,
-          price: stats.daily.totalPrice
+          products: stats.daily.current.totalProducts,
+          stock: stats.daily.current.totalStock,
+          price: stats.daily.current.totalPrice
         },
         {
           name: 'Ойлик',
-          products: stats.monthly.totalProducts,
-          stock: stats.monthly.totalStock,
-          price: stats.monthly.totalPrice
+          products: stats.monthly.current.totalProducts,
+          stock: stats.monthly.current.totalStock,
+          price: stats.monthly.current.totalPrice
         },
         {
-          name: 'Йиллик',
-          products: stats.yearly.totalProducts,
-          stock: stats.yearly.totalStock,
-          price: stats.yearly.totalPrice
+          name: 'Йиллик (Жорий)',
+          products: stats.yearly.current.totalProducts,
+          stock: stats.yearly.current.totalStock,
+          price: stats.yearly.current.totalPrice
+        },
+        {
+          name: 'Йиллик (Олдинги)',
+          products: stats.yearly.previous.totalProducts,
+          stock: stats.yearly.previous.totalStock,
+          price: stats.yearly.previous.totalPrice
         }
       ]
     : []
@@ -92,8 +126,46 @@ export const StatsPage = () => {
             Маҳсулотлар статистикаси
           </h1>
           <p className='text-gray-600 text-base sm:text-lg'>
-            Барча даврлар учун ўзaro солиштирма
+            {selectedYear} йил,{' '}
+            {monthOptions.find(m => m.value === selectedMonth)?.label} ойи учун
+            ўзaro солиштирма
           </p>
+        </div>
+
+        {/* Year and Month Selection */}
+        <div className='flex justify-center space-x-4 mb-6'>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              Йил
+            </label>
+            <select
+              value={selectedYear}
+              onChange={e => setSelectedYear(Number(e.target.value))}
+              className='block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
+            >
+              {yearOptions.map(year => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              Ой
+            </label>
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(Number(e.target.value))}
+              className='block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
+            >
+              {monthOptions.map(month => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Overall Stats */}
@@ -101,7 +173,7 @@ export const StatsPage = () => {
           <div className='flex items-center justify-center mb-4 sm:mb-6'>
             <TrendingUp className='text-blue-500 mr-3' />
             <h2 className='text-xl sm:text-2xl font-bold text-gray-800'>
-              Умумий кўрсаткичлар
+              Умумий кўрсаткичлар ({selectedYear})
             </h2>
           </div>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6'>
@@ -109,21 +181,21 @@ export const StatsPage = () => {
               <Package className='w-8 h-8 mx-auto mb-3' />
               <p className='text-sm opacity-90'>Жами маҳсулотлар</p>
               <p className='text-2xl sm:text-3xl font-bold mt-2'>
-                {stats.yearly.totalProducts}
+                {stats.yearly.current.totalProducts}
               </p>
             </div>
             <div className='text-center p-4 sm:p-6 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-xl text-white shadow-lg'>
               <Layers className='w-8 h-8 mx-auto mb-3' />
               <p className='text-sm opacity-90'>Жами қолдиқ</p>
               <p className='text-2xl sm:text-3xl font-bold mt-2'>
-                {stats.yearly.totalStock}
+                {stats.yearly.current.totalStock}
               </p>
             </div>
             <div className='text-center p-4 sm:p-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white shadow-lg'>
               <DollarSign className='w-8 h-8 mx-auto mb-3' />
               <p className='text-sm opacity-90'>Жами қиймат</p>
               <p className='text-2xl sm:text-3xl font-bold mt-2'>
-                {stats.yearly.totalPrice.toLocaleString('uz-UZ')}
+                {stats.yearly.current.totalPrice.toLocaleString('uz-UZ')}
               </p>
               <p className='text-sm opacity-90 mt-1'>сўм</p>
             </div>
@@ -181,7 +253,7 @@ export const StatsPage = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Маҳсулотлар</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.daily.totalProducts}
+                    {stats.daily.current.totalProducts}
                   </p>
                 </div>
                 <Package className='text-green-500' />
@@ -191,7 +263,7 @@ export const StatsPage = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Қолдиқ</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.daily.totalStock}
+                    {stats.daily.current.totalStock}
                   </p>
                 </div>
                 <Layers className='text-yellow-500' />
@@ -201,7 +273,7 @@ export const StatsPage = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Қиймат</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.daily.totalPrice.toLocaleString('uz-UZ')}
+                    {stats.daily.current.totalPrice.toLocaleString('uz-UZ')}
                   </p>
                   <p className='text-xs text-gray-500'>сўм</p>
                 </div>
@@ -248,7 +320,7 @@ export const StatsPage = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Маҳсулотлар</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.monthly.totalProducts}
+                    {stats.monthly.current.totalProducts}
                   </p>
                 </div>
                 <Package className='text-blue-500' />
@@ -258,7 +330,7 @@ export const StatsPage = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Қолдиқ</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.monthly.totalStock}
+                    {stats.monthly.current.totalStock}
                   </p>
                 </div>
                 <Layers className='text-orange-500' />
@@ -268,7 +340,7 @@ export const StatsPage = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Қиймат</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.monthly.totalPrice.toLocaleString('uz-UZ')}
+                    {stats.monthly.current.totalPrice.toLocaleString('uz-UZ')}
                   </p>
                   <p className='text-xs text-gray-500'>сўм</p>
                 </div>
@@ -313,9 +385,12 @@ export const StatsPage = () => {
             <div className='space-y-3 sm:space-y-4 mb-4 sm:mb-6'>
               <div className='flex justify-between items-center p-3 sm:p-4 bg-red-50 rounded-lg'>
                 <div>
-                  <p className='text-sm text-gray-600'>Маҳсулотлар</p>
+                  <p className='text-sm text-gray-600'>Маҳсулотлар (Жорий)</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.yearly.totalProducts}
+                    {stats.yearly.current.totalProducts}
+                  </p>
+                  <p className='text-sm text-gray-600 mt-1'>
+                    Олдинги: {stats.yearly.previous.totalProducts}
                   </p>
                 </div>
                 <Package className='text-red-500' />
@@ -323,9 +398,12 @@ export const StatsPage = () => {
 
               <div className='flex justify-between items-center p-3 sm:p-4 bg-amber-50 rounded-lg'>
                 <div>
-                  <p className='text-sm text-gray-600'>Қолдиқ</p>
+                  <p className='text-sm text-gray-600'>Қолдиқ (Жорий)</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.yearly.totalStock}
+                    {stats.yearly.current.totalStock}
+                  </p>
+                  <p className='text-sm text-gray-600 mt-1'>
+                    Олдинги: {stats.yearly.previous.totalStock}
                   </p>
                 </div>
                 <Layers className='text-amber-500' />
@@ -333,11 +411,15 @@ export const StatsPage = () => {
 
               <div className='flex justify-between items-center p-3 sm:p-4 bg-pink-50 rounded-lg'>
                 <div>
-                  <p className='text-sm text-gray-600'>Қиймат</p>
+                  <p className='text-sm text-gray-600'>Қиймат (Жорий)</p>
                   <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.yearly.totalPrice.toLocaleString('uz-UZ')}
+                    {stats.yearly.current.totalPrice.toLocaleString('uz-UZ')}
                   </p>
-                  <p className='text-xs text-gray-500'>сўм</p>
+                  <p className='text-sm text-gray-600 mt-1'>
+                    Олдинги:{' '}
+                    {stats.yearly.previous.totalPrice.toLocaleString('uz-UZ')}{' '}
+                    сўм
+                  </p>
                 </div>
                 <DollarSign className='text-pink-500' />
               </div>
@@ -345,11 +427,12 @@ export const StatsPage = () => {
 
             <div className='h-40 sm:h-48'>
               <ResponsiveContainer width='100%' height='100%'>
-                <BarChart data={[combinedChartData[2]]}>
+                <BarChart data={[combinedChartData[2], combinedChartData[3]]}>
                   <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
                   <XAxis dataKey='name' />
                   <YAxis />
                   <Tooltip />
+                  <Legend />
                   <Bar
                     dataKey='products'
                     name='Маҳсулотлар'

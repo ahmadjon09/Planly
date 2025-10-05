@@ -8,7 +8,8 @@ export const Root = () => {
     <>
       <Nav />
       <br />
-      <main className='mt-[50px] text-gray-700'>
+      <br />
+      <main className='mt-[50px] text-gray-700 container'>
         <Outlet />
         <Ping />
         <AboutModal />

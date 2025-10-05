@@ -10,7 +10,8 @@ import {
   UserRoundPen,
   UserPlus2Icon,
   Boxes,
-  BarChart3
+  BarChart3,
+  ReceiptText
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { ContextData } from '../Context/Context'
@@ -39,6 +40,11 @@ export const Nav = () => {
             name: 'Янги ходим',
             path: '/user',
             icon: <UserPlus2Icon size={18} />
+          },
+          {
+            name: 'Буюртмалар',
+            path: '/orders',
+            icon: <ReceiptText size={18} />
           }
         ]
       : [])
@@ -160,7 +166,7 @@ export const Nav = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className='md:hidden absolute z-[99] top-[60px] left-0 w-full bg-blue-800 text-white flex flex-col gap-3 p-4 text-lg shadow-lg rounded-b-lg overflow-hidden'
+            className='navmobile absolute z-[99] top-[60px] left-0 w-full bg-blue-800 text-white flex flex-col gap-3 p-4 text-lg shadow-lg rounded-b-lg overflow-hidden'
           >
             {/* Mobile Navigation Links */}
             <div className='flex flex-col gap-1 mb-2'>

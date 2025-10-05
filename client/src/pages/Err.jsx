@@ -21,19 +21,19 @@ export default function Err () {
       <div
         className='absolute inset-0 opacity-20 transition-all duration-700 ease-out'
         style={{
-          background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(59, 130, 246, 0.3), transparent 50%)`
+          background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgb(59, 131, 246), transparent 50%)`
         }}
       />
       <div
         className='absolute inset-0 opacity-15 transition-all duration-1000 ease-out'
         style={{
-          background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(147, 51, 234, 0.4), transparent 60%)`
+          background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgb(146, 51, 234), transparent 60%)`
         }}
       />
       <div
         className='absolute inset-0 opacity-10 transition-all duration-500 ease-out'
         style={{
-          background: `radial-gradient(200px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(236, 72, 153, 0.5), transparent 70%)`
+          background: `radial-gradient(200px circle at ${mousePosition.x}px ${mousePosition.y}px, rgb(236, 72, 154), transparent 70%)`
         }}
       />
 
