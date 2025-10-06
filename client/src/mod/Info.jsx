@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useContext } from 'react'
-import { ContextData } from '../context/Context'
+import { ContextData } from '../context/ContextT'
 
 export const AboutModal = () => {
   const { openX, setOpenX } = useContext(ContextData)

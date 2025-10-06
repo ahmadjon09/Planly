@@ -10,7 +10,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
-import { ContextData } from '../context/Context'
+import { ContextData } from '../context/ContextT'
 
 export const UserManagement = () => {
   const { id, admin } = useParams()

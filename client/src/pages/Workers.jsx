@@ -6,7 +6,7 @@ import { LoadingState } from '../components/loading-state'
 import { ErrorState } from '../components/error-state'
 import { Link } from 'react-router-dom'
 import { useContext } from 'react'
-import { ContextData } from '../context/Context'
+import { ContextData } from '../context/ContextT'
 
 export const Workers = () => {
   const { data, isLoading, error } = useSWR('/users', Axios)
