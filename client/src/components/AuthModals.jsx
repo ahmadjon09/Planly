@@ -1,6 +1,6 @@
 import { useContext, useState } from 'react'
 import { Phone, Lock, Eye, EyeOff, Upload } from 'lucide-react'
-import { useTranslation } from '../context/LanguageContextTemp'
+import { useTranslation } from '../context/LanguageContext'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../context/Context'
 

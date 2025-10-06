@@ -3,7 +3,7 @@ import App from './App.jsx'
 import './global.css'
 import './assets/css/nav.css'
 import { ContextProvider } from './context/Context.jsx'
-import { LanguageProvider } from './context/LanguageContextTemp.jsx'
+import { LanguageProvider } from './context/LanguageContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <LanguageProvider>
