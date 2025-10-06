@@ -1,8 +1,8 @@
 import { useContext, useState } from 'react'
 import { Phone, Lock, Eye, EyeOff, Upload } from 'lucide-react'
-import { useTranslation } from '../context/LanguageContext'
+import { useTranslation } from '../contextData/LanguageContext'
 import Fetch from '../middlewares/fetcher'
-import { ContextData } from '../context/Context'
+import { ContextData } from '../contextData/Context'
 
 export const AuthModals = ({ initialTab = 'login' }) => {
   const [activeTab, setActiveTab] = useState(initialTab)
