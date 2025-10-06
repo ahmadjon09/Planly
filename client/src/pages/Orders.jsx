@@ -1,17 +1,68 @@
-import { useState } from 'react'
-import Fetch from '../middlewares/fetcher'
+import { useState, useContext } from 'react'
 import useSWR from 'swr'
-import { Plus, Boxes, ScrollText } from 'lucide-react'
+import { Plus, Loader2, Save, Trash2, ScrollText } from 'lucide-react'
+import Fetch from '../middlewares/fetcher'
 import { AddNewOrder } from '../mod/OrderModal'
+import { ContextData } from '../contextData/Context'
 
 export const ViewOrders = () => {
-  const { data, error, isLoading } = useSWR('/orders', Fetch)
-  const [isOpen, setIsOpen] = useState(false)
+  const { user } = useContext(ContextData)
+  const { data, error, isLoading, mutate } = useSWR('/orders', Fetch, {
+    refreshInterval: 5000,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false
+  })
 
-  // Buyurtmalarni sanaga ko‘ra yangi birinchi qilib tartiblash
+  const [isOpen, setIsOpen] = useState(false)
+  const [editing, setEditing] = useState({})
+  const [loading, setLoading] = useState(null)
+  const [deleting, setDeleting] = useState(null)
+
   const orders = (data?.data?.data || []).sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   )
+
+  const handleChange = (id, field, value) => {
+    setEditing(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value
+      }
+    }))
+  }
+
+  const handleSave = async id => {
+    try {
+      setLoading(id)
+      await Fetch.put(`/orders/${id}`, editing[id])
+      setEditing(prev => {
+        const copy = { ...prev }
+        delete copy[id]
+        return copy
+      })
+      mutate()
+    } catch (err) {
+      console.error('Update error:', err)
+      alert('Сақлашда хатолик юз берди ❌')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const handleDelete = async id => {
+    if (!confirm('Ростдан ҳам ушбу буюртмани ўчирмоқчимисиз?')) return
+    try {
+      setDeleting(id)
+      await Fetch.delete(`/orders/${id}`)
+      mutate()
+    } catch (err) {
+      console.error('Delete error:', err)
+      alert('Ўчиришда хатолик юз берди ❌')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   if (isLoading)
     return <div className='text-center mt-10 text-gray-700'>Юкланмоқда...</div>
@@ -24,7 +75,7 @@ export const ViewOrders = () => {
     )
 
   return (
-    <div className='container mx-auto p-6'>
+    <div className='container mx-auto p-6 space-y-6'>
       {/* Header */}
       <div className='w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6'>
         <h1 className='text-2xl font-bold flex items-center gap-2'>
@@ -38,74 +89,114 @@ export const ViewOrders = () => {
         </button>
       </div>
 
-      {/* Jadval yoki bo‘sh xabar */}
+      {/* Table */}
       {orders.length === 0 ? (
         <div className='text-center mt-10 text-gray-600'>
           Ҳозирча буюртмалар мавжуд эмас.
         </div>
       ) : (
-        <div className='overflow-x-auto shadow-md rounded-lg border border-gray-200'>
-          <table className='min-w-full bg-white'>
-            <thead>
-              <tr className='bg-gray-100 text-left'>
-                <th className='py-2 px-4 border-b'>Буюртма ID</th>
-                <th className='py-2 px-4 border-b'>Мижоз</th>
-                <th className='py-2 px-4 border-b'>Маҳсулотлар</th>
-                <th className='py-2 px-4 border-b'>Ҳолат</th>
-                <th className='py-2 px-4 border-b'>Тўлов тури</th>
-                <th className='py-2 px-4 border-b'>Умумий нарх</th>
-                <th className='py-2 px-4 border-b'>Буюртма санаси</th>
+        <div className='overflow-x-auto rounded-xl shadow'>
+          <table className='min-w-full bg-white border-collapse'>
+            <thead className='bg-gray-100 text-left text-sm font-semibold'>
+              <tr>
+                <th className='px-4 py-3'>Мижоз</th>
+                <th className='px-4 py-3'>Маҳсулотлар</th>
+                <th className='px-4 py-3'>Ҳолат</th>
+                <th className='px-4 py-3'>Тўлов тури</th>
+                <th className='px-4 py-3'>Умумий нарх</th>
+                <th className='px-4 py-3'>Сана</th>
+                <th className='px-4 py-3 text-center'>Амалиёт</th>
               </tr>
             </thead>
-            <tbody>
-              {orders.map(order => (
-                <tr
-                  key={order._id}
-                  className='hover:bg-gray-50 transition-colors duration-150'
-                >
-                  <td className='py-2 px-4 border-b text-gray-700'>
-                    {order._id}
-                  </td>
-                  <td className='py-2 px-4 border-b text-gray-700'>
-                    {order.customer?.name || 'Мавжуд эмас'}
-                  </td>
-                  <td className='py-2 px-4 border-b text-gray-700'>
-                    {order.products.map((item, index) => (
-                      <div key={index} className='mb-1'>
-                        {item.product?.name || 'Мавжуд эмас'} (
-                        <span className='font-semibold'>Сони:</span>{' '}
-                        {item.quantity},{' '}
-                        <span className='font-semibold'>Нарх:</span>{' '}
-                        {item.price || item.product?.price || 0} сўм)
-                      </div>
-                    ))}
-                  </td>
-                  <td className='py-2 px-4 border-b text-gray-700'>
-                    {order.status || 'Аниқланмаган'}
-                  </td>
-                  <td className='py-2 px-4 border-b text-gray-700'>
-                    {order.payType || '—'}
-                  </td>
-                  <td className='py-2 px-4 border-b text-gray-700'>
-                    {order.totalPrice?.toLocaleString('uz-UZ')} сўм
-                  </td>
-                  <td className='py-2 px-4 border-b text-gray-700'>
-                    {new Date(
-                      order.createdAt || order.orderDate
-                    ).toLocaleDateString('uz-UZ', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </td>
-                </tr>
-              ))}
+            <tbody className='text-sm'>
+              {orders.map(order => {
+                const isEdited = Boolean(editing[order._id])
+                return (
+                  <tr key={order._id} className='border-b hover:bg-gray-50'>
+                    <td className='px-4 py-3 font-medium'>
+                      {order.customer?.firstName || '—'}{' '}
+                      {order.customer?.lastName || ''}
+                    </td>
+
+                    <td className='px-4 py-3'>
+                      {order.products.map((item, i) => (
+                        <div key={i}>
+                          {item.productName || 'Мавжуд эмас'} — {item.amount}{' '}
+                          {item.unit} × {item.price.toLocaleString()} сўм
+                        </div>
+                      ))}
+                    </td>
+
+                    <td className='px-4 py-3'>{order.status || '—'}</td>
+                    <td className='px-4 py-3'>{order.payType || '—'}</td>
+
+                    {/* Admin uchun editable totalPrice */}
+                    <td className='px-4 py-3'>
+                      {user.role === 'admin' ? (
+                        <div className='flex items-center gap-2'>
+                          <input
+                            type='number'
+                            defaultValue={order.totalPrice}
+                            onChange={e =>
+                              handleChange(
+                                order._id,
+                                'totalPrice',
+                                Number(e.target.value)
+                              )
+                            }
+                            className='border rounded px-2 py-1 w-28'
+                          />
+                          <span className='text-gray-600'>сўм</span>
+                        </div>
+                      ) : (
+                        <span>{order.totalPrice.toLocaleString()} сўм</span>
+                      )}
+                    </td>
+
+                    <td className='px-4 py-3'>
+                      {new Date(
+                        order.createdAt || order.orderDate
+                      ).toLocaleDateString()}
+                    </td>
+
+                    <td className='px-4 py-3 text-center flex gap-2 justify-center'>
+                      {isEdited && (
+                        <button
+                          onClick={() => handleSave(order._id)}
+                          disabled={loading === order._id}
+                          className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
+                        >
+                          {loading === order._id ? (
+                            <Loader2 className='animate-spin' size={16} />
+                          ) : (
+                            <Save size={16} />
+                          )}
+                          Сақлаш
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDelete(order._id)}
+                        disabled={deleting === order._id}
+                        className='flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50'
+                      >
+                        {deleting === order._id ? (
+                          <Loader2 className='animate-spin' size={16} />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
+                        Ўчириш
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Modal ochilsa */}
+      {/* Modal */}
       {isOpen && (
         <AddNewOrder onClose={() => setIsOpen(false)} isOpen={isOpen} />
       )}

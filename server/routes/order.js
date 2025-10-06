@@ -1,17 +1,21 @@
-import exress from 'express'
+import express from 'express'
 import isExisted from '../middlewares/isExisted.js'
 import {
   AllOrders,
   CancelOrder,
   GetOneOrder,
-  NewOrder
+  GetOrderStats,
+  NewOrder,
+  UpdateOrder
 } from '../controllers/order.js'
 
-const router = exress.Router()
+const router = express.Router()
 
 router.get('/', isExisted, AllOrders)
+router.get('/stats', isExisted, GetOrderStats)
 router.get('/:id', isExisted, GetOneOrder)
-router.post('/new-order', isExisted, NewOrder)
+router.put('/:id', isExisted, UpdateOrder)
+router.post('/new', isExisted, NewOrder)
 router.delete('/:id', isExisted, CancelOrder)
 
 export default router

@@ -7,11 +7,14 @@ import { ContextData } from '../contextData/Context'
 
 export const ProductsPage = () => {
   const { user } = useContext(ContextData)
-  const { data, error, isLoading, mutate } = useSWR('/products', Fetch)
+  const { data, error, isLoading, mutate } = useSWR('/products', Fetch, {
+    refreshInterval: 5000
+  })
+
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState({})
   const [loading, setLoading] = useState(null)
-  const [deleting, setDeleting] = useState(null) // 🆕 delete loader
+  const [deleting, setDeleting] = useState(null)
 
   const [searchID, setSearchID] = useState('')
   const [searchTitle, setSearchTitle] = useState('')
@@ -158,17 +161,23 @@ export const ProductsPage = () => {
                   <tr key={p._id} className='border-b hover:bg-gray-50'>
                     <td className='px-4 py-3'>{p.ID}</td>
                     <td className='px-4 py-3 font-bold'>{p.title}</td>
-                    <td className='px-4 py-3'>
-                      <input
-                        type='number'
-                        defaultValue={p.price}
-                        className='border rounded px-2 py-1 w-28'
-                        onChange={e =>
-                          handleChange(p._id, 'price', Number(e.target.value))
-                        }
-                      />
-                      <span className='ml-1 text-gray-600'>сўм</span>
-                    </td>
+                    {user.role === 'admin' ? (
+                      <td className='px-4 py-3'>
+                        <input
+                          type='number'
+                          defaultValue={p.price}
+                          className='border rounded px-2 py-1 w-28'
+                          onChange={e =>
+                            handleChange(p._id, 'price', Number(e.target.value))
+                          }
+                        />
+                        <span className='ml-1 text-gray-600'>сўм</span>
+                      </td>
+                    ) : (
+                      <td className='px-4 py-3'>
+                        {p.price.toLocaleString()} сўм
+                      </td>
+                    )}
                     <td className='px-4 py-3'>
                       <input
                         type='number'

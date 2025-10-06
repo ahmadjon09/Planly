@@ -13,7 +13,7 @@ import { ContextData } from '../contextData/Context'
 export const Admins = () => {
   const { user } = useContext(ContextData)
   const { data, isLoading, error, mutate } = useSWR('/users', Axios)
-  const Admins = (data?.data?.data || []).filter(user => user.role === 'admin')
+  const Admins = (data?.data?.data || []).filter(user => user.role == 'admin')
 
   const handleDelete = async id => {
     if (!window.confirm('Админни ўчиришга ишончингиз комилми?')) return

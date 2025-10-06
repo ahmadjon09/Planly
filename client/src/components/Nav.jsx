@@ -195,7 +195,7 @@ export const Nav = () => {
                 <span className='font-medium text-white'>
                   {data.firstName} {data.lastName}
                 </span>
-                <span className='text-xs text-blue-200'>Админ</span>
+                <span className='text-xs text-blue-200'>{user.role}</span>
               </div>
             </div>
 
