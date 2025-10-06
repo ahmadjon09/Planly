@@ -1,6 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { useContext, useEffect, useState, useRef } from 'react'
-import { ContextData } from './context/ContextT'
+import { ContextData } from './context/Context'
 import { Root } from './layout/Root'
 import Err from './pages/Err'
 import { Loading } from './components/Loading'

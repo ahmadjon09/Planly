@@ -1,7 +1,7 @@
 import { X, Loader2, Trash2 } from 'lucide-react'
 import { useState, useContext } from 'react'
 import Fetch from '../middlewares/fetcher'
-import { ContextData } from '../context/ContextT'
+import { ContextData } from '../context/Context'
 
 export default function AddProductModal ({ open, setOpen, mutate }) {
   const { setOpenX, user } = useContext(ContextData)

@@ -3,7 +3,7 @@ import useSWR from 'swr'
 import { Boxes, Loader2, Plus, Save, Search, Trash2 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import AddProductModal from '../components/AddProductModal'
-import { ContextData } from '../context/ContextT'
+import { ContextData } from '../context/Context'
 
 export const ProductsPage = () => {
   const { user } = useContext(ContextData)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Minus, Save, Search, X } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { useContext } from 'react'
-import { ContextData } from '../context/ContextT'
+import { ContextData } from '../context/Context'
 
 export const AddNewOrder = ({ isOpen, onClose }) => {
   const { user } = useContext(ContextData)
