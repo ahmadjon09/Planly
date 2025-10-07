@@ -27,7 +27,12 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   const [visibleCount, setVisibleCount] = useState(30)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState(null) // success yoki error xabar
+  const [message, setMessage] = useState(null)
+
+  // 🆕 client ma'lumotlari
+  const [clientFullName, setClientFullName] = useState('')
+  const [clientPhoneNumber, setClientPhoneNumber] = useState('')
+  const [clientAddress, setClientAddress] = useState('')
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -45,7 +50,6 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
     fetchProducts()
   }, [])
 
-  // qidiruv
   const filteredProducts = products?.filter(p => {
     const q = searchQuery.toLowerCase()
     return (
@@ -61,7 +65,15 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   }
 
   const handleAddProduct = product => {
-    if (!selectedProducts.some(p => p._id === product._id)) {
+    if (product.stock === 0) {
+      setMessage({ type: 'error', text: 'Бу маҳсулот қолмаган!' })
+      alert('Бу маҳсулот қолмаган!')
+    }
+
+    if (
+      !selectedProducts.some(p => p._id === product._id) &&
+      product.stock !== 0
+    ) {
       setSelectedProducts(prev => [
         ...prev,
         {
@@ -72,7 +84,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
         }
       ])
     } else {
-      setMessage({ type: 'error', text: 'Бу маҳсулот қўшилган!' })
+      return
     }
   }
 
@@ -110,6 +122,12 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
         text: 'Ҳеч қандай маҳсулот танланмаган!'
       })
 
+    if (!clientFullName || !clientPhoneNumber)
+      return setMessage({
+        type: 'error',
+        text: 'Мижоз маълумотларини тўлиқ киритинг!'
+      })
+
     setSubmitting(true)
     try {
       const orderData = {
@@ -120,6 +138,11 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
           unit: p.unit,
           price: p.price
         })),
+        client: {
+          fullName: clientFullName,
+          phoneNumber: clientPhoneNumber,
+          address: clientAddress || '--'
+        },
         status,
         payType,
         totalPrice: Number(totalPrice) || 0,
@@ -134,6 +157,9 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
       setStatus('Янги')
       setPayType('--')
       setTotalPrice('')
+      setClientFullName('')
+      setClientPhoneNumber('')
+      setClientAddress('')
       setSearchQuery('')
       setVisibleCount(30)
       onClose()
@@ -154,7 +180,6 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
         onClick={e => e.stopPropagation()}
         className='bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative'
       >
-        {/* Yopish tugmasi */}
         <button
           onClick={onClose}
           className='absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700'
@@ -167,7 +192,6 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
             Янги буюртма яратиш
           </h2>
 
-          {/* Xabar */}
           {message && (
             <div
               className={`flex items-center gap-2 mb-4 p-3 rounded-md ${
@@ -186,20 +210,50 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
           )}
 
           <form onSubmit={handleSubmit} className='space-y-8'>
-            {/* Mijoz */}
-            <div>
-              <label className='block text-gray-700 font-medium mb-2'>
-                Мижоз ID
-              </label>
-              <input
-                type='text'
-                value={customer}
-                disabled
-                className='border border-gray-300 w-full p-3 rounded-lg text-gray-500 bg-gray-100'
-              />
+            {/* 🧾 Mijoz ma'lumotlari */}
+            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
+              <div>
+                <label className='block text-gray-700 font-medium mb-2'>
+                  Мижоз исми
+                </label>
+                <input
+                  type='text'
+                  value={clientFullName}
+                  onChange={e => setClientFullName(e.target.value)}
+                  placeholder='Масалан: Алижон Тошпулатов'
+                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
+                  required
+                />
+              </div>
+
+              <div>
+                <label className='block text-gray-700 font-medium mb-2'>
+                  Телефон рақами
+                </label>
+                <input
+                  type='text'
+                  value={clientPhoneNumber}
+                  onChange={e => setClientPhoneNumber(e.target.value)}
+                  placeholder='+998901234567'
+                  required
+                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
+                />
+              </div>
+
+              <div>
+                <label className='block text-gray-700 font-medium mb-2'>
+                  Манзил
+                </label>
+                <input
+                  type='text'
+                  value={clientAddress}
+                  onChange={e => setClientAddress(e.target.value)}
+                  placeholder='Масалан: Тошкент ш., Олмазор тумани'
+                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
+                />
+              </div>
             </div>
 
-            {/* Qidiruv */}
             <div>
               <label className='block text-gray-700 font-medium mb-2'>
                 Маҳсулотларни қидириш
@@ -236,7 +290,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                       type='button'
                       key={product._id}
                       onClick={() => handleAddProduct(product)}
-                      className='px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition text-left'
+                      className='px-4 py-3 bg-white border cursor-pointer border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition text-left'
                     >
                       <span className='font-medium text-gray-800'>
                         {product.title}
@@ -386,18 +440,27 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
             </div>
 
             {/* Submit */}
-            <button
-              type='submit'
-              disabled={submitting}
-              className='flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition w-full sm:w-auto disabled:opacity-70'
-            >
-              {submitting ? (
-                <Loader2 className='animate-spin' size={18} />
-              ) : (
-                <Save size={18} />
-              )}
-              {submitting ? 'Сақланмоқда...' : 'Буюртмани сақлаш'}
-            </button>
+            <div className='flex gap-2 flex-wrap'>
+              <button
+                type='submit'
+                disabled={submitting}
+                className='flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition w-full sm:w-auto disabled:opacity-70'
+              >
+                {submitting ? (
+                  <Loader2 className='animate-spin' size={18} />
+                ) : (
+                  <Save size={18} />
+                )}
+                {submitting ? 'Сақланмоқда...' : 'Буюртмани сақлаш'}
+              </button>
+              <button
+                type='button'
+                onClick={() => onClose()}
+                className='flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition w-full sm:w-auto disabled:opacity-70'
+              >
+                Бекор қилиш
+              </button>
+            </div>
           </form>
         </div>
       </div>

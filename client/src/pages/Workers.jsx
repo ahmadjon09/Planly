@@ -18,7 +18,7 @@ export const Workers = () => {
   const handleDelete = async id => {
     if (!window.confirm('Ходимни ўчиришга ишончингиз комилми?')) return
     try {
-      await Axios.delete(`worker/${id}`)
+      await Axios.delete(`users/${id}`)
       mutate('/users')
     } catch (error) {
       alert(error.response?.data?.message || 'Ходимни ўчириб бўлмади')

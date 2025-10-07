@@ -29,6 +29,11 @@ const OrderSchema = new mongoose.Schema({
       }
     }
   ],
+  client: {
+    fullName: { type: String, required: true },
+    phoneNumber: { type: String, required: true },
+    address: { type: String, default: '--' }
+  },
   status: { type: String, required: true },
   payType: { type: String, default: '--' },
   totalPrice: { type: Number, required: true },

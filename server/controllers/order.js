@@ -20,6 +20,7 @@ export const GetOrderStats = async (req, res) => {
     const { year, month, day } = req.query
     const now = new Date()
 
+    // 📅 Tanlangan sana yoki hozirgi sanani olish
     const targetYear = Number(year) || now.getFullYear()
     const targetMonth = month ? Number(month) - 1 : now.getMonth()
     const targetDay = Number(day) || now.getDate()
@@ -29,7 +30,7 @@ export const GetOrderStats = async (req, res) => {
       return sendErrorResponse(res, 400, 'Нотўғри сана киритилди.')
     }
 
-    // Intervallar
+    // 📆 Intervallar
     const dayStart = startOfDay(targetDate)
     const dayEnd = endOfDay(targetDate)
     const monthStart = startOfMonth(targetDate)
@@ -39,9 +40,11 @@ export const GetOrderStats = async (req, res) => {
 
     // 🔥 Statistikani hisoblash funksiyasi
     const calcStats = async (start, end) => {
-      // Buyurtmalarni olish
-      const orders = await Order.find({ orderDate: { $gte: start, $lte: end } })
-      const products = await Product.find()
+      // Buyurtmalarni va mahsulotlarni bir vaqtda olish
+      const [orders, products] = await Promise.all([
+        Order.find({ orderDate: { $gte: start, $lte: end } }),
+        Product.find()
+      ])
 
       const totalOrders = orders.length
       const totalOrderPrice = orders.reduce(
@@ -49,70 +52,88 @@ export const GetOrderStats = async (req, res) => {
         0
       )
 
-      // Mahsulot statistikalari
+      // 📦 Mahsulotlar statistikasi
       const totalProducts = products.length
-      const totalStockValue = products.reduce((acc, p) => acc + p.stock, 0)
+      const totalStockValue = products.reduce(
+        (acc, p) => acc + (p.stock || 0),
+        0
+      )
 
-      // Sotilgan mahsulotlar statistikasi
+      // 📊 Sotilgan mahsulotlar hisoblari
       let soldCount = 0
-      let soldValue = 0
-      for (const o of orders) {
-        for (const item of o.products) {
-          soldCount += item.amount
-          soldValue += item.price * item.amount
+      let soldValue = 0 // sotilgan mahsulotlarning umumiy sotuv narxi
+      let totalCost = 0 // mahsulotlarning umumiy tannarxi
+
+      // Mahsulotlarni tez qidirish uchun Map yaratish
+      const productMap = new Map()
+      products.forEach(p => {
+        productMap.set(p._id.toString(), p)
+      })
+
+      for (const order of orders) {
+        for (const item of order.products) {
+          const productId = item.product.toString()
+          const product = productMap.get(productId)
+
+          if (product) {
+            soldCount += item.amount
+            soldValue += item.price * item.amount // sotuv narxi
+            totalCost += (product.price || 0) * item.amount // tannarx
+          }
         }
       }
 
-      // Eng ko‘p sotilgan mahsulotni topish
+      // 🔝 Eng ko'p sotilgan mahsulot
       let topSelling = { name: 'Маълумот йўқ', total: 0 }
       const productSales = {}
-      for (const o of orders) {
-        for (const item of o.products) {
-          productSales[item.product] =
-            (productSales[item.product] || 0) + item.amount
+
+      for (const order of orders) {
+        for (const item of order.products) {
+          const productId = item.product.toString()
+          productSales[productId] = (productSales[productId] || 0) + item.amount
         }
       }
 
-      if (Object.keys(productSales).length) {
-        const maxId = Object.keys(productSales).reduce((a, b) =>
+      if (Object.keys(productSales).length > 0) {
+        const maxProductId = Object.keys(productSales).reduce((a, b) =>
           productSales[a] > productSales[b] ? a : b
         )
-        const prod = await Product.findById(maxId)
-        if (prod)
+        const topProduct = productMap.get(maxProductId)
+        if (topProduct) {
           topSelling = {
-            name: prod.title || prod.name,
-            total: productSales[maxId]
+            name: topProduct.title || topProduct.name,
+            total: productSales[maxProductId]
           }
+        }
       }
 
-      // Moliyaviy hisob-kitoblar
-      const revenue = totalOrderPrice
-      const cost = soldValue * 0.7
-      const profit = revenue - cost
+      // 💰 Moliyaviy hisob-kitoblar
+      const revenue = totalOrderPrice // jami tushum
+      const cost = totalCost // jami xarajat (tannarx)
+      const profit = revenue - cost // sof foyda
       const loss = profit < 0 ? Math.abs(profit) : 0
-      const margin = revenue ? Math.round((profit / revenue) * 100) : 0
-      const averageOrderValue = totalOrders
-        ? Math.round(revenue / totalOrders)
-        : 0
+      const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0
+      const averageOrderValue =
+        totalOrders > 0 ? Math.round(revenue / totalOrders) : 0
 
       return {
         totalOrders,
-        totalOrderPrice,
+        totalOrderPrice: Math.round(revenue),
         totalProducts,
         totalStockValue,
         soldCount,
-        soldValue,
-        revenue,
-        cost,
-        profit,
-        loss,
+        soldValue: Math.round(soldValue),
+        revenue: Math.round(revenue),
+        cost: Math.round(cost),
+        profit: Math.round(profit),
+        loss: Math.round(loss),
         margin,
         averageOrderValue,
         topSelling
       }
     }
 
-    // Paralel hisoblash
+    // ⚡ Paralel hisoblash (tezlik uchun Promise.all)
     const [daily, monthly, yearly, prevDay, prevMonth, prevYear] =
       await Promise.all([
         calcStats(dayStart, dayEnd),
@@ -123,12 +144,15 @@ export const GetOrderStats = async (req, res) => {
         calcStats(subYears(yearStart, 1), subYears(yearEnd, 1))
       ])
 
-    // O‘sish foizlarini hisoblash
-    const growthRate = (current, prev) =>
-      prev && prev !== 0
-        ? Math.round(((current - prev) / prev) * 100 * 100) / 100
-        : 0
+    // 📈 O'sish foizlarini hisoblash
+    const growthRate = (current, prev) => {
+      if (prev === 0 || prev === null || prev === undefined) {
+        return current > 0 ? 100 : 0
+      }
+      return Math.round(((current - prev) / Math.abs(prev)) * 100 * 100) / 100
+    }
 
+    // 🔚 Yakuniy natija
     const result = {
       filter: { year: targetYear, month: targetMonth + 1, day: targetDay },
       daily: {
@@ -171,7 +195,7 @@ export const GetOrderStats = async (req, res) => {
 
 export const AllOrders = async (_, res) => {
   try {
-    const orders = await Order.find()
+    const orders = await Order.find().sort({ createdAt: 1 })
 
     const enrichedOrders = await Promise.all(
       orders.map(async order => {

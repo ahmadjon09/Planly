@@ -1,12 +1,10 @@
 import { useContext, useState } from 'react'
 import { Phone, Lock, Eye, EyeOff, Upload } from 'lucide-react'
-import { useTranslation } from '../contextData/LanguageContext'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
 
 export const AuthModals = ({ initialTab = 'login' }) => {
   const [activeTab, setActiveTab] = useState(initialTab)
-  const { t } = useTranslation()
 
   return (
     <div className='fixed bg-white inset-0 z-50 flex items-center justify-center'>
@@ -16,7 +14,7 @@ export const AuthModals = ({ initialTab = 'login' }) => {
             className={`flex-1 py-4 font-semibold text-center transition-colors text-white hover:text-white`}
             onClick={() => setActiveTab('login')}
           >
-            {t('login')}
+            Вход
           </button>
         </div>
 

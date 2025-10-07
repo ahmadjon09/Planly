@@ -8,7 +8,9 @@ import { ContextData } from '../contextData/Context'
 export const ProductsPage = () => {
   const { user } = useContext(ContextData)
   const { data, error, isLoading, mutate } = useSWR('/products', Fetch, {
-    refreshInterval: 5000
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true
   })
 
   const [open, setOpen] = useState(false)
