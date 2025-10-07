@@ -39,12 +39,22 @@ export const GetOrderStats = async (req, res) => {
     const yearEnd = endOfYear(new Date(targetYear, 0))
 
     // 🔥 Statistikani hisoblash funksiyasi
-    const calcStats = async (start, end) => {
-      // Buyurtmalarni va mahsulotlarni bir vaqtda olish
-      const [orders, products] = await Promise.all([
-        Order.find({ orderDate: { $gte: start, $lte: end } }),
-        Product.find()
-      ])
+    const calcStats = async (start, end, periodYear = targetYear) => {
+      // Buyurtmalarni olish
+      const orders = await Order.find({ orderDate: { $gte: start, $lte: end } })
+
+      // Буюртмалардаги барча маҳсулот IDларини олиш
+      const allProductIds = []
+      orders.forEach(order => {
+        order.products.forEach(item => {
+          allProductIds.push(item.product)
+        })
+      })
+
+      // Ушбу даврдаги буюртмаларда келган маҳсулотларни олиш
+      const products = await Product.find({
+        _id: { $in: allProductIds }
+      })
 
       const totalOrders = orders.length
       const totalOrderPrice = orders.reduce(
@@ -52,14 +62,14 @@ export const GetOrderStats = async (req, res) => {
         0
       )
 
-      // 📦 Mahsulotlar statistikasi
+      // 📦 Маҳсулотлар статистикаси (фақат ушбу даврдаги маҳсулотлар)
       const totalProducts = products.length
       const totalStockValue = products.reduce(
         (acc, p) => acc + (p.stock || 0),
         0
       )
 
-      // 📊 Sotilgan mahsulotlar hisoblari
+      // 📊 Сотилган маҳсулотлар ҳисоблари
       let soldCount = 0
       let soldValue = 0 // sotilgan mahsulotlarning umumiy sotuv narxi
       let totalCost = 0 // mahsulotlarning umumiy tannarxi
