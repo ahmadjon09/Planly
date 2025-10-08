@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { AddNewOrder } from '../mod/OrderModal'
+import { ContextData } from '../contextData/Context'
 
 export const ViewOrders = () => {
   const { data, error, isLoading, mutate } = useSWR('/orders', Fetch, {
@@ -26,6 +27,7 @@ export const ViewOrders = () => {
     revalidateOnFocus: true,
     revalidateOnReconnect: true
   })
+  const { user } = useContext(ContextData)
 
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState({})
@@ -202,19 +204,27 @@ export const ViewOrders = () => {
                       </a>
                     </td>
 
-                    <td className='px-4 py-3'>
-                      <input
-                        type='number'
-                        value={
-                          editing[order._id]?.totalPrice ??
-                          order.totalPrice ??
-                          ''
-                        }
-                        onChange={e =>
-                          handleChange(order._id, 'totalPrice', e.target.value)
-                        }
-                        className='border rounded px-2 py-1 w-28 text-right'
-                      />
+                    <td className='px-4 py-3 flex gap-0.5 flex-wrap'>
+                      {user.role === 'admin' ? (
+                        <input
+                          type='number'
+                          value={
+                            editing[order._id]?.totalPrice ??
+                            order.totalPrice ??
+                            ''
+                          }
+                          onChange={e =>
+                            handleChange(
+                              order._id,
+                              'totalPrice',
+                              e.target.value
+                            )
+                          }
+                          className='border rounded px-2 py-1 w-28 text-right'
+                        />
+                      ) : (
+                        <p>{order.totalPrice.toLocaleString()}</p>
+                      )}
                       сўм
                     </td>
 

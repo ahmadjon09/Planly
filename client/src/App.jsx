@@ -60,7 +60,7 @@ export default function App () {
     isAdmin && { path: 'user/:admin', element: <UserManagement /> },
     isAdmin && { path: 'user', element: <UserManagement /> },
     isAdmin && { path: 'static', element: <StatsPage /> },
-    isAdmin && { path: 'orders', element: <ViewOrders /> },
+    { path: 'orders', element: <ViewOrders /> },
     { path: 'admin', element: <Admins /> },
     { path: 'workers', element: <Workers /> },
     { path: '*', element: <Err /> }

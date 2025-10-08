@@ -29,6 +29,11 @@ export const Nav = () => {
     { name: 'Склад', path: '/', icon: <Boxes size={18} /> },
     { name: 'Админлар', path: '/admin', icon: <ShieldUser size={18} /> },
     { name: 'Xодимлар', path: '/workers', icon: <UserRoundPen size={18} /> },
+    {
+      name: 'Буюртмалар',
+      path: '/orders',
+      icon: <ReceiptText size={18} />
+    },
     ...(user.role === 'admin'
       ? [
           {
@@ -40,11 +45,6 @@ export const Nav = () => {
             name: 'Янги ходим',
             path: '/user',
             icon: <UserPlus2Icon size={18} />
-          },
-          {
-            name: 'Буюртмалар',
-            path: '/orders',
-            icon: <ReceiptText size={18} />
           }
         ]
       : [])
