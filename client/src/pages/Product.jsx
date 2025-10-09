@@ -16,7 +16,8 @@ import {
   Calendar,
   MapPin,
   Phone,
-  User
+  User,
+  Shield
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import AddProductModal from '../components/AddProductModal'
@@ -72,8 +73,10 @@ export const ProductsPage = () => {
         return copy
       })
       mutate()
+      alert('✅ Маълумотлар сақланди')
     } catch (err) {
       console.error('Update error:', err)
+      alert('❌ Сақлашда хатолик юз берди')
     } finally {
       setLoading(null)
     }
@@ -85,9 +88,10 @@ export const ProductsPage = () => {
       setDeleting(id)
       await Fetch.delete(`/products/${id}`)
       mutate()
+      alert('✅ Маҳсулот ўчирилди')
     } catch (err) {
       console.error('Delete error:', err)
-      alert('Ўчиришда хатолик юз берди ❌')
+      alert('❌ Ўчиришда хатолик юз берди')
     } finally {
       setDeleting(null)
     }
@@ -117,13 +121,21 @@ export const ProductsPage = () => {
       <div className='w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6'>
         <h1 className='text-2xl font-bold flex items-center gap-2'>
           <Boxes size={30} /> Маҳсулотлар
+          {user.role !== 'admin' && (
+            <span className='text-sm font-normal bg-blue-100 text-blue-700 px-2 py-1 rounded-full flex items-center gap-1'>
+              <Shield size={14} />
+              Фақат кўриш
+            </span>
+          )}
         </h1>
-        <button
-          onClick={() => setOpen(true)}
-          className='flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600'
-        >
-          <Plus size={18} /> Янги маҳсулот
-        </button>
+        {user.role === 'admin' && (
+          <button
+            onClick={() => setOpen(true)}
+            className='flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600'
+          >
+            <Plus size={18} /> Янги маҳсулот
+          </button>
+        )}
       </div>
 
       <div className='flex flex-wrap items-center gap-4 bg-gray-50 p-4 rounded-lg shadow'>
@@ -171,7 +183,9 @@ export const ProductsPage = () => {
                 <th className='px-4 py-3'>Миқдори</th>
                 <th className='px-4 py-3'>Бирлик</th>
                 <th className='px-4 py-3'>Яратилган сана</th>
-                <th className='px-4 py-3 text-center'>Амалиёт</th>
+                {user.role === 'admin' && (
+                  <th className='px-4 py-3 text-center'>Амалиёт</th>
+                )}
               </tr>
             </thead>
             <tbody className='text-sm'>
@@ -181,23 +195,31 @@ export const ProductsPage = () => {
                   <tr key={p._id} className='border-b hover:bg-gray-50'>
                     <td className='px-4 py-3'>{p.ID}</td>
                     <td className='px-4 py-3 font-bold'>{p.title}</td>
-                    {user.role === 'admin' ? (
-                      <td className='px-4 py-3'>
-                        <input
-                          type='number'
-                          defaultValue={p.price}
-                          className='border rounded px-2 py-1 w-28'
-                          onChange={e =>
-                            handleChange(p._id, 'price', Number(e.target.value))
-                          }
-                        />
-                        <span className='ml-1 text-gray-600'>сўм</span>
-                      </td>
-                    ) : (
-                      <td className='px-4 py-3'>
-                        {p.price.toLocaleString()} сўм
-                      </td>
-                    )}
+
+                    {/* Narx - admin uchun tahrirlash, boshqalar uchun faqat ko'rish */}
+                    <td className='px-4 py-3'>
+                      {user.role === 'admin' ? (
+                        <div className='flex items-center'>
+                          <input
+                            type='number'
+                            defaultValue={p.price}
+                            className='border rounded px-2 py-1 w-28'
+                            onChange={e =>
+                              handleChange(
+                                p._id,
+                                'price',
+                                Number(e.target.value)
+                              )
+                            }
+                          />
+                          <span className='ml-1 text-gray-600'>сўм</span>
+                        </div>
+                      ) : (
+                        <span>{p.price.toLocaleString()} сўм</span>
+                      )}
+                    </td>
+
+                    {/* Miqdor - hamma uchun tahrirlash */}
                     <td className='px-4 py-3'>
                       <input
                         type='number'
@@ -206,8 +228,11 @@ export const ProductsPage = () => {
                         onChange={e =>
                           handleChange(p._id, 'stock', Number(e.target.value))
                         }
+                        disabled={user.role !== 'admin'}
                       />
                     </td>
+
+                    {/* Birlik - hamma uchun tahrirlash */}
                     <td className='px-4 py-3'>
                       <select
                         defaultValue={p.unit || 'дона'}
@@ -215,6 +240,7 @@ export const ProductsPage = () => {
                           handleChange(p._id, 'unit', e.target.value)
                         }
                         className='border rounded px-2 py-1 w-28'
+                        disabled={user.role !== 'admin'}
                       >
                         {availableUnits.map(u => (
                           <option key={u} value={u}>
@@ -223,47 +249,52 @@ export const ProductsPage = () => {
                         ))}
                       </select>
                     </td>
+
                     <td className='px-4 py-3'>
                       {new Date(p.createdAt).toLocaleDateString()}
                     </td>
-                    <td className='px-4 py-3 flex items-center gap-2 justify-center'>
-                      {/* 👁️ View */}
-                      <button
-                        onClick={() => setViewData(p)}
-                        className='flex items-center gap-2 bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600'
-                      >
-                        <Eye size={16} />
-                        Кўриш
-                      </button>
 
-                      {isEdited && (
+                    {/* Amaliyotlar - faqat admin uchun */}
+                    {user.role === 'admin' && (
+                      <td className='px-4 py-3 flex items-center gap-2 justify-center'>
+                        {/* 👁️ View */}
                         <button
-                          onClick={() => handleSave(p._id)}
-                          disabled={loading === p._id}
-                          className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
+                          onClick={() => setViewData(p)}
+                          className='flex items-center gap-2 bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600'
                         >
-                          {loading === p._id ? (
+                          <Eye size={16} />
+                          Кўриш
+                        </button>
+
+                        {isEdited && (
+                          <button
+                            onClick={() => handleSave(p._id)}
+                            disabled={loading === p._id}
+                            className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
+                          >
+                            {loading === p._id ? (
+                              <Loader2 className='animate-spin' size={16} />
+                            ) : (
+                              <Save size={16} />
+                            )}
+                            Сақлаш
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleDelete(p._id)}
+                          disabled={deleting === p._id}
+                          className='flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50'
+                        >
+                          {deleting === p._id ? (
                             <Loader2 className='animate-spin' size={16} />
                           ) : (
-                            <Save size={16} />
+                            <Trash2 size={16} />
                           )}
-                          Сақлаш
+                          Ўчириш
                         </button>
-                      )}
-
-                      <button
-                        onClick={() => handleDelete(p._id)}
-                        disabled={deleting === p._id}
-                        className='flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50'
-                      >
-                        {deleting === p._id ? (
-                          <Loader2 className='animate-spin' size={16} />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                        Ўчириш
-                      </button>
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -272,9 +303,11 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      <AddProductModal open={open} setOpen={setOpen} mutate={mutate} />
+      {user.role === 'admin' && (
+        <AddProductModal open={open} setOpen={setOpen} mutate={mutate} />
+      )}
 
-      {/* 🪟 VIEW MODAL */}
+      {/* 🪟 VIEW/EDIT MODAL */}
       {viewData && (
         <div
           onClick={() => setViewData(null)}
@@ -293,6 +326,11 @@ export const ProductsPage = () => {
 
             <h2 className='text-xl font-bold mb-4 flex items-center gap-2 text-indigo-600'>
               <Tag size={22} /> Маҳсулот маълумотлари
+              {user.role !== 'admin' && (
+                <span className='text-sm font-normal bg-blue-100 text-blue-700 px-2 py-1 rounded-full'>
+                  Фақат кўриш
+                </span>
+              )}
             </h2>
 
             <div className='space-y-3 text-sm'>
@@ -304,35 +342,157 @@ export const ProductsPage = () => {
                 <Boxes size={16} className='text-gray-500' /> <b>Номи:</b>{' '}
                 {viewData.title}
               </p>
-              <p className='flex items-center gap-2'>
-                <DollarSign size={16} className='text-gray-500' /> <b>Нархи:</b>{' '}
-                {viewData.price?.toLocaleString()} сўм
-              </p>
-              <p className='flex items-center gap-2'>
-                <Package size={16} className='text-gray-500' /> <b>Миқдори:</b>{' '}
-                {viewData.stock}
-              </p>
-              <p className='flex items-center gap-2'>
-                <Ruler size={16} className='text-gray-500' /> <b>Бирлик:</b>{' '}
-                {viewData.unit}
-              </p>
 
+              {/* Narxni tahrirlash - faqat admin uchun */}
+              <div className='flex items-center gap-2'>
+                <DollarSign size={16} className='text-gray-500' />
+                <b>Нархи:</b>
+                {user.role === 'admin' ? (
+                  <div className='flex items-center gap-1'>
+                    <input
+                      type='number'
+                      defaultValue={viewData.price}
+                      className='border rounded px-2 py-1 w-28 ml-2'
+                      onChange={e =>
+                        handleChange(
+                          viewData._id,
+                          'price',
+                          Number(e.target.value)
+                        )
+                      }
+                    />
+                    <span className='text-gray-600'>сўм</span>
+                  </div>
+                ) : (
+                  <span className='ml-1'>
+                    {viewData.price?.toLocaleString()} сўм
+                  </span>
+                )}
+              </div>
+
+              {/* Miqdorni tahrirlash - faqat admin uchun */}
+              <div className='flex items-center gap-2'>
+                <Package size={16} className='text-gray-500' />
+                <b>Миқдори:</b>
+                {user.role === 'admin' ? (
+                  <input
+                    type='number'
+                    defaultValue={viewData.stock}
+                    className='border rounded px-2 py-1 w-24 ml-2'
+                    onChange={e =>
+                      handleChange(
+                        viewData._id,
+                        'stock',
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+                ) : (
+                  <span className='ml-1'>{viewData.stock}</span>
+                )}
+              </div>
+
+              {/* Birlikni tahrirlash - faqat admin uchun */}
+              <div className='flex items-center gap-2'>
+                <Ruler size={16} className='text-gray-500' />
+                <b>Бирлик:</b>
+                {user.role === 'admin' ? (
+                  <select
+                    defaultValue={viewData.unit || 'дона'}
+                    onChange={e =>
+                      handleChange(viewData._id, 'unit', e.target.value)
+                    }
+                    className='border rounded px-2 py-1 w-28 ml-2'
+                  >
+                    {availableUnits.map(u => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className='ml-1'>{viewData.unit || 'дона'}</span>
+                )}
+              </div>
+
+              {/* Kelgan joy haqida ma'lumotlarni tahrirlash - faqat admin uchun */}
               <div className='border-t pt-2 mt-3'>
                 <p className='font-semibold text-gray-700 mb-1'>
                   📦 Келган жой ҳақида:
                 </p>
-                <p className='flex items-center gap-2'>
-                  <User size={16} className='text-gray-500' />{' '}
-                  {viewData.from?.name || '-'}
-                </p>
-                <p className='flex items-center gap-2'>
-                  <Phone size={16} className='text-gray-500' />{' '}
-                  {viewData.from?.phoneNumber || '-'}
-                </p>
-                <p className='flex items-center gap-2'>
-                  <MapPin size={16} className='text-gray-500' />{' '}
-                  {viewData.from?.address || '-'}
-                </p>
+
+                <div className='flex items-center gap-2 mb-1'>
+                  <User size={16} className='text-gray-500' />
+                  <b>Номи:</b>
+                  {user.role === 'admin' ? (
+                    <input
+                      type='text'
+                      defaultValue={viewData.from?.name || ''}
+                      placeholder='Номи'
+                      className='border rounded px-2 py-1 flex-1 ml-2'
+                      onChange={e =>
+                        handleChange(viewData._id, 'from', {
+                          ...(editing[viewData._id]?.from ||
+                            viewData.from ||
+                            {}),
+                          name: e.target.value
+                        })
+                      }
+                    />
+                  ) : (
+                    <span className='ml-1'>{viewData.from?.name || '—'}</span>
+                  )}
+                </div>
+
+                <div className='flex items-center gap-2 mb-1'>
+                  <Phone size={16} className='text-gray-500' />
+                  <b>Телефон:</b>
+                  {user.role === 'admin' ? (
+                    <input
+                      type='text'
+                      defaultValue={viewData.from?.phoneNumber || ''}
+                      placeholder='Телефон рақами'
+                      className='border rounded px-2 py-1 flex-1 ml-2'
+                      onChange={e =>
+                        handleChange(viewData._id, 'from', {
+                          ...(editing[viewData._id]?.from ||
+                            viewData.from ||
+                            {}),
+                          phoneNumber: e.target.value
+                        })
+                      }
+                    />
+                  ) : (
+                    <span className='ml-1'>
+                      {viewData.from?.phoneNumber || '—'}
+                    </span>
+                  )}
+                </div>
+
+                <div className='flex items-center gap-2'>
+                  <MapPin size={16} className='text-gray-500' />
+                  <b>Манзил:</b>
+                  {user.role === 'admin' ? (
+                    <input
+                      type='text'
+                      defaultValue={viewData.from?.address || ''}
+                      placeholder='Манзил'
+                      className='border rounded px-2 py-1 flex-1 ml-2'
+                      onChange={e =>
+                        handleChange(viewData._id, 'from', {
+                          ...(editing[viewData._id]?.from ||
+                            viewData.from ||
+                            {}),
+                          address: e.target.value
+                        })
+                      }
+                    />
+                  ) : (
+                    <span className='ml-1'>
+                      {viewData.from?.address || '—'}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className='border-t pt-2 mt-3'>
@@ -346,6 +506,24 @@ export const ProductsPage = () => {
                 </p>
               </div>
             </div>
+
+            {/* Saqlash tugmasi - faqat admin uchun */}
+            {user.role === 'admin' && editing[viewData._id] && (
+              <div className='mt-6 pt-4 border-t flex justify-end'>
+                <button
+                  onClick={() => handleSave(viewData._id)}
+                  disabled={loading === viewData._id}
+                  className='flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition'
+                >
+                  {loading === viewData._id ? (
+                    <Loader2 className='animate-spin' size={18} />
+                  ) : (
+                    <Save size={18} />
+                  )}
+                  Сақлаш
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

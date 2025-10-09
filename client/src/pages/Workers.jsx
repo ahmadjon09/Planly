@@ -9,7 +9,11 @@ import { useContext } from 'react'
 import { ContextData } from '../contextData/Context'
 
 export const Workers = () => {
-  const { data, isLoading, error } = useSWR('/users', Axios)
+  const { data, isLoading, error } = useSWR('/users', Axios, {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true
+  })
   const { user } = useContext(ContextData)
 
   const workers = (data?.data?.data || []).filter(u => u.role === 'worker')

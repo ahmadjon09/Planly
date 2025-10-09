@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react'
-import { Phone, Lock, Eye, EyeOff, Upload } from 'lucide-react'
+import { Phone, Lock, Eye, EyeOff } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
 

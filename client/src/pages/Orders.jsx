@@ -14,8 +14,9 @@ import {
   CreditCard,
   Phone,
   Calendar,
-  Search,
-  BadgeDollarSign
+  BadgeDollarSign,
+  ChevronLeft,
+  Package
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { AddNewOrder } from '../mod/OrderModal'
@@ -35,6 +36,7 @@ export const ViewOrders = () => {
   const [loading, setLoading] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [selectedClient, setSelectedClient] = useState(null)
 
   const [searchPhone, setSearchPhone] = useState('')
   const [searchName, setSearchName] = useState('')
@@ -42,21 +44,57 @@ export const ViewOrders = () => {
 
   const orders = data?.data?.data || []
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      const phoneMatch = o.client?.phoneNumber
+  // Mijozlarni guruhlab olish
+  const clients = useMemo(() => {
+    const clientMap = {}
+
+    orders.forEach(order => {
+      const clientId = order.client?._id || order.client?.phoneNumber
+      if (!clientId) return
+
+      if (!clientMap[clientId]) {
+        clientMap[clientId] = {
+          ...order.client,
+          orders: [],
+          totalOrders: 0,
+          totalSpent: 0
+        }
+      }
+
+      clientMap[clientId].orders.push(order)
+      clientMap[clientId].totalOrders += 1
+      clientMap[clientId].totalSpent += order.totalPrice || 0
+    })
+
+    return Object.values(clientMap)
+  }, [orders])
+
+  // Mijozlarni filter qilish
+  const filteredClients = useMemo(() => {
+    return clients.filter(client => {
+      const phoneMatch = client.phoneNumber
         ?.toLowerCase()
         .includes(searchPhone.toLowerCase())
-      const nameMatch = o.client?.fullName
+      const nameMatch = client.fullName
         ?.toLowerCase()
         .includes(searchName.toLowerCase())
+
+      return phoneMatch && nameMatch
+    })
+  }, [clients, searchPhone, searchName])
+
+  // Tanlangan mijozning buyurtmalarini filter qilish
+  const filteredClientOrders = useMemo(() => {
+    if (!selectedClient) return []
+
+    return selectedClient.orders.filter(order => {
       const dateMatch = searchDate
-        ? new Date(o.orderDate).toLocaleDateString() ===
+        ? new Date(order.orderDate).toLocaleDateString() ===
           new Date(searchDate).toLocaleDateString()
         : true
-      return phoneMatch && nameMatch && dateMatch
+      return dateMatch
     })
-  }, [orders, searchPhone, searchName, searchDate])
+  }, [selectedClient, searchDate])
 
   const handleChange = (id, field, value) => {
     setEditing(prev => ({
@@ -121,7 +159,19 @@ export const ViewOrders = () => {
       {/* Header */}
       <div className='w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6'>
         <h1 className='text-2xl font-bold flex items-center gap-2'>
-          <ScrollText size={30} /> Буюртмалар
+          {selectedClient ? (
+            <button
+              onClick={() => setSelectedClient(null)}
+              className='flex items-center gap-2 text-blue-500 hover:text-blue-700'
+            >
+              <ChevronLeft size={24} />
+            </button>
+          ) : (
+            <ScrollText size={30} />
+          )}
+          {selectedClient
+            ? `${selectedClient.fullName} буюртмалари`
+            : 'Мижозлар'}
         </h1>
         <button
           onClick={() => setIsOpen(true)}
@@ -153,137 +203,195 @@ export const ViewOrders = () => {
             className='w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400'
           />
         </div>
-        <div className='flex items-center gap-2'>
-          <Calendar size={18} className='text-gray-500' />
-          <input
-            type='date'
-            value={searchDate}
-            onChange={e => setSearchDate(e.target.value)}
-            className='w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400'
-          />
-        </div>
+        {selectedClient && (
+          <div className='flex items-center gap-2'>
+            <Calendar size={18} className='text-gray-500' />
+            <input
+              type='date'
+              value={searchDate}
+              onChange={e => setSearchDate(e.target.value)}
+              className='w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400'
+            />
+          </div>
+        )}
       </div>
 
-      {/* Table */}
-      {filteredOrders.length === 0 ? (
-        <div className='text-center mt-10 text-gray-600'>
-          Ҳеч қандай мувофиқ буюртма топилмади.
-        </div>
-      ) : (
-        <div className='overflow-x-auto rounded-xl shadow'>
-          <table className='min-w-full bg-white border-collapse'>
-            <thead className='bg-gray-100 text-left text-sm font-semibold'>
-              <tr>
-                <th className='px-4 py-3'>Омборчи</th>
-                <th className='px-4 py-3'>Маҳсулотлар</th>
-                <th className='px-4 py-3'>Ҳолат</th>
-                <th className='px-4 py-3'>Телефон</th>
-                <th className='px-4 py-3'>Умумий нарх</th>
-                <th className='px-4 py-3'>Сана</th>
-                <th className='px-4 py-3 text-center'>Амалиёт</th>
-              </tr>
-            </thead>
-            <tbody className='text-sm'>
-              {filteredOrders.map(order => {
-                const isEdited = Boolean(editing[order._id])
-                return (
-                  <tr key={order._id} className='border-b hover:bg-gray-50'>
-                    <td className='px-4 py-3 font-medium'>
-                      {order.customer?.firstName || '—'}{' '}
-                      {order.customer?.lastName || ''}
-                    </td>
+      {/* Mijozlar ro'yxati */}
+      {!selectedClient && (
+        <>
+          {filteredClients.length === 0 ? (
+            <div className='text-center mt-10 text-gray-600'>
+              Ҳеч қандай мувофиқ мижоз топилмади.
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+              {filteredClients.map(client => (
+                <div
+                  key={client._id || client.phoneNumber}
+                  onClick={() => setSelectedClient(client)}
+                  className='bg-white rounded-xl shadow-md p-5 border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:border-blue-300'
+                >
+                  <div className='flex items-start justify-between mb-3'>
+                    <div className='flex items-center gap-3'>
+                      <div className='bg-blue-100 p-2 rounded-full'>
+                        <User className='text-blue-600' size={20} />
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-lg'>
+                          {client.fullName || 'Номаълум'}
+                        </h3>
+                        <p className='text-gray-600 text-sm'>
+                          {client.phoneNumber}
+                        </p>
+                      </div>
+                    </div>
+                    <div className='text-right'>
+                      <div className='flex items-center gap-1 text-green-600 font-semibold'>
+                        <Package size={16} />
+                        <span>{client.totalOrders}</span>
+                      </div>
+                      <div className='text-xs text-gray-500'>буюртма</div>
+                    </div>
+                  </div>
 
-                    <td className='px-4 py-3'>
-                      {order.products.slice(0, 2).map((item, i) => (
-                        <div key={i}>
-                          {item.productName || 'Мавжуд эмас'} — {item.amount}{' '}
-                          {item.unit} × {item.price.toLocaleString()} сўм
-                        </div>
-                      ))}
-                      {order.products.length > 2 && <div>...</div>}
-                    </td>
+                  <div className='flex items-center gap-2 text-sm text-gray-600 mb-2'>
+                    <MapPin size={14} />
+                    <span className='truncate'>
+                      {client.address || 'Манзил кўрсатилмаган'}
+                    </span>
+                  </div>
 
-                    <td className='px-4 py-3'>{order.status || '—'}</td>
-                    <td className='px-4 py-3'>
-                      <a href={`tel:${order.client.phoneNumber}`}>
-                        {order.client.phoneNumber || '—'}
-                      </a>
-                    </td>
-
-                    <td className='px-4 py-3 flex gap-0.5 flex-wrap'>
-                      {user.role === 'admin' ? (
-                        <input
-                          type='number'
-                          value={
-                            editing[order._id]?.totalPrice ??
-                            order.totalPrice ??
-                            ''
-                          }
-                          onChange={e =>
-                            handleChange(
-                              order._id,
-                              'totalPrice',
-                              e.target.value
-                            )
-                          }
-                          className='border rounded px-2 py-1 w-28 text-right'
-                        />
-                      ) : (
-                        <p>{order.totalPrice.toLocaleString()}</p>
-                      )}
-                      сўм
-                    </td>
-
-                    <td className='px-4 py-3'>
-                      {new Date(
-                        order.createdAt || order.orderDate
-                      ).toLocaleDateString()}
-                    </td>
-
-                    <td className='px-4 py-3 text-center flex gap-2 justify-center'>
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        className='flex items-center gap-2 bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600'
-                      >
-                        <Eye size={16} /> Кўриш
-                      </button>
-
-                      {isEdited && (
-                        <button
-                          onClick={() => handleSave(order._id)}
-                          disabled={loading === order._id}
-                          className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
-                        >
-                          {loading === order._id ? (
-                            <Loader2 className='animate-spin' size={16} />
-                          ) : (
-                            <Save size={16} />
-                          )}
-                          Сақлаш
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => handleDelete(order._id)}
-                        disabled={deleting === order._id}
-                        className='flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50'
-                      >
-                        {deleting === order._id ? (
-                          <Loader2 className='animate-spin' size={16} />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                        Ўчириш
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                  <div className='flex justify-between items-center mt-4 pt-3 border-t border-gray-100'>
+                    <span className='text-sm text-gray-500'>
+                      Жами:
+                    </span>
+                    <span className='font-semibold text-green-600'>
+                      {client.totalSpent.toLocaleString()} сўм
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
+      {/* Mijozning buyurtmalari */}
+      {selectedClient && (
+        <>
+          {filteredClientOrders.length === 0 ? (
+            <div className='text-center mt-10 text-gray-600'>
+              Ушбу мижоз учун ҳеч қандай буюртма топилмади.
+            </div>
+          ) : (
+            <div className='overflow-x-auto rounded-xl shadow'>
+              <table className='min-w-full bg-white border-collapse'>
+                <thead className='bg-gray-100 text-left text-sm font-semibold'>
+                  <tr>
+                    <th className='px-4 py-3'>Маҳсулотлар</th>
+                    <th className='px-4 py-3'>Ҳолат</th>
+                    <th className='px-4 py-3'>Умумий нарх</th>
+                    <th className='px-4 py-3'>Сана</th>
+                    <th className='px-4 py-3 text-center'>Амалиёт</th>
+                  </tr>
+                </thead>
+                <tbody className='text-sm'>
+                  {filteredClientOrders.map(order => {
+                    const isEdited = Boolean(editing[order._id])
+                    return (
+                      <tr key={order._id} className='border-b hover:bg-gray-50'>
+                        <td className='px-4 py-3'>
+                          {order.products.slice(0, 2).map((item, i) => (
+                            <div key={i}>
+                              {item.productName || 'Мавжуд эмас'} —{' '}
+                              {item.amount} {item.unit} ×{' '}
+                              {item.price.toLocaleString()} сўм
+                            </div>
+                          ))}
+                          {order.products.length > 2 && <div>...</div>}
+                        </td>
+
+                        <td className='px-4 py-3'>{order.status || '—'}</td>
+
+                        <td className='px-4 py-3 flex gap-0.5 flex-wrap'>
+                          {user.role === 'admin' ? (
+                            <input
+                              type='number'
+                              value={
+                                editing[order._id]?.totalPrice ??
+                                order.totalPrice ??
+                                ''
+                              }
+                              onChange={e =>
+                                handleChange(
+                                  order._id,
+                                  'totalPrice',
+                                  e.target.value
+                                )
+                              }
+                              className='border rounded px-2 py-1 w-28 text-right'
+                            />
+                          ) : (
+                            <p>{order.totalPrice.toLocaleString()}</p>
+                          )}
+                          сўм
+                        </td>
+
+                        <td className='px-4 py-3'>
+                          {new Date(
+                            order.createdAt || order.orderDate
+                          ).toLocaleDateString()}
+                        </td>
+
+                        <td className='px-4 py-3 text-center flex gap-2 justify-center'>
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className='flex items-center gap-2 bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600'
+                          >
+                            <Eye size={16} /> Кўриш
+                          </button>
+
+                          {isEdited && (
+                            <button
+                              onClick={() => handleSave(order._id)}
+                              disabled={loading === order._id}
+                              className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
+                            >
+                              {loading === order._id ? (
+                                <Loader2 className='animate-spin' size={16} />
+                              ) : (
+                                <Save size={16} />
+                              )}
+                              Сақлаш
+                            </button>
+                          )}
+
+                          {user.role === 'admin' && (
+                            <button
+                              onClick={() => handleDelete(order._id)}
+                              disabled={deleting === order._id}
+                              className='flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50'
+                            >
+                              {deleting === order._id ? (
+                                <Loader2 className='animate-spin' size={16} />
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
+                              Бекор қилиш
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Order Detail Modal */}
       {selectedOrder && (
         <div
           onClick={() => setSelectedOrder(null)}

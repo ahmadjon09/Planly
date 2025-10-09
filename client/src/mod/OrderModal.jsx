@@ -7,7 +7,11 @@ import {
   X,
   Loader2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  User,
+  Phone,
+  MapPin,
+  Users
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
@@ -18,16 +22,20 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   if (!isOpen) return null
 
   const [products, setProducts] = useState([])
+  const [clients, setClients] = useState([]) // 🆕 Mavjud mijozlar
   const [selectedProducts, setSelectedProducts] = useState([])
   const [customer, setCustomer] = useState(user._id)
   const [status, setStatus] = useState('Янги')
   const [payType, setPayType] = useState('--')
   const [totalPrice, setTotalPrice] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [clientSearchQuery, setClientSearchQuery] = useState('') // 🆕 Mijoz qidiruv
   const [visibleCount, setVisibleCount] = useState(30)
   const [loading, setLoading] = useState(false)
+  const [clientsLoading, setClientsLoading] = useState(false) // 🆕 Mijozlar yuklanmoqda
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState(null)
+  const [showClientsList, setShowClientsList] = useState(false) // 🆕 Mijozlar ro'yxatini ko'rsatish
 
   // 🆕 client ma'lumotlari
   const [clientFullName, setClientFullName] = useState('')
@@ -35,20 +43,75 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   const [clientAddress, setClientAddress] = useState('')
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       setLoading(true)
+      setClientsLoading(true)
       try {
-        const res = await Fetch.get('/products')
-        setProducts(res.data?.data || [])
+        // Mahsulotlarni olish
+        const productsRes = await Fetch.get('/products')
+        setProducts(productsRes.data?.data || [])
+
+        // 🆕 Mijozlarni olish va birlashtirish
+        const ordersRes = await Fetch.get('/orders')
+        const orders = ordersRes.data?.data || []
+
+        // 🆕 Clientlarni birlashtirish
+        const uniqueClients = getUniqueClients(orders)
+        setClients(uniqueClients)
       } catch (err) {
-        console.error('❌ Mahsulotlarni olishda xato:', err)
-        setMessage({ type: 'error', text: 'Маҳсулотларни юклашда хатолик!' })
+        console.error('❌ Маълумотларни олишда хатолик:', err)
+        setMessage({ type: 'error', text: 'Маълумотларни юклашда хатолик!' })
       } finally {
         setLoading(false)
+        setClientsLoading(false)
       }
     }
-    fetchProducts()
+    fetchData()
   }, [])
+
+  // 🆕 Takroriy clientlarni birlashtirish funksiyasi
+  const getUniqueClients = orders => {
+    const clientMap = new Map()
+
+    orders.forEach(order => {
+      if (!order.client) return
+
+      const clientKey =
+        `${order.client.phoneNumber}-${order.client.fullName}`.toLowerCase()
+
+      if (!clientMap.has(clientKey)) {
+        clientMap.set(clientKey, {
+          ...order.client,
+          orderCount: 1,
+          lastOrderDate: order.createdAt || order.orderDate
+        })
+      } else {
+        const existingClient = clientMap.get(clientKey)
+        clientMap.set(clientKey, {
+          ...existingClient,
+          orderCount: existingClient.orderCount + 1,
+          lastOrderDate:
+            new Date(order.createdAt || order.orderDate) >
+            new Date(existingClient.lastOrderDate)
+              ? order.createdAt || order.orderDate
+              : existingClient.lastOrderDate
+        })
+      }
+    })
+
+    return Array.from(clientMap.values())
+  }
+
+  // 🆕 Mijozlarni filter qilish
+  const filteredClients = clients.filter(client => {
+    const q = clientSearchQuery.toLowerCase()
+    return (
+      q === '' ||
+      client.fullName?.toLowerCase().includes(q) ||
+      client.phoneNumber?.includes(q) ||
+      client.address?.toLowerCase().includes(q)
+    )
+  })
 
   const filteredProducts = products?.filter(p => {
     const q = searchQuery.toLowerCase()
@@ -60,6 +123,16 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   })
 
   const visibleProducts = filteredProducts.slice(0, visibleCount)
+
+  // 🆕 Mijoz tanlash funksiyasi
+  const handleSelectClient = client => {
+    setClientFullName(client.fullName || '')
+    setClientPhoneNumber(client.phoneNumber || '')
+    setClientAddress(client.address || '')
+    setShowClientsList(false)
+    setClientSearchQuery('')
+  }
+
   const handleLoadMore = () => {
     setVisibleCount(prev => Math.min(prev + 10, filteredProducts.length))
   }
@@ -67,7 +140,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   const handleAddProduct = product => {
     if (product.stock === 0) {
       setMessage({ type: 'error', text: 'Бу маҳсулот қолмаган!' })
-      alert('Бу маҳсулот қолмаган!')
+      return
     }
 
     if (
@@ -83,8 +156,6 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
           unit: product.unit || 'дона'
         }
       ])
-    } else {
-      return
     }
   }
 
@@ -162,7 +233,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
       setClientAddress('')
       setSearchQuery('')
       setVisibleCount(30)
-      onClose()
+      setTimeout(() => onClose(), 1500)
     } catch (err) {
       console.error(err)
       setMessage({ type: 'error', text: 'Буюртма яратишда хатолик ❌' })
@@ -211,49 +282,142 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
 
           <form onSubmit={handleSubmit} className='space-y-8'>
             {/* 🧾 Mijoz ma'lumotlari */}
-            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
-              <div>
-                <label className='block text-gray-700 font-medium mb-2'>
-                  Мижоз исми
-                </label>
-                <input
-                  type='text'
-                  value={clientFullName}
-                  onChange={e => setClientFullName(e.target.value)}
-                  placeholder='Масалан: Алижон Тошпулатов'
-                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
-                  required
-                />
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-lg font-semibold text-gray-800 flex items-center gap-2'>
+                  <Users size={20} />
+                  Мижоз маълумотлари
+                </h3>
+                <button
+                  type='button'
+                  onClick={() => setShowClientsList(!showClientsList)}
+                  className='flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition'
+                >
+                  <User size={16} />
+                  {showClientsList ? 'Янги мижоз' : 'Мавжуд мижоз'}
+                </button>
               </div>
 
-              <div>
-                <label className='block text-gray-700 font-medium mb-2'>
-                  Телефон рақами
-                </label>
-                <input
-                  type='text'
-                  value={clientPhoneNumber}
-                  onChange={e => setClientPhoneNumber(e.target.value)}
-                  placeholder='+998901234567'
-                  required
-                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
-                />
-              </div>
+              {showClientsList ? (
+                <div className='space-y-3'>
+                  <div className='relative'>
+                    <input
+                      type='text'
+                      value={clientSearchQuery}
+                      onChange={e => setClientSearchQuery(e.target.value)}
+                      placeholder='Мижоз исми, телефон рақами ёки манзили бўйича қидириш...'
+                      className='border border-gray-300 w-full p-3 rounded-lg pl-10 focus:ring-2 focus:ring-blue-500 outline-none'
+                    />
+                    <Search
+                      className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+                      size={20}
+                    />
+                  </div>
 
-              <div>
-                <label className='block text-gray-700 font-medium mb-2'>
-                  Манзил
-                </label>
-                <input
-                  type='text'
-                  value={clientAddress}
-                  onChange={e => setClientAddress(e.target.value)}
-                  placeholder='Масалан: Тошкент ш., Олмазор тумани'
-                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
-                />
-              </div>
+                  {clientsLoading ? (
+                    <div className='flex justify-center py-4'>
+                      <Loader2
+                        className='animate-spin text-blue-500'
+                        size={24}
+                      />
+                    </div>
+                  ) : filteredClients.length > 0 ? (
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-2 border border-gray-200 rounded-lg bg-gray-50'>
+                      {filteredClients.map((client, index) => (
+                        <button
+                          type='button'
+                          key={`${client.phoneNumber}-${client.fullName}-${index}`}
+                          onClick={() => handleSelectClient(client)}
+                          className='p-3 bg-white border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition text-left'
+                        >
+                          <div className='flex items-center justify-between mb-2'>
+                            <div className='flex items-center gap-2'>
+                              <User size={16} className='text-blue-500' />
+                              <span className='font-medium text-gray-800'>
+                                {client.fullName}
+                              </span>
+                            </div>
+                            <span className='bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full'>
+                              {client.orderCount} та буюртма
+                            </span>
+                          </div>
+
+                          <div className='flex items-center gap-2 text-sm text-gray-600 mb-1'>
+                            <Phone size={14} />
+                            <span>{client.phoneNumber}</span>
+                          </div>
+
+                          {client.address && (
+                            <div className='flex items-center gap-2 text-sm text-gray-600'>
+                              <MapPin size={14} />
+                              <span className='truncate'>{client.address}</span>
+                            </div>
+                          )}
+
+                          <div className='text-xs text-gray-500 mt-2'>
+                            Охирги буюртма:{' '}
+                            {new Date(
+                              client.lastOrderDate
+                            ).toLocaleDateString()}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='text-center py-6 text-gray-500 bg-gray-50 rounded-lg border border-gray-200'>
+                      <User size={32} className='mx-auto mb-2 text-gray-400' />
+                      <p>Мижоз топилмади</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Yangi mijoz formasi
+                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
+                  <div>
+                    <label className='block text-gray-700 font-medium mb-2'>
+                      Мижоз исми *
+                    </label>
+                    <input
+                      type='text'
+                      value={clientFullName}
+                      onChange={e => setClientFullName(e.target.value)}
+                      placeholder='Масалан: Алижон Тошпулатов'
+                      className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-gray-700 font-medium mb-2'>
+                      Телефон рақами *
+                    </label>
+                    <input
+                      type='text'
+                      value={clientPhoneNumber}
+                      onChange={e => setClientPhoneNumber(e.target.value)}
+                      placeholder='+998901234567'
+                      required
+                      className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-gray-700 font-medium mb-2'>
+                      Манзил
+                    </label>
+                    <input
+                      type='text'
+                      value={clientAddress}
+                      onChange={e => setClientAddress(e.target.value)}
+                      placeholder='Масалан: Тошкент ш., Олмазор тумани'
+                      className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Mahsulotlar qidiruv */}
             <div>
               <label className='block text-gray-700 font-medium mb-2'>
                 Маҳсулотларни қидириш
@@ -263,7 +427,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                   type='text'
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder='Қидириш...'
+                  placeholder='Маҳсулот номи ёки ID си бўйича қидириш...'
                   className='border border-gray-300 w-full p-3 rounded-lg pl-10 focus:ring-2 focus:ring-blue-500 outline-none'
                 />
                 <Search
@@ -281,7 +445,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
 
               <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-64 overflow-y-auto p-2 border border-gray-200 rounded-lg bg-gray-50'>
                 {loading ? (
-                  <div className='flex h-[200px] items-center justify-center'>
+                  <div className='flex h-[200px] items-center justify-center col-span-full'>
                     <Loader2 className='animate-spin text-blue-500' size={32} />
                   </div>
                 ) : visibleProducts.length > 0 ? (
@@ -290,19 +454,31 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                       type='button'
                       key={product._id}
                       onClick={() => handleAddProduct(product)}
-                      className='px-4 py-3 bg-white border cursor-pointer border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition text-left'
+                      disabled={product.stock === 0}
+                      className={`px-4 py-3 bg-white border cursor-pointer border-gray-200 rounded-lg transition text-left ${
+                        product.stock === 0
+                          ? 'opacity-50 cursor-not-allowed bg-gray-100'
+                          : 'hover:bg-blue-50 hover:border-blue-300'
+                      }`}
                     >
                       <span className='font-medium text-gray-800'>
                         {product.title}
                       </span>
                       <p className='text-sm text-gray-500'>ID: {product.ID}</p>
-                      <p className='text-sm text-gray-500'>
+                      <p
+                        className={`text-sm ${
+                          product.stock === 0 ? 'text-red-500' : 'text-gray-500'
+                        }`}
+                      >
                         Қолдиқ: {product.stock} {product.unit || 'дона'}
+                      </p>
+                      <p className='text-sm font-medium text-green-600'>
+                        {product.price?.toLocaleString()} сўм
                       </p>
                     </button>
                   ))
                 ) : (
-                  <p className='text-center text-gray-500 py-6'>
+                  <p className='text-center text-gray-500 py-6 col-span-full'>
                     Маҳсулот топилмади
                   </p>
                 )}
@@ -370,7 +546,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                         {item.price.toLocaleString()} сўм
                       </span>
 
-                      {/* ❌ O‘chirish tugmasi */}
+                      {/* ❌ O'chirish tugmasi */}
                       <button
                         type='button'
                         onClick={() =>
@@ -389,7 +565,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {/* Holat va to‘lov */}
+            {/* Holat va to'lov */}
             <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
               <div>
                 <label className='block text-gray-700 font-medium mb-2'>

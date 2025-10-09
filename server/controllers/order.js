@@ -14,7 +14,7 @@ import Order from '../models/order.js'
 import User from '../models/user.js'
 import Product from '../models/product.js'
 import { sendErrorResponse } from '../middlewares/sendErrorResponse.js'
-
+import Stats from '../models/stats.js'
 export const GetOrderStats = async (req, res) => {
   try {
     const { year, month, day } = req.query
@@ -143,7 +143,123 @@ export const GetOrderStats = async (req, res) => {
       }
     }
 
-    // ⚡ Paralel hisoblash (tezlik uchun Promise.all)
+    // 📈 O'sish foizlarini hisoblash
+    const growthRate = (current, prev) => {
+      if (prev === 0 || prev === null || prev === undefined) {
+        return current > 0 ? 100 : 0
+      }
+      return Math.round(((current - prev) / Math.abs(prev)) * 100 * 100) / 100
+    }
+
+    // 🔄 O'tgan oy va yillarni tekshirish va saqlash (ASINXRON - fon jarayoni)
+    const checkAndCreatePastStats = async () => {
+      try {
+        const lastMonth = subMonths(now, 1)
+        const lastYear = subYears(now, 1)
+
+        const statsToCheck = [
+          {
+            year: lastMonth.getFullYear(),
+            month: lastMonth.getMonth(),
+            type: 'month'
+          },
+          { year: lastYear.getFullYear(), month: 0, type: 'year' }
+        ]
+
+        for (const { year, month, type } of statsToCheck) {
+          const exists = await Stats.findOne({
+            'filter.year': year,
+            'filter.month': month + 1
+          })
+
+          if (!exists) {
+            console.log(
+              `📊 O'tgan ${type} statistikasini yaratish: ${year}-${month + 1}`
+            )
+
+            // O'tgan oy statistikasini to'liq hisoblash
+            const monthStart = startOfMonth(new Date(year, month))
+            const monthEnd = endOfMonth(new Date(year, month))
+            const yearStart = startOfYear(new Date(year, 0))
+            const yearEnd = endOfYear(new Date(year, 0))
+            const prevMonthStart = subMonths(monthStart, 1)
+            const prevMonthEnd = subMonths(monthEnd, 1)
+            const prevYearStart = subYears(yearStart, 1)
+            const prevYearEnd = subYears(yearEnd, 1)
+
+            const [monthly, yearly, prevMonth, prevYear] = await Promise.all([
+              calcStats(monthStart, monthEnd),
+              calcStats(yearStart, yearEnd),
+              calcStats(prevMonthStart, prevMonthEnd),
+              calcStats(prevYearStart, prevYearEnd)
+            ])
+
+            // Kunlik statistikani hisoblash (oxirgi kun uchun)
+            const lastDayOfMonth = new Date(year, month + 1, 0).getDate()
+            const dayStart = startOfDay(new Date(year, month, lastDayOfMonth))
+            const dayEnd = endOfDay(new Date(year, month, lastDayOfMonth))
+            const prevDayStart = subDays(dayStart, 1)
+            const prevDayEnd = subDays(dayEnd, 1)
+
+            const [daily, prevDay] = await Promise.all([
+              calcStats(dayStart, dayEnd),
+              calcStats(prevDayStart, prevDayEnd)
+            ])
+
+            // Schema ga mos statistikani yaratish
+            const statsData = {
+              filter: {
+                year: year,
+                month: month + 1
+              },
+              daily: [
+                {
+                  day: lastDayOfMonth,
+                  stats: {
+                    current: daily,
+                    previous: prevDay,
+                    growth: {
+                      revenue: growthRate(daily.revenue, prevDay.revenue),
+                      profit: growthRate(daily.profit, prevDay.profit),
+                      orders: growthRate(daily.totalOrders, prevDay.totalOrders)
+                    }
+                  }
+                }
+              ],
+              monthly: {
+                current: monthly,
+                previous: prevMonth,
+                growth: {
+                  revenue: growthRate(monthly.revenue, prevMonth.revenue),
+                  profit: growthRate(monthly.profit, prevMonth.profit),
+                  orders: growthRate(monthly.totalOrders, prevMonth.totalOrders)
+                }
+              },
+              yearly: {
+                current: yearly,
+                previous: prevYear,
+                growth: {
+                  revenue: growthRate(yearly.revenue, prevYear.revenue),
+                  profit: growthRate(yearly.profit, prevYear.profit),
+                  orders: growthRate(yearly.totalOrders, prevYear.totalOrders)
+                }
+              }
+            }
+
+            await Stats.create(statsData)
+            console.log(
+              `✅ O'tgan ${type} statistikasi yaratildi: ${year}-${month + 1}`
+            )
+          }
+        }
+      } catch (error) {
+        console.error('❌ Oʻtgan statistikani yaratishda xato:', error)
+        // Fon jarayoni - xatolarni foydalanuvchiga ko'rsatmaymiz
+      }
+    }
+
+    // ⚡ ASOSIY LOGIKA - foydalanuvchiga javob qaytarish
+    // Paralel hisoblash (tezlik uchun Promise.all)
     const [daily, monthly, yearly, prevDay, prevMonth, prevYear] =
       await Promise.all([
         calcStats(dayStart, dayEnd),
@@ -154,15 +270,7 @@ export const GetOrderStats = async (req, res) => {
         calcStats(subYears(yearStart, 1), subYears(yearEnd, 1))
       ])
 
-    // 📈 O'sish foizlarini hisoblash
-    const growthRate = (current, prev) => {
-      if (prev === 0 || prev === null || prev === undefined) {
-        return current > 0 ? 100 : 0
-      }
-      return Math.round(((current - prev) / Math.abs(prev)) * 100 * 100) / 100
-    }
-
-    // 🔚 Yakuniy natija
+    // 🔚 Yakuniy natija - ASL KODDAGI FORMATDA
     const result = {
       filter: { year: targetYear, month: targetMonth + 1, day: targetDay },
       daily: {
@@ -194,6 +302,8 @@ export const GetOrderStats = async (req, res) => {
       }
     }
 
+    checkAndCreatePastStats().catch(() => {})
+
     return res.status(200).json(result)
   } catch (error) {
     console.error('❌ GetOrderStats xatosi:', error)
@@ -205,7 +315,7 @@ export const GetOrderStats = async (req, res) => {
 
 export const AllOrders = async (_, res) => {
   try {
-    const orders = await Order.find().sort({ createdAt: 1 })
+    const orders = await Order.find().sort({ createdAt: -1 })
 
     const enrichedOrders = await Promise.all(
       orders.map(async order => {
@@ -324,7 +434,7 @@ export const CancelOrder = async (req, res) => {
     const restoreTasks = canceledOrder.products.map(async item => {
       const product = await Product.findById(item.product)
       if (product) {
-        product.stock += item.amount // shu yerda amount ishlatilayapti
+        product.stock += item.amount
         await product.save()
       }
     })

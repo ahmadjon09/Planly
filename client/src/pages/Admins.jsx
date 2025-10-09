@@ -12,7 +12,11 @@ import { ContextData } from '../contextData/Context'
 
 export const Admins = () => {
   const { user } = useContext(ContextData)
-  const { data, isLoading, error, mutate } = useSWR('/users', Axios)
+  const { data, isLoading, error, mutate } = useSWR('/users', Axios, {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true
+  })
   const Admins = (data?.data?.data || []).filter(user => user.role == 'admin')
 
   const handleDelete = async id => {

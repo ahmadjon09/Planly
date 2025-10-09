@@ -628,13 +628,24 @@ export const StatsPage = () => {
               </div>
             </div>
 
-            <div className='h-40 sm:h-48'>
-              <ResponsiveContainer width='100%' height='100%'>
-                <BarChart data={[combinedChartData[2], combinedChartData[3]]}>
+            <div className='relative h-40 sm:h-48 z-10'>
+              <ResponsiveContainer width='100%' height='100%' className='z-10'>
+                <BarChart
+                  data={combinedChartData?.slice(2, 4) || []}
+                  barCategoryGap='25%'
+                  barGap={4}
+                >
                   <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
                   <XAxis dataKey='name' />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip
+                    wrapperStyle={{
+                      zIndex: 9999,
+                      backgroundColor: '#fff',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    }}
+                  />
                   <Legend />
                   <Bar
                     dataKey='products'
