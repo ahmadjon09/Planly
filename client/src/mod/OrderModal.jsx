@@ -22,7 +22,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   const [customer, setCustomer] = useState(user._id)
   const [status, setStatus] = useState('Янги')
   const [payType, setPayType] = useState('--')
-  const [totalPrice, setTotalPrice] = useState('0')
+  const [totalPrice, setTotalPrice] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [visibleCount, setVisibleCount] = useState(30)
   const [loading, setLoading] = useState(false)

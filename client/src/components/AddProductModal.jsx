@@ -6,7 +6,13 @@ import { ContextData } from '../contextData/Context'
 export default function AddProductModal ({ open, setOpen, mutate }) {
   const { setOpenX, user } = useContext(ContextData)
   const [products, setProducts] = useState([
-    { title: '', price: 0, stock: 1, unit: 'дона' }
+    {
+      title: '',
+      price: 0,
+      stock: 1,
+      unit: 'дона',
+      from: { phoneNumber: '', address: '', name: '' }
+    }
   ])
   const [loading, setLoading] = useState(false)
 
@@ -27,8 +33,23 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
     setProducts(newProducts)
   }
 
+  const handleFromChange = (i, field, value) => {
+    const newProducts = [...products]
+    newProducts[i].from[field] = value
+    setProducts(newProducts)
+  }
+
   const addRow = () =>
-    setProducts([...products, { title: '', price: '', stock: 1, unit: 'дона' }])
+    setProducts([
+      ...products,
+      {
+        title: '',
+        price: 0,
+        stock: 1,
+        unit: 'дона',
+        from: { phoneNumber: '', address: '', name: '' }
+      }
+    ])
 
   const removeRow = i => setProducts(products.filter((_, idx) => idx !== i))
 
@@ -38,7 +59,15 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
       await Fetch.post('/products/create', products)
       mutate()
       setOpen(false)
-      setProducts([{ title: '', price: 0, stock: 1, unit: 'дона' }])
+      setProducts([
+        {
+          title: '',
+          price: 0,
+          stock: 1,
+          unit: 'дона',
+          from: { phoneNumber: '', address: '', name: '' }
+        }
+      ])
     } catch (e) {
       console.error(e)
     } finally {
@@ -50,7 +79,7 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
 
   return (
     <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-[99] px-3 sm:px-6'>
-      <div className='bg-white w-full max-w-4xl rounded-2xl shadow-lg p-5 sm:p-8 space-y-6 relative max-h-[90vh] overflow-y-auto'>
+      <div className='bg-white w-full max-w-5xl rounded-2xl shadow-lg p-5 sm:p-8 space-y-6 relative max-h-[90vh] overflow-y-auto'>
         <button
           onClick={() => setOpen(false)}
           className='absolute right-4 top-4 text-gray-600 hover:text-black transition'
@@ -62,11 +91,11 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
           🆕 Янги маҳсулот(лар) қўшиш
         </h2>
 
-        <div className='space-y-4'>
+        <div className='space-y-5'>
           {products.map((p, i) => (
             <div
               key={i}
-              className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 border-b pb-3'
+              className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-b pb-4'
             >
               {/* Номи */}
               <div>
@@ -124,7 +153,7 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
               </div>
 
               {/* Бирлик */}
-              <div className='md:col-span-1'>
+              <div>
                 <label className='text-sm font-medium'>Бирлик</label>
                 <select
                   value={p.unit}
@@ -139,8 +168,62 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
                 </select>
               </div>
 
-              {/* Ўчириш tugmasi */}
-              <div className='flex sm:col-span-2 md:col-span-3 mt-1'>
+              {/* 🧾 Маълумот: FROM */}
+              <div className='sm:col-span-2 md:col-span-3 border-t pt-3'>
+                <h3 className='text-sm font-semibold mb-2 text-gray-700'>
+                  Келган жой ҳақида маълумот
+                </h3>
+
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                  <div>
+                    <label className='text-xs font-medium text-gray-600'>
+                      Исм / Номи
+                    </label>
+                    <input
+                      type='text'
+                      value={p.from.name}
+                      onChange={e =>
+                        handleFromChange(i, 'name', e.target.value)
+                      }
+                      className='border rounded px-3 py-2 w-full text-sm'
+                      placeholder='Масалан: Аҳмаджон'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='text-xs font-medium text-gray-600'>
+                      Телефон рақам
+                    </label>
+                    <input
+                      type='text'
+                      value={p.from.phoneNumber}
+                      onChange={e =>
+                        handleFromChange(i, 'phoneNumber', e.target.value)
+                      }
+                      className='border rounded px-3 py-2 w-full text-sm'
+                      placeholder='+998 90 123 45 67'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='text-xs font-medium text-gray-600'>
+                      Манзил
+                    </label>
+                    <input
+                      type='text'
+                      value={p.from.address}
+                      onChange={e =>
+                        handleFromChange(i, 'address', e.target.value)
+                      }
+                      className='border rounded px-3 py-2 w-full text-sm'
+                      placeholder='Наманган, Юнусобод...'
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Ўчириш */}
+              <div className='flex sm:col-span-2 md:col-span-3 mt-2'>
                 {products.length > 1 && (
                   <button
                     onClick={() => removeRow(i)}

@@ -36,7 +36,7 @@ const OrderSchema = new mongoose.Schema({
   },
   status: { type: String, required: true },
   payType: { type: String, default: '--' },
-  totalPrice: { type: Number, required: true },
+  totalPrice: { type: Number, default: 0 },
   orderDate: {
     type: Date,
     default: Date.now

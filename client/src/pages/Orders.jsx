@@ -20,6 +20,7 @@ import {
 import Fetch from '../middlewares/fetcher'
 import { AddNewOrder } from '../mod/OrderModal'
 import { ContextData } from '../contextData/Context'
+import { LoadingState } from '../components/loading-state'
 
 export const ViewOrders = () => {
   const { data, error, isLoading, mutate } = useSWR('/orders', Fetch, {
@@ -100,8 +101,13 @@ export const ViewOrders = () => {
     }
   }
 
-  if (isLoading)
-    return <div className='text-center mt-10 text-gray-700'>Юкланмоқда...</div>
+  if (isLoading) {
+    return (
+      <div className='flex justify-center items-center h-screen text-lg text-gray-600'>
+        <LoadingState />
+      </div>
+    )
+  }
 
   if (error)
     return (

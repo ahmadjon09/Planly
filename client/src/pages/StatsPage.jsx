@@ -24,6 +24,7 @@ import {
   LineChart,
   Line
 } from 'recharts'
+import { LoadingState } from '../components/loading-state'
 
 export const StatsPage = () => {
   const [stats, setStats] = useState(null)
@@ -141,8 +142,7 @@ export const StatsPage = () => {
   if (loading) {
     return (
       <div className='flex justify-center items-center h-screen text-lg text-gray-600'>
-        <Loader2 className='mr-2 text-blue-500 animate-spin w-8 h-8' />{' '}
-        Юкланмоқда...
+        <LoadingState />
       </div>
     )
   }
