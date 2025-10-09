@@ -16,8 +16,9 @@ export const ContextProvider = ({ children }) => {
   const [deviceId, setDeviceId] = useState(null)
   const [autoPrint, setAutoPrint] = useState(false)
   const setUserToken = token => {
-    Cookies.set('user_token', token, { expires: 365 })
+    Cookies.set('user_token', token)
   }
+
   const removeUserToken = () => {
     Cookies.remove('user_token')
   }
