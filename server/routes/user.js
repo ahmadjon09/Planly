@@ -13,8 +13,8 @@ import IsAdmin from '../middlewares/IsAdmin.js'
 
 const router = express.Router()
 
-// router.post('/register', isExisted, RegisterUser)
-router.post('/register', RegisterUser) // First user
+router.post('/register', isExisted, RegisterUser)
+// router.post('/register', RegisterUser) // First user
 router.post('/login', LoginUser)
 router.get('/', isExisted, GetAllUsers)
 router.get('/me', isExisted, getMe)
