@@ -506,7 +506,7 @@ export const ProductsPage = () => {
             </div>
 
             {/* Saqlash tugmasi - faqat admin uchun */}
-            {user.role === 'admin' && editing[viewData._id] && (
+            {editing[viewData._id] && (
               <div className='mt-6 pt-4 border-t flex justify-end'>
                 <button
                   onClick={() => handleSave(viewData._id)}
