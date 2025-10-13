@@ -124,7 +124,6 @@ export const ProductsPage = () => {
           {user.role !== 'admin' && (
             <span className='text-sm font-normal bg-blue-100 text-blue-700 px-2 py-1 rounded-full flex items-center gap-1'>
               <Shield size={14} />
-              Фақат кўриш
             </span>
           )}
         </h1>
@@ -181,9 +180,7 @@ export const ProductsPage = () => {
                 <th className='px-4 py-3'>Миқдори</th>
                 <th className='px-4 py-3'>Бирлик</th>
                 <th className='px-4 py-3'>Яратилган сана</th>
-                {user.role === 'admin' && (
-                  <th className='px-4 py-3 text-center'>Амалиёт</th>
-                )}
+                <th className='px-4 py-3 text-center'>Амалиёт</th>
               </tr>
             </thead>
             <tbody className='text-sm'>
@@ -226,7 +223,6 @@ export const ProductsPage = () => {
                         onChange={e =>
                           handleChange(p._id, 'stock', Number(e.target.value))
                         }
-                        disabled={user.role !== 'admin'}
                       />
                     </td>
 
@@ -238,7 +234,6 @@ export const ProductsPage = () => {
                           handleChange(p._id, 'unit', e.target.value)
                         }
                         className='border rounded px-2 py-1 w-28'
-                        disabled={user.role !== 'admin'}
                       >
                         {availableUnits.map(u => (
                           <option key={u} value={u}>
@@ -253,32 +248,32 @@ export const ProductsPage = () => {
                     </td>
 
                     {/* Amaliyotlar - faqat admin uchun */}
-                    {user.role === 'admin' && (
-                      <td className='px-4 py-3 flex items-center gap-2 justify-center'>
-                        {/* 👁️ View */}
+                    <td className='px-4 py-3 flex items-center gap-2 justify-center'>
+                      {/* 👁️ View */}
+                      <button
+                        onClick={() => setViewData(p)}
+                        className='flex items-center gap-2 bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600'
+                      >
+                        <Eye size={16} />
+                        Кўриш
+                      </button>
+
+                      {isEdited && (
                         <button
-                          onClick={() => setViewData(p)}
-                          className='flex items-center gap-2 bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600'
+                          onClick={() => handleSave(p._id)}
+                          disabled={loading === p._id}
+                          className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
                         >
-                          <Eye size={16} />
-                          Кўриш
+                          {loading === p._id ? (
+                            <Loader2 className='animate-spin' size={16} />
+                          ) : (
+                            <Save size={16} />
+                          )}
+                          Сақлаш
                         </button>
+                      )}
 
-                        {isEdited && (
-                          <button
-                            onClick={() => handleSave(p._id)}
-                            disabled={loading === p._id}
-                            className='flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50'
-                          >
-                            {loading === p._id ? (
-                              <Loader2 className='animate-spin' size={16} />
-                            ) : (
-                              <Save size={16} />
-                            )}
-                            Сақлаш
-                          </button>
-                        )}
-
+                      {user.role === 'admin' && (
                         <button
                           onClick={() => handleDelete(p._id)}
                           disabled={deleting === p._id}
@@ -291,8 +286,8 @@ export const ProductsPage = () => {
                           )}
                           Ўчириш
                         </button>
-                      </td>
-                    )}
+                      )}
+                    </td>
                   </tr>
                 )
               })}
