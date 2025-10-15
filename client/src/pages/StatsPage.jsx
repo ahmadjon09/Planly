@@ -81,46 +81,46 @@ export const StatsPage = () => {
   // Combined chart data for multiple metrics, including previous year for yearly
   const combinedChartData = stats
     ? [
-        {
-          name: 'Кунлик',
-          products: stats.daily.current.totalProducts,
-          stock:
-            stats.daily.current.totalStock ||
-            stats.daily.current.totalStockValue,
-          price: stats.daily.current.totalPrice || stats.daily.current.revenue,
-          profit: stats.daily.current.profit
-        },
-        {
-          name: 'Ойлик',
-          products: stats.monthly.current.totalProducts,
-          stock:
-            stats.monthly.current.totalStock ||
-            stats.monthly.current.totalStockValue,
-          price:
-            stats.monthly.current.totalPrice || stats.monthly.current.revenue,
-          profit: stats.monthly.current.profit
-        },
-        {
-          name: 'Йиллик (Жорий)',
-          products: stats.yearly.current.totalProducts,
-          stock:
-            stats.yearly.current.totalStock ||
-            stats.yearly.current.totalStockValue,
-          price:
-            stats.yearly.current.totalPrice || stats.yearly.current.revenue,
-          profit: stats.yearly.current.profit
-        },
-        {
-          name: 'Йиллик (Олдинги)',
-          products: stats.yearly.previous.totalProducts,
-          stock:
-            stats.yearly.previous.totalStock ||
-            stats.yearly.previous.totalStockValue,
-          price:
-            stats.yearly.previous.totalPrice || stats.yearly.previous.revenue,
-          profit: stats.yearly.previous.profit
-        }
-      ]
+      {
+        name: 'Кунлик',
+        products: stats.daily.current.totalProducts,
+        stock:
+          stats.daily.current.totalStock ||
+          stats.daily.current.totalStockValue,
+        price: stats.daily.current.totalPrice || stats.daily.current.revenue,
+        profit: stats.daily.current.profit
+      },
+      {
+        name: 'Ойлик',
+        products: stats.monthly.current.totalProducts,
+        stock:
+          stats.monthly.current.totalStock ||
+          stats.monthly.current.totalStockValue,
+        price:
+          stats.monthly.current.totalPrice || stats.monthly.current.revenue,
+        profit: stats.monthly.current.profit
+      },
+      {
+        name: 'Йиллик (Жорий)',
+        products: stats.yearly.current.totalProducts,
+        stock:
+          stats.yearly.current.totalStock ||
+          stats.yearly.current.totalStockValue,
+        price:
+          stats.yearly.current.totalPrice || stats.yearly.current.revenue,
+        profit: stats.yearly.current.profit
+      },
+      {
+        name: 'Йиллик (Олдинги)',
+        products: stats.yearly.previous.totalProducts,
+        stock:
+          stats.yearly.previous.totalStock ||
+          stats.yearly.previous.totalStockValue,
+        price:
+          stats.yearly.previous.totalPrice || stats.yearly.previous.revenue,
+        profit: stats.yearly.previous.profit
+      }
+    ]
     : []
 
   // Function to render growth percentage with arrow
