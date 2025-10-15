@@ -17,7 +17,9 @@ import {
   MapPin,
   Phone,
   User,
-  Shield
+  Shield,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import AddProductModal from '../components/AddProductModal'
@@ -41,6 +43,7 @@ export const ProductsPage = () => {
   const [searchID, setSearchID] = useState('')
   const [searchTitle, setSearchTitle] = useState('')
   const [searchDate, setSearchDate] = useState('')
+  const [readyFilter, setReadyFilter] = useState('all') // 'all', 'ready', 'not-ready'
 
   const availableUnits = [
     'дона',
@@ -82,20 +85,27 @@ export const ProductsPage = () => {
     }
   }
 
-  const handleDelete = async id => {
-    if (!confirm('Ростдан ҳам ушбу маҳсулотни ўчирмоқчимисиз?')) return
+  const handleDelete = async (id, title) => {
+    const confirmMessage = `🗑️ Сиз ростдан ҳам "${title}" маҳсулотини ўчирмоқчимисиз?\n\nБу амални кейин тиклаб бўлмайди. Давом этасизми?`
+    const confirmed = window.confirm(confirmMessage)
+    if (!confirmed) return
+
     try {
       setDeleting(id)
+
+      // API orqali ўчириш
       await Fetch.delete(`/products/${id}`)
       mutate()
-      alert('✅ Маҳсулот ўчирилди')
+
+      alert('✅ Маҳсулот муваффақиятли ўчирилди.')
     } catch (err) {
       console.error('Delete error:', err)
-      alert('❌ Ўчиришда хатолик юз берди')
+      alert('❌ Ўчириш жараёнида хатолик юз берди.')
     } finally {
       setDeleting(null)
     }
   }
+
 
   const filteredProducts =
     data?.data.data.filter(p => {
@@ -112,6 +122,12 @@ export const ProductsPage = () => {
       if (searchDate) {
         const createdDate = new Date(p.createdAt).toISOString().split('T')[0]
         match = match && createdDate === searchDate
+      }
+      // Tayyorlik holatiga qarab filtrlash
+      if (readyFilter === 'ready') {
+        match = match && p.ready === true
+      } else if (readyFilter === 'not-ready') {
+        match = match && p.ready === false
       }
       return match
     }) || []
@@ -159,6 +175,17 @@ export const ProductsPage = () => {
           onChange={e => setSearchDate(e.target.value)}
           className='border rounded px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none'
         />
+
+        {/* Tayyor mahsulotlar filteri */}
+        <select
+          value={readyFilter}
+          onChange={e => setReadyFilter(e.target.value)}
+          className='border rounded px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none'
+        >
+          <option value="all">Ҳамма маҳсулотлар</option>
+          <option value="ready">Тайёр маҳсулотлар</option>
+          <option value="not-ready">Тайёр бўлмаган маҳсулотлар</option>
+        </select>
       </div>
 
       {isLoading ? (
@@ -179,6 +206,7 @@ export const ProductsPage = () => {
                 <th className='px-4 py-3'>Нархи</th>
                 <th className='px-4 py-3'>Миқдори</th>
                 <th className='px-4 py-3'>Бирлик</th>
+                <th className='px-4 py-3'>Ҳолати</th>
                 <th className='px-4 py-3'>Яратилган сана</th>
                 <th className='px-4 py-3 text-center'>Амалиёт</th>
               </tr>
@@ -243,13 +271,39 @@ export const ProductsPage = () => {
                       </select>
                     </td>
 
+                    {/* Tayyorlik holati - faqat admin uchun tahrirlash */}
+                    <td className='px-4 py-3'>
+                      {user.role === 'admin' ? (
+                        <select
+                          defaultValue={p.ready ? 'true' : 'false'}
+                          onChange={e =>
+                            handleChange(p._id, 'ready', e.target.value === 'true')
+                          }
+                          className='border rounded px-2 py-1'
+                        >
+                          <option value="true">Тайёр</option>
+                          <option value="false">Тайёр эмас</option>
+                        </select>
+                      ) : (
+                        <span className={`flex items-center gap-1 ${p.ready ? 'text-green-600' : 'text-red-600'}`}>
+                          {p.ready ? (
+                            <>
+                              <CheckCircle size={16} /> Тайёр
+                            </>
+                          ) : (
+                            <>
+                              <XCircle size={16} /> Тайёр эмас
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </td>
+
                     <td className='px-4 py-3'>
                       {new Date(p.createdAt).toLocaleDateString()}
                     </td>
 
-                    {/* Amaliyotlar - faqat admin uchun */}
                     <td className='px-4 py-3 flex items-center gap-2 justify-center'>
-                      {/* 👁️ View */}
                       <button
                         onClick={() => setViewData(p)}
                         className='flex items-center gap-2 bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600'
@@ -275,7 +329,7 @@ export const ProductsPage = () => {
 
                       {user.role === 'admin' && (
                         <button
-                          onClick={() => handleDelete(p._id)}
+                          onClick={() => handleDelete(p._id, p.title)}
                           disabled={deleting === p._id}
                           className='flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50'
                         >
@@ -300,7 +354,6 @@ export const ProductsPage = () => {
         <AddProductModal open={open} setOpen={setOpen} mutate={mutate} />
       )}
 
-      {/* 🪟 VIEW/EDIT MODAL */}
       {viewData && (
         <div
           onClick={() => setViewData(null)}
@@ -408,6 +461,37 @@ export const ProductsPage = () => {
                 )}
               </div>
 
+              {/* Tayyorlik holati - faqat admin uchun tahrirlash */}
+              <div className='flex items-center gap-2'>
+                {user.role === 'admin' ? (
+                  <>
+                    <b>Ҳолати:</b>
+                    <select
+                      defaultValue={viewData.ready ? 'true' : 'false'}
+                      onChange={e =>
+                        handleChange(viewData._id, 'ready', e.target.value === 'true')
+                      }
+                      className='border rounded px-2 py-1 ml-2'
+                    >
+                      <option value="true">Тайёр</option>
+                      <option value="false">Тайёр эмас</option>
+                    </select>
+                  </>
+                ) : (
+                  <span className={`flex items-center gap-1 ${viewData.ready ? 'text-green-600' : 'text-red-600'}`}>
+                    {viewData.ready ? (
+                      <>
+                        <CheckCircle size={16} /> <b>Ҳолати:</b> Тайёр
+                      </>
+                    ) : (
+                      <>
+                        <XCircle size={16} /> <b>Ҳолати:</b> Тайёр эмас
+                      </>
+                    )}
+                  </span>
+                )}
+              </div>
+
               {/* Kelgan joy haqida ma'lumotlarni tahrirlash - faqat admin uchun */}
               <div className='border-t pt-2 mt-3'>
                 <p className='font-semibold text-gray-700 mb-1'>
@@ -500,7 +584,6 @@ export const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Saqlash tugmasi - faqat admin uchun */}
             {editing[viewData._id] && (
               <div className='mt-6 pt-4 border-t flex justify-end'>
                 <button

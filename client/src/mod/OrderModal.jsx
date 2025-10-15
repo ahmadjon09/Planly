@@ -27,7 +27,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   const [customer, setCustomer] = useState(user._id)
   const [status, setStatus] = useState('Янги')
   const [payType, setPayType] = useState('--')
-  const [totalPrice, setTotalPrice] = useState('')
+  const [totalPrice, setTotalPrice] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [clientSearchQuery, setClientSearchQuery] = useState('') // 🆕 Mijoz qidiruv
   const [visibleCount, setVisibleCount] = useState(30)
@@ -92,7 +92,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
           orderCount: existingClient.orderCount + 1,
           lastOrderDate:
             new Date(order.createdAt || order.orderDate) >
-            new Date(existingClient.lastOrderDate)
+              new Date(existingClient.lastOrderDate)
               ? order.createdAt || order.orderDate
               : existingClient.lastOrderDate
         })
@@ -152,7 +152,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
         {
           ...product,
           quantity: 1,
-          price: product.price || 0,
+          price: product.price,
           unit: product.unit || 'дона'
         }
       ])
@@ -164,14 +164,20 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
       prev.map(p =>
         p._id === id
           ? {
-              ...p,
-              quantity: Math.max(1, Math.min(p.stock, p.quantity + delta))
-            }
+            ...p,
+            quantity: Math.max(1, Math.min(p.stock, p.quantity + delta))
+          }
           : p
       )
     )
   }
-
+  useEffect(() => {
+    const total = selectedProducts.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    )
+    setTotalPrice(total)
+  }, [selectedProducts])
   const handleInputQuantityChange = (id, value) => {
     setSelectedProducts(prev =>
       prev.map(p => {
@@ -265,11 +271,10 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
 
           {message && (
             <div
-              className={`flex items-center gap-2 mb-4 p-3 rounded-md ${
-                message.type === 'success'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-              }`}
+              className={`flex items-center gap-2 mb-4 p-3 rounded-md ${message.type === 'success'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-red-100 text-red-700'
+                }`}
             >
               {message.type === 'success' ? (
                 <CheckCircle size={20} />
@@ -328,7 +333,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                           type='button'
                           key={`${client.phoneNumber}-${client.fullName}-${index}`}
                           onClick={() => handleSelectClient(client)}
-                          className='p-3 bg-white border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition text-left'
+                          className='p-3 cursor-pointer bg-white border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition text-left'
                         >
                           <div className='flex items-center justify-between mb-2'>
                             <div className='flex items-center gap-2'>
@@ -455,20 +460,18 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                       key={product._id}
                       onClick={() => handleAddProduct(product)}
                       disabled={product.stock === 0}
-                      className={`px-4 py-3 bg-white border cursor-pointer border-gray-200 rounded-lg transition text-left ${
-                        product.stock === 0
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100'
-                          : 'hover:bg-blue-50 hover:border-blue-300'
-                      }`}
+                      className={`px-4 py-3 bg-white border cursor-pointer border-gray-200 rounded-lg transition text-left ${product.stock === 0
+                        ? 'opacity-50 cursor-not-allowed bg-gray-100'
+                        : 'hover:bg-blue-50 hover:border-blue-300'
+                        }`}
                     >
                       <span className='font-medium text-gray-800'>
                         {product.title}
                       </span>
                       <p className='text-sm text-gray-500'>ID: {product.ID}</p>
                       <p
-                        className={`text-sm ${
-                          product.stock === 0 ? 'text-red-500' : 'text-gray-500'
-                        }`}
+                        className={`text-sm ${product.stock === 0 ? 'text-red-500' : 'text-gray-500'
+                          }`}
                       >
                         Қолдиқ: {product.stock} {product.unit || 'дона'}
                       </p>
@@ -543,10 +546,9 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                       </span>
 
                       <span className='w-[150px] text-gray-600 font-medium'>
-                        {item.price.toLocaleString()} сўм
+                        x {item.price.toLocaleString()} сўм
                       </span>
 
-                      {/* ❌ O'chirish tugmasi */}
                       <button
                         type='button'
                         onClick={() =>
@@ -565,7 +567,6 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {/* Holat va to'lov */}
             <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
               <div>
                 <label className='block text-gray-700 font-medium mb-2'>
@@ -599,20 +600,22 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                 </select>
               </div>
 
-              {user.role === 'admin' && (
-                <div>
-                  <label className='block text-gray-700 font-medium mb-2'>
-                    Умумий нарх
-                  </label>
-                  <input
-                    type='number'
-                    value={totalPrice}
-                    onChange={e => setTotalPrice(e.target.value)}
-                    className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
-                    placeholder='Масалан: 1200000'
-                  />
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center shadow-sm hover:shadow-md transition">
+                <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                  Умумий нарх
+                </label>
+
+                <div className="flex items-center justify-center gap-2">
+                  <p className="text-green-600 text-2xl font-extrabold tracking-wide">
+                    {totalPrice.toLocaleString()} сўм
+                  </p>
+                  <CheckCircle className="text-green-500" size={22} />
                 </div>
-              )}
+
+                <p className="text-sm text-gray-500 mt-1">Автоматик ҳисобланади</p>
+              </div>
+
+
             </div>
 
             {/* Submit */}

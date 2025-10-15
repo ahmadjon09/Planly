@@ -69,7 +69,6 @@ export const ViewOrders = () => {
     return Object.values(clientMap)
   }, [orders])
 
-  // Mijozlarni filter qilish
   const filteredClients = useMemo(() => {
     return clients.filter(client => {
       const phoneMatch = client.phoneNumber
@@ -83,14 +82,13 @@ export const ViewOrders = () => {
     })
   }, [clients, searchPhone, searchName])
 
-  // Tanlangan mijozning buyurtmalarini filter qilish
   const filteredClientOrders = useMemo(() => {
     if (!selectedClient) return []
 
     return selectedClient.orders.filter(order => {
       const dateMatch = searchDate
         ? new Date(order.orderDate).toLocaleDateString() ===
-          new Date(searchDate).toLocaleDateString()
+        new Date(searchDate).toLocaleDateString()
         : true
       return dateMatch
     })
@@ -125,19 +123,24 @@ export const ViewOrders = () => {
     }
   }
 
-  const handleDelete = async id => {
-    if (!confirm('Ростдан ҳам ушбу буюртмани ўчирмоқчимисиз?')) return
+  const handleDelete = async (id, title) => {
+    const confirmMessage = `⚠️ Сиз ростдан ҳам буюртмасини бекор қилмоқчимисиз?\n\nБу амални кейин тиклаб бўлмайди!`
+    const confirmed = window.confirm(confirmMessage)
+    if (!confirmed) return
+
     try {
       setDeleting(id)
-      await Fetch.delete(`/orders/${id}`)
+      await Fetch.put(`/orders/${id}`)
       mutate()
+      alert('✅ Буюртма муваффақиятли бекор қилинди.')
     } catch (err) {
-      console.error('Delete error:', err)
-      alert('❌ Ўчиришда хатолик юз берди')
+      console.error('Cancel error:', err)
+      alert('❌ Буюртмани бекор қилишда хатолик юз берди.')
     } finally {
       setDeleting(null)
     }
   }
+
 
   if (isLoading) {
     return (
@@ -156,15 +159,14 @@ export const ViewOrders = () => {
 
   return (
     <div className='container mx-auto p-6 space-y-6'>
-      {/* Header */}
       <div className='w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6'>
-        <h1 className='text-2xl font-bold flex items-center gap-2'>
+        <h1 className='text-2xl font-bold flex items-center gap-2 flex-wrap'>
           {selectedClient ? (
             <button
               onClick={() => setSelectedClient(null)}
-              className='flex items-center gap-2 text-blue-500 hover:text-blue-700'
+              className='flex items-center cursor-pointer gap-1 text-blue-500 hover:text-blue-700'
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={24} /> Орқага
             </button>
           ) : (
             <ScrollText size={30} />
@@ -181,7 +183,6 @@ export const ViewOrders = () => {
         </button>
       </div>
 
-      {/* 🔍 Search inputlar */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl shadow-sm'>
         <div className='flex items-center gap-2'>
           <Phone size={18} className='text-gray-500' />
@@ -216,7 +217,6 @@ export const ViewOrders = () => {
         )}
       </div>
 
-      {/* Mijozlar ro'yxati */}
       {!selectedClient && (
         <>
           {filteredClients.length === 0 ? (
@@ -276,7 +276,6 @@ export const ViewOrders = () => {
         </>
       )}
 
-      {/* Mijozning buyurtmalari */}
       {selectedClient && (
         <>
           {filteredClientOrders.length === 0 ? (
@@ -314,7 +313,7 @@ export const ViewOrders = () => {
                         <td className='px-4 py-3'>{order.status || '—'}</td>
 
                         <td className='px-4 py-3 flex gap-0.5 flex-wrap'>
-                          {user.role === 'admin' ? (
+                          {user.role === 'admin@' ? (
                             <input
                               type='number'
                               value={
@@ -332,7 +331,7 @@ export const ViewOrders = () => {
                               className='border rounded px-2 py-1 w-28 text-right'
                             />
                           ) : (
-                            <p>{order.totalPrice.toLocaleString()}</p>
+                            <b>{order.totalPrice.toLocaleString()}</b>
                           )}
                           сўм
                         </td>
@@ -391,7 +390,6 @@ export const ViewOrders = () => {
         </>
       )}
 
-      {/* Order Detail Modal */}
       {selectedOrder && (
         <div
           onClick={() => setSelectedOrder(null)}
@@ -411,7 +409,6 @@ export const ViewOrders = () => {
               📦 Буюртма маълумотлари
             </h2>
 
-            {/* Mijoz ma’lumotlari */}
             <div className='space-y-3 text-gray-700'>
               <div className='flex items-center gap-2'>
                 <User className='text-blue-600' size={20} />
@@ -435,11 +432,10 @@ export const ViewOrders = () => {
               </div>
             </div>
 
-            {/* Mahsulotlar */}
             <div className='mt-6'>
               <div className='flex items-center gap-2 mb-3'>
                 <ShoppingCart className='text-purple-600' size={20} />
-                <h3 className='font-semibold text-lg'>Маҳсулотлар</h3>
+                <h3 className='font-semibold text-lg'>Маҳсулот(лар)</h3>
               </div>
               <ul className='space-y-2 bg-gray-50 rounded-lg p-3 border border-gray-200'>
                 {selectedOrder.products.map((p, i) => (
@@ -456,7 +452,6 @@ export const ViewOrders = () => {
               </ul>
             </div>
 
-            {/* Qo‘shimcha ma’lumotlar */}
             <div className='mt-6 space-y-2 text-gray-700'>
               <p>
                 <b>Ҳолат:</b> {selectedOrder.status}

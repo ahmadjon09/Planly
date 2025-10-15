@@ -11,6 +11,7 @@ const ProductSchema = new mongoose.Schema(
       enum: ['дона', 'кг', 'метр', 'литр', 'м²', 'м³', 'сет', 'упаковка'],
       default: 'дона'
     },
+    ready: { type: Boolean, default: false },
     from: {
       phoneNumber: { type: String },
       address: { type: String },
