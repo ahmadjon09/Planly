@@ -107,7 +107,7 @@ export const ViewOrders = () => {
   const handleSave = async id => {
     try {
       setLoading(id)
-      await Fetch.delete(`/orders/${id}`, editing[id])
+      await Fetch.put(`/orders/${id}`, editing[id])
       setEditing(prev => {
         const copy = { ...prev }
         delete copy[id]
@@ -130,7 +130,7 @@ export const ViewOrders = () => {
 
     try {
       setDeleting(id)
-      await Fetch.put(`/orders/${id}`)
+      await Fetch.delete(`/orders/${id}`)
       mutate()
       alert('✅ Буюртма муваффақиятли бекор қилинди.')
     } catch (err) {
