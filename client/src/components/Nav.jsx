@@ -11,7 +11,9 @@ import {
   UserPlus2Icon,
   Boxes,
   BarChart3,
-  ReceiptText
+  ReceiptText,
+  Settings,
+  Code2
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { ContextData } from '../contextData/Context'
@@ -23,6 +25,7 @@ export const Nav = () => {
   const data = user
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef(null)
+  const [api, setApi] = useState("")
   const location = useLocation()
 
   const navLinks = [
@@ -36,22 +39,22 @@ export const Nav = () => {
     },
     ...(user.role === 'admin'
       ? [
-          {
-            name: 'Статистика',
-            path: '/static',
-            icon: <BarChart3 size={18} />
-          },
-          {
-            name: 'Янги ходим',
-            path: '/user',
-            icon: <UserPlus2Icon size={18} />
-          }
-        ]
+        {
+          name: 'Статистика',
+          path: '/static',
+          icon: <BarChart3 size={18} />
+        },
+        {
+          name: 'Янги ходим',
+          path: '/user',
+          icon: <UserPlus2Icon size={18} />
+        }
+      ]
       : [])
   ]
 
   useEffect(() => {
-    function handleClickOutside (event) {
+    function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false)
       }
@@ -63,11 +66,16 @@ export const Nav = () => {
     }
   }, [])
 
-  function handleLogout () {
+  function handleLogout() {
     if (!window.confirm('Админ сифатида чиқишни хоҳлайсизми?')) return
     removeUserToken()
     window.location.href = '/'
   }
+
+  useEffect(() => {
+    setApi(localStorage.getItem("base_api") || "")
+  }, [])
+
 
   return (
     <nav className='w-full fixed top-0 left-0 h-[60px] z-[99] bg-gradient-to-r from-blue-700 to-blue-600 shadow-md'>
@@ -78,10 +86,9 @@ export const Nav = () => {
               key={link.path}
               to={link.path}
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5
-                ${
-                  location.pathname === link.path
-                    ? 'bg-blue-800 text-white'
-                    : 'text-blue-100 hover:bg-blue-800/50 hover:text-white'
+                ${location.pathname === link.path
+                  ? 'bg-blue-800 text-white'
+                  : 'text-blue-100 hover:bg-blue-800/50 hover:text-white'
                 }`}
             >
               {link.icon}
@@ -110,9 +117,8 @@ export const Nav = () => {
               </span>
               <ChevronDown
                 size={16}
-                className={`transition-transform duration-300 ${
-                  showDropdown ? 'rotate-180' : ''
-                }`}
+                className={`transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''
+                  }`}
               />
             </div>
 
@@ -133,7 +139,33 @@ export const Nav = () => {
                       {data.role}
                     </p>
                   </div>
+                  {user.role === "admin" && <div className="relative group">
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2">
+                      <Code2 size={14} />
+                      API
+                    </button>
 
+                    <div className="absolute -left-full top-full mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                      <a
+                        href={`${api}/health`}
+                        className='block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50'
+                      >
+                        Server health
+                      </a>
+                      <a
+                        href={`${api}/system`}
+                        className='block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50'
+                      >
+                        Server system
+                      </a>
+                      <a
+                        href={`${api}/about`}
+                        className='block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50'
+                      >
+                        API routes
+                      </a>
+                    </div>
+                  </div>}
                   <Link
                     to={`/user/edit/${data._id}`}
                     className='w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2'
@@ -176,10 +208,9 @@ export const Nav = () => {
                   to={link.path}
                   onClick={() => setIsOpen(false)}
                   className={`flex items-center gap-2 py-2 px-3 rounded-md transition-colors
-                    ${
-                      location.pathname === link.path
-                        ? 'bg-blue-700 text-white'
-                        : 'hover:bg-blue-700/70 text-blue-100'
+                    ${location.pathname === link.path
+                      ? 'bg-blue-700 text-white'
+                      : 'hover:bg-blue-700/70 text-blue-100'
                     }`}
                 >
                   {link.icon}
