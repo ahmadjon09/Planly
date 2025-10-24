@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import Fetch from '../middlewares/fetcher'
 import {
   AlertTriangle,
@@ -10,7 +11,12 @@ import {
   Calendar,
   TrendingUp,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  RefreshCw,
+  BarChart3,
+  PieChart,
+  Activity,
+  Target
 } from 'lucide-react'
 import {
   BarChart,
@@ -22,21 +28,26 @@ import {
   Legend,
   ResponsiveContainer,
   LineChart,
-  Line
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
 } from 'recharts'
 import { LoadingState } from '../components/loading-state'
+import { motion, AnimatePresence } from 'framer-motion'
+
+// SWR fetcher function
+const fetcher = url => Fetch.get(url).then(res => res.data)
 
 export const StatsPage = () => {
-  const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedDay, setSelectedDay] = useState(new Date().getDate())
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const currentYear = new Date().getFullYear()
   const yearOptions = Array.from(
-    { length: currentYear - 2019 },
+    { length: currentYear - 2023 },
     (_, i) => currentYear - i
   )
 
@@ -57,91 +68,91 @@ export const StatsPage = () => {
 
   const dayOptions = Array.from({ length: 31 }, (_, i) => i + 1)
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true)
-        const res = await Fetch.get(
-          `/orders/stats?year=${selectedYear}&month=${selectedMonth}&day=${selectedDay}`
-        )
-        setStats(res.data)
-      } catch (err) {
-        console.log(err)
-
-        setError(
-          'Маълумотларни олиб бўлмади. Интернет уланишингизни текширинг.'
-        )
-      } finally {
-        setLoading(false)
-      }
+  // SWR hook for data fetching
+  const {
+    data: stats,
+    error,
+    isLoading,
+    mutate,
+    isValidating
+  } = useSWR(
+    `/orders/stats?year=${selectedYear}&month=${selectedMonth}&day=${selectedDay}`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      refreshInterval: 300000
     }
-    fetchStats()
-  }, [selectedYear, selectedMonth, selectedDay])
+  )
 
-  // Combined chart data for multiple metrics, including previous year for yearly
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await mutate()
+    setTimeout(() => setIsRefreshing(false), 1000)
+  }
+
+  // Combined chart data for multiple metrics
   const combinedChartData = stats
     ? [
-      {
-        name: 'Кунлик',
-        products: stats.daily.current.totalProducts,
-        stock:
-          stats.daily.current.totalStock ||
-          stats.daily.current.totalStockValue,
-        price: stats.daily.current.totalPrice || stats.daily.current.revenue,
-        profit: stats.daily.current.profit
-      },
-      {
-        name: 'Ойлик',
-        products: stats.monthly.current.totalProducts,
-        stock:
-          stats.monthly.current.totalStock ||
-          stats.monthly.current.totalStockValue,
-        price:
-          stats.monthly.current.totalPrice || stats.monthly.current.revenue,
-        profit: stats.monthly.current.profit
-      },
-      {
-        name: 'Йиллик (Жорий)',
-        products: stats.yearly.current.totalProducts,
-        stock:
-          stats.yearly.current.totalStock ||
-          stats.yearly.current.totalStockValue,
-        price:
-          stats.yearly.current.totalPrice || stats.yearly.current.revenue,
-        profit: stats.yearly.current.profit
-      },
-      {
-        name: 'Йиллик (Олдинги)',
-        products: stats.yearly.previous.totalProducts,
-        stock:
-          stats.yearly.previous.totalStock ||
-          stats.yearly.previous.totalStockValue,
-        price:
-          stats.yearly.previous.totalPrice || stats.yearly.previous.revenue,
-        profit: stats.yearly.previous.profit
-      }
-    ]
+        {
+          name: 'Кунлик',
+          products: stats.daily.current.totalProducts,
+          stock: stats.daily.current.totalStockValue,
+          price: stats.daily.current.revenue,
+          orders: stats.daily.current.totalOrders
+        },
+        {
+          name: 'Ойлик',
+          products: stats.monthly.current.totalProducts,
+          stock: stats.monthly.current.totalStockValue,
+          price: stats.monthly.current.revenue,
+          orders: stats.monthly.current.totalOrders
+        },
+        {
+          name: 'Йиллик',
+          products: stats.yearly.current.totalProducts,
+          stock: stats.yearly.current.totalStockValue,
+          price: stats.yearly.current.revenue,
+          orders: stats.yearly.current.totalOrders
+        }
+      ]
     : []
+
+  // Pie chart data for revenue distribution
+  const pieChartData = stats
+    ? [
+        { name: 'Кунлик', value: stats.daily.current.revenue },
+        { name: 'Ойлик', value: stats.monthly.current.revenue },
+        { name: 'Йиллик', value: stats.yearly.current.revenue }
+      ]
+    : []
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28']
 
   // Function to render growth percentage with arrow
   const renderGrowth = (value, label) => {
     const numValue = parseFloat(value)
     const isPositive = numValue > 0
     return (
-      <div className='flex items-center justify-center text-sm'>
+      <div
+        className={`flex items-center justify-center text-sm font-medium ${
+          isPositive ? 'text-green-600' : 'text-red-600'
+        }`}
+      >
         {isPositive ? (
-          <ArrowUp className='w-4 h-4 text-green-500 mr-1' />
+          <ArrowUp className='w-4 h-4 mr-1' />
         ) : (
-          <ArrowDown className='w-4 h-4 text-red-500 mr-1' />
+          <ArrowDown className='w-4 h-4 mr-1' />
         )}
         {value}% {label}
       </div>
     )
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className='flex justify-center items-center h-screen text-lg text-gray-600'>
+      <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex justify-center items-center'>
         <LoadingState />
       </div>
     )
@@ -149,533 +160,556 @@ export const StatsPage = () => {
 
   if (error) {
     return (
-      <div className='flex justify-center items-center h-screen text-red-500 text-lg'>
-        <AlertTriangle className='mr-2 w-8 h-8' /> {error}
+      <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center items-center p-6'>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className='bg-white rounded-2xl shadow-xl p-8 text-center max-w-md'
+        >
+          <AlertTriangle className='w-16 h-16 text-red-500 mx-auto mb-4' />
+          <h3 className='text-xl font-bold text-gray-800 mb-2'>
+            Хатолик юз берди
+          </h3>
+          <p className='text-gray-600 mb-6'>
+            Маълумотларни олиб бўлмади. Интернет уланишингизни текширинг.
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            className='flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-3 rounded-xl hover:shadow-xl transition-all duration-300 mx-auto'
+          >
+            <RefreshCw className='w-4 h-4' />
+            Қайта уриниш
+          </motion.button>
+        </motion.div>
       </div>
     )
   }
 
   return (
-    <div className='min-h-screen bg-gray-50'>
-      <div className='container mx-auto py-4 px-4 sm:py-6 sm:px-6'>
-        {/* Header */}
-        <div className='text-center mb-6 sm:mb-8'>
-          <h1 className='text-2xl sm:text-3xl font-bold text-gray-800 mb-3 flex items-center justify-center'>
-            <ChartColumn className='mr-3 text-blue-600 w-8 h-8' />
-            Маҳсулотлар статистикаси
-          </h1>
-          <p className='text-gray-600 text-base sm:text-lg'>
-            {selectedYear} йил,{' '}
-            {monthOptions.find(m => m.value === selectedMonth)?.label} ойи,{' '}
-            {selectedDay} куни учун ўзаро солиштирма. Бу саҳифа маълумотларни
-            осон тушуниш учун яратилган – ҳар бир кўрсаткичнинг маъноси ва
-            ўзгариши кўрсатилган.
-          </p>
-        </div>
+    <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'>
+      <div className='max-w-7xl mx-auto py-6 px-4 sm:px-6'>
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className='bg-white rounded-2xl shadow-xl p-8 border border-gray-200 mb-8'
+        >
+          <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6'>
+            <div className='flex items-center gap-4'>
+              <div className='bg-gradient-to-r from-blue-500 to-indigo-500 p-4 rounded-2xl shadow-lg'>
+                <BarChart3 className='h-8 w-8 text-white' />
+              </div>
+              <div>
+                <h1 className='text-3xl font-bold text-gray-800'>
+                  Статистика ва ҳисоботлар
+                </h1>
+                <p className='text-gray-600 mt-2'>
+                  Маҳсулотлар ва буюртмаларнинг батафсил таҳлили
+                </p>
+              </div>
+            </div>
+
+            <div className='flex flex-col sm:flex-row gap-4 w-full lg:w-auto'>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleRefresh}
+                disabled={isValidating || isRefreshing}
+                className={`flex items-center gap-3 px-6 py-3 rounded-xl transition-all duration-300 ${
+                  isValidating || isRefreshing
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl'
+                }`}
+              >
+                <RefreshCw
+                  className={`w-5 h-5 ${
+                    isValidating || isRefreshing ? 'animate-spin' : ''
+                  }`}
+                />
+                {isValidating || isRefreshing ? 'Янгиланяпти...' : 'Янгилаш'}
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Last updated time */}
+          {stats && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className='mt-4 flex items-center gap-2 text-sm text-gray-500'
+            >
+              <Activity className='w-4 h-4' />
+              Охирги янгиланган: {new Date().toLocaleTimeString('uz-UZ')}
+            </motion.div>
+          )}
+        </motion.div>
 
         {/* Date Selection */}
-        <div className='flex justify-center space-x-4 mb-6 flex-wrap gap-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Йил
-            </label>
-            <select
-              value={selectedYear}
-              onChange={e => setSelectedYear(Number(e.target.value))}
-              className='block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
-            >
-              {yearOptions.map(year => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Ой
-            </label>
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(Number(e.target.value))}
-              className='block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
-            >
-              {monthOptions.map(month => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Кун
-            </label>
-            <select
-              value={selectedDay}
-              onChange={e => setSelectedDay(Number(e.target.value))}
-              className='block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
-            >
-              {dayOptions.map(day => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200 mb-8'
+        >
+          <div className='flex flex-col md:flex-row gap-6'>
+            <div className='flex-1 grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div className='space-y-2'>
+                <label className='block text-sm font-semibold text-gray-700'>
+                  Йил
+                </label>
+                <select
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(Number(e.target.value))}
+                  className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                  disabled={isValidating}
+                >
+                  {yearOptions.map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {/* Overall Stats (Yearly) */}
-        <div className='bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-gray-100 transition-transform hover:scale-101'>
-          <div className='flex items-center justify-center mb-4 sm:mb-6'>
-            <TrendingUp className='text-blue-500 mr-3 w-6 h-6' />
-            <h2 className='text-xl sm:text-2xl font-bold text-gray-800'>
-              Умумий кўрсаткичлар ({selectedYear} йили)
-            </h2>
-          </div>
-          <div className='grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6'>
-            <div className='text-center p-4 sm:p-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl text-white shadow-lg'>
-              <Package className='w-8 h-8 mx-auto mb-3' />
-              <p className='text-sm opacity-90'>
-                Жами маҳсулотлар (сотилган ва қолганлар умумий)
-              </p>
-              <p className='text-2xl sm:text-3xl font-bold mt-2'>
-                {stats.yearly.current.totalProducts}
-              </p>
-            </div>
-            <div className='text-center p-4 sm:p-6 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-xl text-white shadow-lg'>
-              <Layers className='w-8 h-8 mx-auto mb-3' />
-              <p className='text-sm opacity-90'>
-                Жами қолдиқ (складда қолган маҳсулотлар)
-              </p>
-              <p className='text-2xl sm:text-3xl font-bold mt-2'>
-                {stats.yearly.current.totalStock ||
-                  stats.yearly.current.totalStockValue}
-              </p>
-            </div>
-            <div className='text-center p-4 sm:p-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white shadow-lg'>
-              <DollarSign className='w-8 h-8 mx-auto mb-3' />
-              <p className='text-sm opacity-90'>
-                Жами даромад (сотувлардан тушган пул)
-              </p>
-              <p className='text-2xl sm:text-3xl font-bold mt-2'>
-                {(
-                  stats.yearly.current.totalPrice ||
-                  stats.yearly.current.revenue
-                ).toLocaleString('uz-UZ')}
-              </p>
-              <p className='text-sm opacity-90 mt-1'>сўм</p>
-            </div>
-            <div className='text-center p-4 sm:p-6 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl text-white shadow-lg'>
-              <TrendingUp className='w-8 h-8 mx-auto mb-3' />
-              <p className='text-sm opacity-90'>
-                Жами фойда (даромад минус харжатлар)
-              </p>
-              <p className='text-2xl sm:text-3xl font-bold mt-2'>
-                {stats.yearly.current.profit.toLocaleString('uz-UZ')}
-              </p>
-              <p className='text-sm opacity-90 mt-1'>сўм</p>
+              <div className='space-y-2'>
+                <label className='block text-sm font-semibold text-gray-700'>
+                  Ой
+                </label>
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(Number(e.target.value))}
+                  className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                  disabled={isValidating}
+                >
+                  {monthOptions.map(month => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className='space-y-2'>
+                <label className='block text-sm font-semibold text-gray-700'>
+                  Кун
+                </label>
+                <select
+                  value={selectedDay}
+                  onChange={e => setSelectedDay(Number(e.target.value))}
+                  className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                  disabled={isValidating}
+                >
+                  {dayOptions.map(day => (
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Loading indicator during validation */}
+        <AnimatePresence>
+          {isValidating && !isRefreshing && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className='flex justify-center mb-6'
+            >
+              <div className='flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-xl'>
+                <Loader2 className='w-4 h-4 animate-spin' />
+                Маълумотлар янгиланяпти...
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Overall Stats Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'
+        >
+          <div className='bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl p-6 text-white shadow-xl'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm opacity-90'>Жами маҳсулотлар</p>
+                <p className='text-3xl font-bold mt-2'>
+                  {stats.yearly.current.totalProducts}
+                </p>
+              </div>
+              <Package className='w-8 h-8 opacity-90' />
+            </div>
+          </div>
+
+          <div className='bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-6 text-white shadow-xl'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm opacity-90'>Жами қолдиқ</p>
+                <p className='text-3xl font-bold mt-2'>
+                  {stats.yearly.current.totalStockValue}
+                </p>
+              </div>
+              <Layers className='w-8 h-8 opacity-90' />
+            </div>
+          </div>
+
+          <div className='bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-xl'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm opacity-90'>Жами даромад</p>
+                <p className='text-3xl font-bold mt-2'>
+                  {stats.yearly.current.revenue.toLocaleString('uz-UZ')}
+                </p>
+                <p className='text-xs opacity-90 mt-1'>сўм</p>
+              </div>
+              <DollarSign className='w-8 h-8 opacity-90' />
+            </div>
+          </div>
+
+          <div className='bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-6 text-white shadow-xl'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm opacity-90'>Жами буюртмалар</p>
+                <p className='text-3xl font-bold mt-2'>
+                  {stats.yearly.current.totalOrders}
+                </p>
+              </div>
+              <Target className='w-8 h-8 opacity-90' />
+            </div>
+          </div>
+        </motion.div>
 
         {/* Growth Metrics */}
-        <div className='bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-gray-100'>
-          <h2 className='text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 text-center'>
-            Ўсиш кўрсаткичлари (олдинги даврга нисбатан)
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200 mb-8'
+        >
+          <h2 className='text-xl font-bold text-gray-800 mb-6 text-center'>
+            Ўсиш кўрсаткичлари
           </h2>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            <div className='text-center'>
-              <p className='text-sm text-gray-600'>Даромад ўсиши</p>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+            <div className='text-center p-4 bg-green-50 rounded-xl border border-green-200'>
+              <p className='text-sm text-gray-600 mb-2'>Даромад ўсиши</p>
               {renderGrowth(stats.daily.growth.revenue, '')}
             </div>
-            <div className='text-center'>
-              <p className='text-sm text-gray-600'>Фойда ўсиши</p>
-              {renderGrowth(stats.daily.growth.profit, '')}
-            </div>
-            <div className='text-center'>
-              <p className='text-sm text-gray-600'>Буюртмалар ўсиши</p>
+            <div className='text-center p-4 bg-blue-50 rounded-xl border border-blue-200'>
+              <p className='text-sm text-gray-600 mb-2'>Буюртмалар ўсиши</p>
               {renderGrowth(stats.daily.growth.orders, '')}
             </div>
-          </div>
-        </div>
-
-        {/* Combined Metrics Chart */}
-        <div className='bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-gray-100 overflow-hidden'>
-          <h2 className='text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 text-center'>
-            Қийматлар ва фойдани солиштириш (графикда ҳар бир линия ўз
-            кўрсаткичини ифодалайди)
-          </h2>
-          <div className='h-64 sm:h-80'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <LineChart data={combinedChartData}>
-                <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
-                <XAxis dataKey='name' stroke='#666' />
-                <YAxis stroke='#666' />
-                <Tooltip
-                  contentStyle={{
-                    background: 'white',
-                    border: 'none',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                  }}
-                />
-                <Legend />
-                <Line
-                  type='monotone'
-                  dataKey='price'
-                  name='Даромад (сўм)'
-                  stroke='#8b5cf6'
-                  strokeWidth={3}
-                  dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8 }}
-                />
-                <Line
-                  type='monotone'
-                  dataKey='profit'
-                  name='Фойда (сўм)'
-                  stroke='#10b981'
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8 }}
-                />
-                <Line
-                  type='monotone'
-                  dataKey='products'
-                  name='Маҳсулотлар (дона)'
-                  stroke='#ef4444'
-                  strokeWidth={3}
-                  dot={{ fill: '#ef4444', strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8 }}
-                />
-                <Line
-                  type='monotone'
-                  dataKey='stock'
-                  name='Қолдиқ (дона)'
-                  stroke='#f59e0b'
-                  strokeWidth={3}
-                  dot={{ fill: '#f59e0b', strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Period Stats Grid */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6'>
-          {/* Daily */}
-          <div className='bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 hover:shadow-2xl transition-shadow duration-300'>
-            <div className='flex items-center mb-4 sm:mb-6'>
-              <div className='w-3 h-8 bg-green-500 rounded-full mr-3'></div>
-              <Calendar className='text-green-500 mr-2 w-5 h-5' />
-              <h3 className='text-lg sm:text-xl font-bold text-gray-800'>
-                Кунлик ({selectedDay}-кун)
-              </h3>
+            <div className='text-center p-4 bg-purple-50 rounded-xl border border-purple-200'>
+              <p className='text-sm text-gray-600 mb-2'>Маҳсулотлар ўсиши</p>
+              {renderGrowth(stats.daily.growth.products, '')}
             </div>
-
-            <div className='space-y-3 sm:space-y-4 mb-4 sm:mb-6'>
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-green-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Маҳсулотлар (умумий)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.daily.current.totalProducts}
-                  </p>
-                </div>
-                <Package className='text-green-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-yellow-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Қолдиқ (складда)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.daily.current.totalStock ||
-                      stats.daily.current.totalStockValue}
-                  </p>
-                </div>
-                <Layers className='text-yellow-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-purple-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Даромад</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {(
-                      stats.daily.current.totalPrice ||
-                      stats.daily.current.revenue
-                    ).toLocaleString('uz-UZ')}
-                  </p>
-                  <p className='text-xs text-gray-500'>сўм</p>
-                </div>
-                <DollarSign className='text-purple-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-blue-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Фойда (тоза даромад)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.daily.current.profit.toLocaleString('uz-UZ')}
-                  </p>
-                  <p className='text-xs text-gray-500'>сўм</p>
-                </div>
-                <TrendingUp className='text-blue-500' />
-              </div>
+            <div className='text-center p-4 bg-amber-50 rounded-xl border border-amber-200'>
+              <p className='text-sm text-gray-600 mb-2'>Қолдиқ ўсиши</p>
+              {renderGrowth(stats.daily.growth.stock, '')}
             </div>
+          </div>
+        </motion.div>
 
-            <div className='h-40 sm:h-48'>
+        {/* Charts Section */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8'>
+          {/* Combined Metrics Chart */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200'
+          >
+            <h2 className='text-xl font-bold text-gray-800 mb-6 text-center'>
+              Кўрсаткичларни солиштириш
+            </h2>
+            <div className='h-80'>
               <ResponsiveContainer width='100%' height='100%'>
-                <BarChart data={[combinedChartData[0]]}>
+                <LineChart data={combinedChartData}>
                   <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
-                  <XAxis dataKey='name' />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar
-                    dataKey='products'
-                    name='Маҳсулотлар'
-                    fill='#10b981'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey='stock'
-                    name='Қолдиқ'
-                    fill='#f59e0b'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey='price'
-                    name='Даромад'
-                    fill='#8b5cf6'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey='profit'
-                    name='Фойда'
-                    fill='#3b82f6'
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Monthly */}
-          <div className='bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 hover:shadow-2xl transition-shadow duration-300'>
-            <div className='flex items-center mb-4 sm:mb-6'>
-              <div className='w-3 h-8 bg-blue-500 rounded-full mr-3'></div>
-              <Calendar className='text-blue-500 mr-2 w-5 h-5' />
-              <h3 className='text-lg sm:text-xl font-bold text-gray-800'>
-                Ойлик
-              </h3>
-            </div>
-
-            <div className='space-y-3 sm:space-y-4 mb-4 sm:mb-6'>
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-blue-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Маҳсулотлар (умумий)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.monthly.current.totalProducts}
-                  </p>
-                </div>
-                <Package className='text-blue-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-orange-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Қолдиқ (складда)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.monthly.current.totalStock ||
-                      stats.monthly.current.totalStockValue}
-                  </p>
-                </div>
-                <Layers className='text-orange-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-indigo-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Даромад</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {(
-                      stats.monthly.current.totalPrice ||
-                      stats.monthly.current.revenue
-                    ).toLocaleString('uz-UZ')}
-                  </p>
-                  <p className='text-xs text-gray-500'>сўм</p>
-                </div>
-                <DollarSign className='text-indigo-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-cyan-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Фойда (тоза даромад)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.monthly.current.profit.toLocaleString('uz-UZ')}
-                  </p>
-                  <p className='text-xs text-gray-500'>сўм</p>
-                </div>
-                <TrendingUp className='text-cyan-500' />
-              </div>
-            </div>
-
-            <div className='h-40 sm:h-48'>
-              <ResponsiveContainer width='100%' height='100%'>
-                <BarChart data={[combinedChartData[1]]}>
-                  <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
-                  <XAxis dataKey='name' />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar
-                    dataKey='products'
-                    name='Маҳсулотлар'
-                    fill='#3b82f6'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey='stock'
-                    name='Қолдиқ'
-                    fill='#f97316'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey='price'
-                    name='Даромад'
-                    fill='#6366f1'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey='profit'
-                    name='Фойда'
-                    fill='#06b6d4'
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Yearly */}
-          <div className='bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 hover:shadow-2xl transition-shadow duration-300'>
-            <div className='flex items-center mb-4 sm:mb-6'>
-              <div className='w-3 h-8 bg-red-500 rounded-full mr-3'></div>
-              <Calendar className='text-red-500 mr-2 w-5 h-5' />
-              <h3 className='text-lg sm:text-xl font-bold text-gray-800'>
-                Йиллик
-              </h3>
-            </div>
-
-            <div className='space-y-3 sm:space-y-4 mb-4 sm:mb-6'>
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-red-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Маҳсулотлар (Жорий)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.yearly.current.totalProducts}
-                  </p>
-                  <p className='text-sm text-gray-600 mt-1'>
-                    Олдинги: {stats.yearly.previous.totalProducts}
-                  </p>
-                </div>
-                <Package className='text-red-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-amber-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Қолдиқ (Жорий)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.yearly.current.totalStock ||
-                      stats.yearly.current.totalStockValue}
-                  </p>
-                  <p className='text-sm text-gray-600 mt-1'>
-                    Олдинги:{' '}
-                    {stats.yearly.previous.totalStock ||
-                      stats.yearly.previous.totalStockValue}
-                  </p>
-                </div>
-                <Layers className='text-amber-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-pink-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Даромад (Жорий)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {(
-                      stats.yearly.current.totalPrice ||
-                      stats.yearly.current.revenue
-                    ).toLocaleString('uz-UZ')}
-                  </p>
-                  <p className='text-sm text-gray-600 mt-1'>
-                    Олдинги:{' '}
-                    {(
-                      stats.yearly.previous.totalPrice ||
-                      stats.yearly.previous.revenue
-                    ).toLocaleString('uz-UZ')}{' '}
-                    сўм
-                  </p>
-                </div>
-                <DollarSign className='text-pink-500' />
-              </div>
-
-              <div className='flex justify-between items-center p-3 sm:p-4 bg-green-50 rounded-lg'>
-                <div>
-                  <p className='text-sm text-gray-600'>Фойда (Жорий)</p>
-                  <p className='text-xl sm:text-2xl font-bold text-gray-800'>
-                    {stats.yearly.current.profit.toLocaleString('uz-UZ')}
-                  </p>
-                  <p className='text-sm text-gray-600 mt-1'>
-                    Олдинги:{' '}
-                    {stats.yearly.previous.profit.toLocaleString('uz-UZ')} сўм
-                  </p>
-                </div>
-                <TrendingUp className='text-green-500' />
-              </div>
-            </div>
-
-            <div className='relative h-40 sm:h-48 z-10'>
-              <ResponsiveContainer width='100%' height='100%' className='z-10'>
-                <BarChart
-                  data={combinedChartData?.slice(2, 4) || []}
-                  barCategoryGap='25%'
-                  barGap={4}
-                >
-                  <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
-                  <XAxis dataKey='name' />
-                  <YAxis />
+                  <XAxis dataKey='name' stroke='#666' />
+                  <YAxis stroke='#666' />
                   <Tooltip
-                    wrapperStyle={{
-                      zIndex: 9999,
-                      backgroundColor: '#fff',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    contentStyle={{
+                      background: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
                     }}
                   />
                   <Legend />
-                  <Bar
-                    dataKey='products'
-                    name='Маҳсулотлар'
-                    fill='#ef4444'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey='stock'
-                    name='Қолдиқ'
-                    fill='#f59e0b'
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
+                  <Line
+                    type='monotone'
                     dataKey='price'
-                    name='Даромад'
-                    fill='#ec4899'
-                    radius={[4, 4, 0, 0]}
+                    name='Даромад (сўм)'
+                    stroke='#8b5cf6'
+                    strokeWidth={3}
+                    dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8 }}
                   />
-                  <Bar
-                    dataKey='profit'
-                    name='Фойда'
-                    fill='#22c55e'
-                    radius={[4, 4, 0, 0]}
+                  <Line
+                    type='monotone'
+                    dataKey='products'
+                    name='Маҳсулотлар (дона)'
+                    stroke='#ef4444'
+                    strokeWidth={3}
+                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8 }}
                   />
-                </BarChart>
+                  <Line
+                    type='monotone'
+                    dataKey='stock'
+                    name='Қолдиқ (дона)'
+                    stroke='#f59e0b'
+                    strokeWidth={3}
+                    dot={{ fill: '#f59e0b', strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8 }}
+                  />
+                  <Line
+                    type='monotone'
+                    dataKey='orders'
+                    name='Буюртмалар (дона)'
+                    stroke='#10b981'
+                    strokeWidth={3}
+                    dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8 }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </motion.div>
+
+          {/* Revenue Distribution Pie Chart */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200'
+          >
+            <h2 className='text-xl font-bold text-gray-800 mb-6 text-center'>
+              Даромад тақсимланиши
+            </h2>
+            <div className='h-80'>
+              <ResponsiveContainer width='100%' height='100%'>
+                <RechartsPieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx='50%'
+                    cy='50%'
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name}: ${(percent * 100).toFixed(0)}%`
+                    }
+                    outerRadius={80}
+                    fill='#8884d8'
+                    dataKey='value'
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={value => [
+                      value.toLocaleString('uz-UZ') + ' сўм',
+                      'Даромад'
+                    ]}
+                    contentStyle={{
+                      background: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Legend />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
         </div>
+
+        {/* Period Stats Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className='grid grid-cols-1 lg:grid-cols-3 gap-6'
+        >
+          {/* Daily Stats */}
+          <div className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200 hover:shadow-2xl transition-all duration-300'>
+            <div className='flex items-center mb-6'>
+              <div className='bg-green-500 p-2 rounded-lg mr-3'>
+                <Calendar className='text-white w-5 h-5' />
+              </div>
+              <h3 className='text-lg font-bold text-gray-800'>Кунлик</h3>
+            </div>
+            <div className='space-y-4'>
+              {[
+                {
+                  label: 'Маҳсулотлар',
+                  value: stats.daily.current.totalProducts,
+                  icon: Package,
+                  color: 'green'
+                },
+                {
+                  label: 'Қолдиқ',
+                  value: stats.daily.current.totalStockValue,
+                  icon: Layers,
+                  color: 'yellow'
+                },
+                {
+                  label: 'Даромад',
+                  value: stats.daily.current.revenue,
+                  icon: DollarSign,
+                  color: 'purple'
+                },
+                {
+                  label: 'Буюртмалар',
+                  value: stats.daily.current.totalOrders,
+                  icon: TrendingUp,
+                  color: 'blue'
+                }
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className={`flex justify-between items-center p-3 bg-${item.color}-50 rounded-lg border border-${item.color}-200`}
+                >
+                  <div>
+                    <p className='text-sm text-gray-600'>{item.label}</p>
+                    <p className='text-lg font-bold text-gray-800'>
+                      {item.label === 'Даромад'
+                        ? item.value.toLocaleString('uz-UZ')
+                        : item.value}
+                    </p>
+                    {item.label === 'Даромад' && (
+                      <p className='text-xs text-gray-500'>сўм</p>
+                    )}
+                  </div>
+                  <item.icon className={`text-${item.color}-500 w-5 h-5`} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Monthly Stats */}
+          <div className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200 hover:shadow-2xl transition-all duration-300'>
+            <div className='flex items-center mb-6'>
+              <div className='bg-blue-500 p-2 rounded-lg mr-3'>
+                <Calendar className='text-white w-5 h-5' />
+              </div>
+              <h3 className='text-lg font-bold text-gray-800'>Ойлик</h3>
+            </div>
+            <div className='space-y-4'>
+              {[
+                {
+                  label: 'Маҳсулотлар',
+                  value: stats.monthly.current.totalProducts,
+                  icon: Package,
+                  color: 'blue'
+                },
+                {
+                  label: 'Қолдиқ',
+                  value: stats.monthly.current.totalStockValue,
+                  icon: Layers,
+                  color: 'orange'
+                },
+                {
+                  label: 'Даромад',
+                  value: stats.monthly.current.revenue,
+                  icon: DollarSign,
+                  color: 'indigo'
+                },
+                {
+                  label: 'Буюртмалар',
+                  value: stats.monthly.current.totalOrders,
+                  icon: TrendingUp,
+                  color: 'cyan'
+                }
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className={`flex justify-between items-center p-3 bg-${item.color}-50 rounded-lg border border-${item.color}-200`}
+                >
+                  <div>
+                    <p className='text-sm text-gray-600'>{item.label}</p>
+                    <p className='text-lg font-bold text-gray-800'>
+                      {item.label === 'Даромад'
+                        ? item.value.toLocaleString('uz-UZ')
+                        : item.value}
+                    </p>
+                    {item.label === 'Даромад' && (
+                      <p className='text-xs text-gray-500'>сўм</p>
+                    )}
+                  </div>
+                  <item.icon className={`text-${item.color}-500 w-5 h-5`} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Yearly Stats */}
+          <div className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200 hover:shadow-2xl transition-all duration-300'>
+            <div className='flex items-center mb-6'>
+              <div className='bg-red-500 p-2 rounded-lg mr-3'>
+                <Calendar className='text-white w-5 h-5' />
+              </div>
+              <h3 className='text-lg font-bold text-gray-800'>Йиллик</h3>
+            </div>
+            <div className='space-y-4'>
+              {[
+                {
+                  label: 'Маҳсулотлар',
+                  value: stats.yearly.current.totalProducts,
+                  icon: Package,
+                  color: 'red'
+                },
+                {
+                  label: 'Қолдиқ',
+                  value: stats.yearly.current.totalStockValue,
+                  icon: Layers,
+                  color: 'amber'
+                },
+                {
+                  label: 'Даромад',
+                  value: stats.yearly.current.revenue,
+                  icon: DollarSign,
+                  color: 'pink'
+                },
+                {
+                  label: 'Буюртмалар',
+                  value: stats.yearly.current.totalOrders,
+                  icon: TrendingUp,
+                  color: 'green'
+                }
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className={`flex justify-between items-center p-3 bg-${item.color}-50 rounded-lg border border-${item.color}-200`}
+                >
+                  <div>
+                    <p className='text-sm text-gray-600'>{item.label}</p>
+                    <p className='text-lg font-bold text-gray-800'>
+                      {item.label === 'Даромад'
+                        ? item.value.toLocaleString('uz-UZ')
+                        : item.value}
+                    </p>
+                    {item.label === 'Даромад' && (
+                      <p className='text-xs text-gray-500'>сўм</p>
+                    )}
+                  </div>
+                  <item.icon className={`text-${item.color}-500 w-5 h-5`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   )

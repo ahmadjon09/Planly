@@ -14,7 +14,7 @@ import Order from '../models/order.js'
 import User from '../models/user.js'
 import Product from '../models/product.js'
 import { sendErrorResponse } from '../middlewares/sendErrorResponse.js'
-import Stats from '../models/stats.js'
+
 export const GetOrderStats = async (req, res) => {
   try {
     const { year, month, day } = req.query
@@ -120,9 +120,8 @@ export const GetOrderStats = async (req, res) => {
       // 💰 Moliyaviy hisob-kitoblar
       const revenue = totalOrderPrice // jami tushum
       const cost = totalCost // jami xarajat (tannarx)
-      const profit = revenue - cost // sof foyda
-      const loss = profit < 0 ? Math.abs(profit) : 0
-      const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0
+      const margin =
+        revenue > 0 ? Math.round(((revenue - cost) / revenue) * 100) : 0
       const averageOrderValue =
         totalOrders > 0 ? Math.round(revenue / totalOrders) : 0
 
@@ -135,8 +134,6 @@ export const GetOrderStats = async (req, res) => {
         soldValue: Math.round(soldValue),
         revenue: Math.round(revenue),
         cost: Math.round(cost),
-        profit: Math.round(profit),
-        loss: Math.round(loss),
         margin,
         averageOrderValue,
         topSelling
@@ -151,113 +148,6 @@ export const GetOrderStats = async (req, res) => {
       return Math.round(((current - prev) / Math.abs(prev)) * 100 * 100) / 100
     }
 
-    // 🔄 O'tgan oy va yillarni tekshirish va saqlash (ASINXRON - fon jarayoni)
-    const checkAndCreatePastStats = async () => {
-      try {
-        const lastMonth = subMonths(now, 1)
-        const lastYear = subYears(now, 1)
-
-        const statsToCheck = [
-          {
-            year: lastMonth.getFullYear(),
-            month: lastMonth.getMonth(),
-            type: 'month'
-          },
-          { year: lastYear.getFullYear(), month: 0, type: 'year' }
-        ]
-
-        for (const { year, month, type } of statsToCheck) {
-          const exists = await Stats.findOne({
-            'filter.year': year,
-            'filter.month': month + 1
-          })
-
-          if (!exists) {
-            console.log(
-              `📊 O'tgan ${type} statistikasini yaratish: ${year}-${month + 1}`
-            )
-
-            // O'tgan oy statistikasini to'liq hisoblash
-            const monthStart = startOfMonth(new Date(year, month))
-            const monthEnd = endOfMonth(new Date(year, month))
-            const yearStart = startOfYear(new Date(year, 0))
-            const yearEnd = endOfYear(new Date(year, 0))
-            const prevMonthStart = subMonths(monthStart, 1)
-            const prevMonthEnd = subMonths(monthEnd, 1)
-            const prevYearStart = subYears(yearStart, 1)
-            const prevYearEnd = subYears(yearEnd, 1)
-
-            const [monthly, yearly, prevMonth, prevYear] = await Promise.all([
-              calcStats(monthStart, monthEnd),
-              calcStats(yearStart, yearEnd),
-              calcStats(prevMonthStart, prevMonthEnd),
-              calcStats(prevYearStart, prevYearEnd)
-            ])
-
-            // Kunlik statistikani hisoblash (oxirgi kun uchun)
-            const lastDayOfMonth = new Date(year, month + 1, 0).getDate()
-            const dayStart = startOfDay(new Date(year, month, lastDayOfMonth))
-            const dayEnd = endOfDay(new Date(year, month, lastDayOfMonth))
-            const prevDayStart = subDays(dayStart, 1)
-            const prevDayEnd = subDays(dayEnd, 1)
-
-            const [daily, prevDay] = await Promise.all([
-              calcStats(dayStart, dayEnd),
-              calcStats(prevDayStart, prevDayEnd)
-            ])
-
-            // Schema ga mos statistikani yaratish
-            const statsData = {
-              filter: {
-                year: year,
-                month: month + 1
-              },
-              daily: [
-                {
-                  day: lastDayOfMonth,
-                  stats: {
-                    current: daily,
-                    previous: prevDay,
-                    growth: {
-                      revenue: growthRate(daily.revenue, prevDay.revenue),
-                      profit: growthRate(daily.profit, prevDay.profit),
-                      orders: growthRate(daily.totalOrders, prevDay.totalOrders)
-                    }
-                  }
-                }
-              ],
-              monthly: {
-                current: monthly,
-                previous: prevMonth,
-                growth: {
-                  revenue: growthRate(monthly.revenue, prevMonth.revenue),
-                  profit: growthRate(monthly.profit, prevMonth.profit),
-                  orders: growthRate(monthly.totalOrders, prevMonth.totalOrders)
-                }
-              },
-              yearly: {
-                current: yearly,
-                previous: prevYear,
-                growth: {
-                  revenue: growthRate(yearly.revenue, prevYear.revenue),
-                  profit: growthRate(yearly.profit, prevYear.profit),
-                  orders: growthRate(yearly.totalOrders, prevYear.totalOrders)
-                }
-              }
-            }
-
-            await Stats.create(statsData)
-            console.log(
-              `✅ O'tgan ${type} statistikasi yaratildi: ${year}-${month + 1}`
-            )
-          }
-        }
-      } catch (error) {
-        console.error('❌ Oʻtgan statistikani yaratishda xato:', error)
-        // Fon jarayoni - xatolarni foydalanuvchiga ko'rsatmaymiz
-      }
-    }
-
     // ⚡ ASOSIY LOGIKA - foydalanuvchiga javob qaytarish
     // Paralel hisoblash (tezlik uchun Promise.all)
     const [daily, monthly, yearly, prevDay, prevMonth, prevYear] =
@@ -270,7 +160,7 @@ export const GetOrderStats = async (req, res) => {
         calcStats(subYears(yearStart, 1), subYears(yearEnd, 1))
       ])
 
-    // 🔚 Yakuniy natija - ASL KODDAGI FORMATDA
+    // 🔚 Yakuniy natija - to'g'ridan-to'g'ri qaytarish
     const result = {
       filter: { year: targetYear, month: targetMonth + 1, day: targetDay },
       daily: {
@@ -278,7 +168,6 @@ export const GetOrderStats = async (req, res) => {
         previous: prevDay,
         growth: {
           revenue: growthRate(daily.revenue, prevDay.revenue),
-          profit: growthRate(daily.profit, prevDay.profit),
           orders: growthRate(daily.totalOrders, prevDay.totalOrders)
         }
       },
@@ -287,7 +176,6 @@ export const GetOrderStats = async (req, res) => {
         previous: prevMonth,
         growth: {
           revenue: growthRate(monthly.revenue, prevMonth.revenue),
-          profit: growthRate(monthly.profit, prevMonth.profit),
           orders: growthRate(monthly.totalOrders, prevMonth.totalOrders)
         }
       },
@@ -296,13 +184,10 @@ export const GetOrderStats = async (req, res) => {
         previous: prevYear,
         growth: {
           revenue: growthRate(yearly.revenue, prevYear.revenue),
-          profit: growthRate(yearly.profit, prevYear.profit),
           orders: growthRate(yearly.totalOrders, prevYear.totalOrders)
         }
       }
     }
-
-    checkAndCreatePastStats().catch(() => {})
 
     return res.status(200).json(result)
   } catch (error) {

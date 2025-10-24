@@ -1,6 +1,0 @@
-export const ProjectName = 'Planly'
-export const NameOf = 'Test'
-export const AddressOf = 'Ўзбекистон, Наманган, Наманган шаҳар …'
-export const PhoneOf = '+998 (77) 777 77 77'
-export const EmailOf = 'info.info@gmail.com'
-export const WebsiteOf = 'www.info.uz'

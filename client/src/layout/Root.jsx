@@ -9,7 +9,7 @@ export const Root = () => {
       <Nav />
       <br />
       <br />
-      <main className='mt-[50px] text-gray-700 container'>
+      <main className='pt-[10px] text-gray-700 container'>
         <Outlet />
         <Ping />
         <AboutModal />

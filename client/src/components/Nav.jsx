@@ -12,115 +12,159 @@ import {
   Boxes,
   BarChart3,
   ReceiptText,
-  Settings,
-  Code2
+  User
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { ContextData } from '../contextData/Context'
-import '../assets/css/nav.css'
+import logo from '../assets/images/logo2.png'
+import { name } from '../assets/js/i'
 
 export const Nav = () => {
   const { user, removeUserToken } = useContext(ContextData)
   const [isOpen, setIsOpen] = useState(false)
-  const data = user
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef(null)
-  const [api, setApi] = useState("")
   const location = useLocation()
 
   const navLinks = [
-    { name: 'Склад', path: '/', icon: <Boxes size={18} /> },
-    { name: 'Админлар', path: '/admin', icon: <ShieldUser size={18} /> },
-    { name: 'Xодимлар', path: '/workers', icon: <UserRoundPen size={18} /> },
+    { name: 'Склад', path: '/', icon: <Boxes size={20} /> },
+    { name: 'Админлар', path: '/admin', icon: <ShieldUser size={20} /> },
+    { name: 'Xодимлар', path: '/workers', icon: <UserRoundPen size={20} /> },
     {
       name: 'Буюртмалар',
       path: '/orders',
-      icon: <ReceiptText size={18} />
+      icon: <ReceiptText size={20} />
     },
     ...(user.role === 'admin'
       ? [
-        {
-          name: 'Статистика',
-          path: '/static',
-          icon: <BarChart3 size={18} />
-        },
-        {
-          name: 'Янги ходим',
-          path: '/user',
-          icon: <UserPlus2Icon size={18} />
-        }
-      ]
+          {
+            name: 'Статистика',
+            path: '/static',
+            icon: <BarChart3 size={20} />
+          },
+          {
+            name: '+ ходим',
+            path: '/user',
+            icon: <UserPlus2Icon size={20} />
+          }
+        ]
       : [])
   ]
 
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleClickOutside = event => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false)
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  function handleLogout() {
-    if (!window.confirm('Админ сифатида чиқишни хоҳлайсизми?')) return
+  const handleLogout = () => {
+    if (!window.confirm('Сиз ростдан хам тизимдан чиқмоқчимисиз?')) return
     removeUserToken()
     window.location.href = '/'
   }
 
-  useEffect(() => {
-    setApi(localStorage.getItem("base_api") || "")
-  }, [])
-
-
   return (
-    <nav className='w-full fixed top-0 left-0 h-[60px] z-[99] bg-gradient-to-r from-blue-700 to-blue-600 shadow-md'>
-      <div className='container w-full h-full flex items-center justify-between px-4'>
-        <div className='navv items-center space-x-1'>
-          {navLinks.map(link => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5
-                ${location.pathname === link.path
-                  ? 'bg-blue-800 text-white'
-                  : 'text-blue-100 hover:bg-blue-800/50 hover:text-white'
-                }`}
-            >
-              {link.icon}
-              {link.name}
-            </Link>
-          ))}
-        </div>
-
-        <button
-          className='absolute top-2 right-1 text-white p-2 navvbtn'
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label={isOpen ? 'Ёпиш' : 'Меню'}
+    <nav className='fixed top-0 left-0 w-full h-16 z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100'>
+      <div className='container mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:px-8'>
+        {/* Logo/Brand */}
+        <motion.div
+          className='flex items-center gap-2'
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
         >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+          <Link to={'/'}>
+            <motion.img
+              className='w-9 h-9 rounded-lg shadow-sm'
+              src={logo}
+              alt='logo'
+              whileHover={{ scale: 1.1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+            />
+          </Link>
+          <span className='text-lg font-semibold text-gray-900'>{name}</span>
+        </motion.div>
 
-        <div className='flex navv relative items-center gap-3 text-xl font-bold text-white'>
-          <div
-            className='flex items-center cursor-pointer relative'
-            onClick={() => setShowDropdown(!showDropdown)}
-            ref={dropdownRef}
-          >
-            <div className='ml-2 flex items-center gap-1'>
-              <span className='text-sm font-medium hidden sm:block'>
-                {data.firstName || 'Фойдаланувчи'}
-              </span>
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''
+        {/* Desktop Navigation */}
+        <motion.div
+          className='hidden lg:flex items-center gap-2'
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          {navLinks.map((link, index) => (
+            <motion.div
+              key={link.path}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+            >
+              <Link
+                to={link.path}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                  ${
+                    location.pathname === link.path
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                   }`}
-              />
-            </div>
+              >
+                <span
+                  className={
+                    location.pathname === link.path
+                      ? 'text-white'
+                      : 'text-gray-400 group-hover:text-blue-600'
+                  }
+                >
+                  {link.icon}
+                </span>
+                {link.name}
+                {location.pathname === link.path && (
+                  <motion.div
+                    className='absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-blue-200 rounded-full'
+                    layoutId='activeIndicator'
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  />
+                )}
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* User Menu */}
+        <motion.div
+          className='flex items-center gap-3'
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          {/* Desktop User Dropdown */}
+          <div className='hidden lg:block relative' ref={dropdownRef}>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowDropdown(!showDropdown)}
+              className='flex items-center gap-2 bg-white hover:bg-gray-50 rounded-lg px-3 py-2 transition-all duration-200 border border-gray-100 shadow-sm'
+            >
+              <div className='bg-blue-600 p-1.5 rounded-md'>
+                <User className='h-4 w-4 text-white' />
+              </div>
+              <div className='text-left hidden lg:block'>
+                <p className='text-sm font-medium text-gray-800'>
+                  {user.firstName || 'Фойдаланувчи'}
+                </p>
+                <p className='text-xs text-gray-500 capitalize'>{user.role}</p>
+              </div>
+              <motion.div
+                animate={{ rotate: showDropdown ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ChevronDown size={16} className='text-gray-400' />
+              </motion.div>
+            </motion.button>
 
             <AnimatePresence>
               {showDropdown && (
@@ -128,124 +172,149 @@ export const Nav = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2 }}
-                  className='absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20'
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className='absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 p-2 z-50'
                 >
-                  <div className='px-4 py-2 border-b border-gray-100'>
-                    <p className='text-sm font-medium text-gray-900'>
-                      {data.firstName} {data.lastName}
+                  <div className='px-3 py-2 border-b border-gray-100'>
+                    <p className='text-sm font-medium text-gray-800'>
+                      {user.firstName} {user.lastName}
                     </p>
-                    <p className='text-xs text-gray-500 truncate'>
-                      {data.role}
-                    </p>
-                  </div>
-                  {user.role === "admin" && <div className="relative group">
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2">
-                      <Code2 size={14} />
-                      API
-                    </button>
-
-                    <div className="absolute -left-full top-full mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                      <a
-                        href={`${api}/health`}
-                        className='block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50'
+                    <p className='text-xs text-gray-500 mt-1'>{user.email}</p>
+                    <div className='flex items-center gap-2 mt-2'>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize
+                          ${
+                            user.role === 'admin'
+                              ? 'bg-purple-600 text-white'
+                              : user.role === 'owner'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-blue-600 text-white'
+                          }`}
                       >
-                        Server health
-                      </a>
-                      <a
-                        href={`${api}/system`}
-                        className='block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50'
-                      >
-                        Server system
-                      </a>
-                      <a
-                        href={`${api}/about`}
-                        className='block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50'
-                      >
-                        API routes
-                      </a>
+                        {user.role}
+                      </span>
                     </div>
-                  </div>}
-                  <Link
-                    to={`/user/edit/${data._id}`}
-                    className='w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2'
-                  >
-                    <Pencil size={14} />
-                    Профилни таҳрирлаш
-                  </Link>
-
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      handleLogout()
-                    }}
-                    className='w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2'
-                  >
-                    <LogOut size={14} />
-                    Чиқиш
-                  </button>
+                  </div>
+                  <div className='py-1'>
+                    <Link
+                      to={`/user/edit/${user._id}`}
+                      className='flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded-md transition-colors'
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      <Pencil size={16} className='text-gray-500' />
+                      Профилни таҳрирлаш
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className='w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors'
+                    >
+                      <LogOut size={16} />
+                      Чиқиш
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-        </div>
+
+          {/* Mobile Menu Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className='lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg'
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? 'Ёпиш' : 'Меню'}
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </motion.button>
+        </motion.div>
       </div>
 
+      {/* Mobile Navigation */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className='navmobile absolute z-[99] top-[60px] left-0 w-full bg-blue-800 text-white flex flex-col gap-3 p-4 text-lg shadow-lg rounded-b-lg overflow-hidden'
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className='lg:hidden fixed inset-x-0 top-16 z-40 bg-white/95 backdrop-blur-md shadow-lg'
           >
-            {/* Mobile Navigation Links */}
-            <div className='flex flex-col gap-1 mb-2'>
-              {navLinks.map(link => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-2 py-2 px-3 rounded-md transition-colors
-                    ${location.pathname === link.path
-                      ? 'bg-blue-700 text-white'
-                      : 'hover:bg-blue-700/70 text-blue-100'
-                    }`}
-                >
-                  {link.icon}
-                  {link.name}
-                </Link>
-              ))}
-            </div>
+            <div className='p-4 space-y-3'>
+              <motion.div
+                className='flex items-center gap-3 p-3 bg-blue-50 rounded-lg'
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <div className='bg-blue-600 p-2 rounded-md'>
+                  <User className='h-5 w-5 text-white' />
+                </div>
+                <div>
+                  <p className='font-medium text-gray-800'>
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className='text-sm text-gray-600 capitalize'>
+                    {user.role}
+                  </p>
+                </div>
+              </motion.div>
 
-            <div className='border-t border-blue-700 my-1'></div>
-
-            <div className='flex items-center gap-3'>
-              <div className='flex flex-col'>
-                <span className='font-medium text-white'>
-                  {data.firstName} {data.lastName}
-                </span>
-                <span className='text-xs text-blue-200'>{user.role}</span>
+              <div className='space-y-1'>
+                {navLinks.map((link, index) => (
+                  <motion.div
+                    key={link.path}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                  >
+                    <Link
+                      to={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200
+                        ${
+                          location.pathname === link.path
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-600 hover:bg-blue-50'
+                        }`}
+                    >
+                      <span
+                        className={
+                          location.pathname === link.path
+                            ? 'text-white'
+                            : 'text-gray-400'
+                        }
+                      >
+                        {link.icon}
+                      </span>
+                      <span className='font-medium'>{link.name}</span>
+                    </Link>
+                  </motion.div>
+                ))}
               </div>
-            </div>
 
-            <div className='flex flex-col gap-2 mt-2 border-t border-blue-700 pt-3'>
-              <Link
-                to={`/user/edit/${data._id}`}
-                className='flex items-center gap-2 py-2 px-3 rounded-md hover:bg-blue-700 transition-colors'
+              <motion.div
+                className='border-t border-gray-100 pt-3 space-y-1'
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
               >
-                <Pencil size={16} />
-                Профилни таҳрирлаш
-              </Link>
-
-              <button
-                onClick={handleLogout}
-                className='flex items-center gap-2 py-2 px-3 rounded-md text-red-300 hover:bg-blue-700 transition-colors'
-              >
-                <LogOut size={16} />
-                Чиқиш
-              </button>
+                <Link
+                  to={`/user/edit/${user._id}`}
+                  className='flex items-center gap-3 p-3 rounded-lg text-gray-600 hover:bg-blue-50 transition-colors'
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Pencil size={20} className='text-gray-500' />
+                  <span>Профилни таҳрирлаш</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className='w-full flex items-center gap-3 p-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors'
+                >
+                  <LogOut size={20} />
+                  <span>Чиқиш</span>
+                </button>
+              </motion.div>
             </div>
           </motion.div>
         )}
