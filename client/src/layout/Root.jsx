@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { Nav } from '../components/Nav'
 import { Ping } from '../components/Ping'
 import { AboutModal } from '../mod/Info'
+import { Footer } from '../components/Footer'
 
 export const Root = () => {
   return (
@@ -14,6 +15,7 @@ export const Root = () => {
         <Ping />
         <AboutModal />
       </main>
+      <Footer />
     </>
   )
 }

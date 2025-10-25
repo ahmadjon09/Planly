@@ -189,7 +189,7 @@ export const StatsPage = () => {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'>
-      <div className='max-w-7xl mx-auto py-6 px-4 sm:px-6'>
+      <div className='mx-auto py-6 px-4 sm:px-6'>
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
