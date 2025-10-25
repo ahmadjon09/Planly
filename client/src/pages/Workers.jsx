@@ -76,7 +76,7 @@ export const Workers = () => {
   }
 
   const getRoleText = worker => {
-    if (worker._id === isBoss) return 'Бошлиқ'
+    if (worker._id === isBoss) return 'Cиз'
     if (worker.role === 'admin') return 'Админ'
     return 'Ходим'
   }
