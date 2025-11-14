@@ -15,6 +15,7 @@ export const Root = () => {
         <Ping />
         <AboutModal />
       </main>
+      <Footer />
     </>
   )
 }

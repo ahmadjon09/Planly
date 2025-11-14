@@ -7,6 +7,6 @@ const User = new mongoose.Schema({
   role: { type: String, required: true },
   owner: { type: Boolean, default: false },
   password: { type: String, required: true }
-})
+})  
 
 export default mongoose.model('Users', User)

@@ -37,17 +37,17 @@ export const Nav = () => {
     },
     ...(user.role === 'admin'
       ? [
-          {
-            name: 'Статистика',
-            path: '/static',
-            icon: <BarChart3 size={20} />
-          },
-          {
-            name: '+ ходим',
-            path: '/user',
-            icon: <UserPlus2Icon size={20} />
-          }
-        ]
+        {
+          name: 'Статистика',
+          path: '/static',
+          icon: <BarChart3 size={20} />
+        },
+        {
+          name: 'ходим',
+          path: '/user',
+          icon: <UserPlus2Icon size={20} />
+        }
+      ]
       : [])
   ]
 
@@ -106,10 +106,9 @@ export const Nav = () => {
               <Link
                 to={link.path}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                  ${
-                    location.pathname === link.path
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                  ${location.pathname === link.path
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                   }`}
               >
                 <span
@@ -183,10 +182,9 @@ export const Nav = () => {
                     <div className='flex items-center gap-2 mt-2'>
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium capitalize
-                          ${
-                            user.role === 'admin'
-                              ? 'bg-purple-600 text-white'
-                              : user.role === 'owner'
+                          ${user.role === 'admin'
+                            ? 'bg-purple-600 text-white'
+                            : user.role === 'owner'
                               ? 'bg-red-600 text-white'
                               : 'bg-blue-600 text-white'
                           }`}
@@ -272,10 +270,9 @@ export const Nav = () => {
                       to={link.path}
                       onClick={() => setIsOpen(false)}
                       className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200
-                        ${
-                          location.pathname === link.path
-                            ? 'bg-blue-600 text-white'
-                            : 'text-gray-600 hover:bg-blue-50'
+                        ${location.pathname === link.path
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-600 hover:bg-blue-50'
                         }`}
                     >
                       <span

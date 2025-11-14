@@ -567,56 +567,42 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
-              <div>
-                <label className='block text-gray-700 font-medium mb-2'>
-                  Ҳолат
-                </label>
-                <select
-                  value={status}
-                  onChange={e => setStatus(e.target.value)}
-                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
-                >
-                  <option>Янги</option>
-                  <option>Қабул қилинди</option>
-                  <option>Юборилди</option>
-                  <option>Бажарилди</option>
-                </select>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {[{
+                label: "Ҳолат",
+                value: status,
+                onChange: e => setStatus(e.target.value),
+                options: ["Янги", "Қабул қилинди", "Юборилди"]
+              }, {
+                label: "Тўлов тури",
+                value: payType,
+                onChange: e => setPayType(e.target.value),
+                options: ["Нақд", "Карта", "Онлайн"]
+              }, {
+                label: "Умумий нарх",
+                value: totalPrice,
+                isPrice: true
+              }].map((item, idx) => (
+                <div key={idx} className="border border-gray-300 rounded-lg p-3 flex flex-col">
+                  <label className="block text-gray-700 font-medium mb-2">{item.label}</label>
 
-              <div>
-                <label className='block text-gray-700 font-medium mb-2'>
-                  Тўлов тури
-                </label>
-                <select
-                  value={payType}
-                  onChange={e => setPayType(e.target.value)}
-                  className='border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none'
-                >
-                  <option>--</option>
-                  <option>Нақд</option>
-                  <option>Карта</option>
-                  <option>Онлайн</option>
-                </select>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center shadow-sm hover:shadow-md transition">
-                <label className="block text-gray-700 font-semibold mb-2 text-lg">
-                  Умумий нарх
-                </label>
-
-                <div className="flex items-center justify-center gap-2">
-                  <p className="text-green-600 text-2xl font-extrabold tracking-wide">
-                    {totalPrice.toLocaleString()} сўм
-                  </p>
-                  <CheckCircle className="text-green-500" size={22} />
+                  {item.isPrice ? (
+                    <p className="text-green-600 text-xl">{item.value.toLocaleString()} сўм</p>
+                  ) : (
+                    <select
+                      value={item.value}
+                      onChange={item.onChange}
+                      className="border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      {item.options.map((opt, i) => (
+                        <option key={i}>{opt}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-
-                <p className="text-sm text-gray-500 mt-1">Автоматик ҳисобланади</p>
-              </div>
-
-
+              ))}
             </div>
+
 
             {/* Submit */}
             <div className='flex gap-2 flex-wrap'>

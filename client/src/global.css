@@ -1,9 +1,10 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 .container {
   max-width: 1744px;
   margin: 0 auto;
 }
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

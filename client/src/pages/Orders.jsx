@@ -517,7 +517,7 @@ export const ViewOrders = () => {
                             </td>
 
                             <td className='px-6 py-4'>
-                              {user.role === 'admin' ? (
+                              {user.role === 'adminn' ? (
                                 <div className='flex items-center gap-2'>
                                   <input
                                     type='number'
@@ -714,8 +714,8 @@ export const ViewOrders = () => {
                             {product.amount} {product.unit}
                           </p>
                         </div>
-                        <p className='font-semibold text-green-600'>
-                          {product.price.toLocaleString()} сўм
+                        <p className='flex gap-1 flex-wrap items-center'>
+                          <span className='text-xs'>{product.amount} x</span><span className='font-semibold text-green-600'>{product.price.toLocaleString()} сўм</span>
                         </p>
                       </div>
                     ))}

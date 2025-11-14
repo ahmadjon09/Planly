@@ -3,7 +3,6 @@ import useSWR from 'swr'
 import Fetch from '../middlewares/fetcher'
 import {
   AlertTriangle,
-  ChartColumn,
   Loader2,
   Package,
   Layers,
@@ -14,13 +13,10 @@ import {
   ArrowDown,
   RefreshCw,
   BarChart3,
-  PieChart,
   Activity,
   Target
 } from 'lucide-react'
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -95,37 +91,37 @@ export const StatsPage = () => {
   // Combined chart data for multiple metrics
   const combinedChartData = stats
     ? [
-        {
-          name: 'Кунлик',
-          products: stats.daily.current.totalProducts,
-          stock: stats.daily.current.totalStockValue,
-          price: stats.daily.current.revenue,
-          orders: stats.daily.current.totalOrders
-        },
-        {
-          name: 'Ойлик',
-          products: stats.monthly.current.totalProducts,
-          stock: stats.monthly.current.totalStockValue,
-          price: stats.monthly.current.revenue,
-          orders: stats.monthly.current.totalOrders
-        },
-        {
-          name: 'Йиллик',
-          products: stats.yearly.current.totalProducts,
-          stock: stats.yearly.current.totalStockValue,
-          price: stats.yearly.current.revenue,
-          orders: stats.yearly.current.totalOrders
-        }
-      ]
+      {
+        name: 'Кунлик',
+        products: stats.daily.current.totalProducts,
+        stock: stats.daily.current.totalStockValue,
+        price: stats.daily.current.revenue,
+        orders: stats.daily.current.totalOrders
+      },
+      {
+        name: 'Ойлик',
+        products: stats.monthly.current.totalProducts,
+        stock: stats.monthly.current.totalStockValue,
+        price: stats.monthly.current.revenue,
+        orders: stats.monthly.current.totalOrders
+      },
+      {
+        name: 'Йиллик',
+        products: stats.yearly.current.totalProducts,
+        stock: stats.yearly.current.totalStockValue,
+        price: stats.yearly.current.revenue,
+        orders: stats.yearly.current.totalOrders
+      }
+    ]
     : []
 
   // Pie chart data for revenue distribution
   const pieChartData = stats
     ? [
-        { name: 'Кунлик', value: stats.daily.current.revenue },
-        { name: 'Ойлик', value: stats.monthly.current.revenue },
-        { name: 'Йиллик', value: stats.yearly.current.revenue }
-      ]
+      { name: 'Кунлик', value: stats.daily.current.revenue },
+      { name: 'Ойлик', value: stats.monthly.current.revenue },
+      { name: 'Йиллик', value: stats.yearly.current.revenue }
+    ]
     : []
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28']
@@ -136,9 +132,8 @@ export const StatsPage = () => {
     const isPositive = numValue > 0
     return (
       <div
-        className={`flex items-center justify-center text-sm font-medium ${
-          isPositive ? 'text-green-600' : 'text-red-600'
-        }`}
+        className={`flex items-center justify-center text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'
+          }`}
       >
         {isPositive ? (
           <ArrowUp className='w-4 h-4 mr-1' />
@@ -217,16 +212,14 @@ export const StatsPage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleRefresh}
                 disabled={isValidating || isRefreshing}
-                className={`flex items-center gap-3 px-6 py-3 rounded-xl transition-all duration-300 ${
-                  isValidating || isRefreshing
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl'
-                }`}
+                className={`flex items-center gap-3 px-6 py-3 rounded-xl transition-all duration-300 ${isValidating || isRefreshing
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl'
+                  }`}
               >
                 <RefreshCw
-                  className={`w-5 h-5 ${
-                    isValidating || isRefreshing ? 'animate-spin' : ''
-                  }`}
+                  className={`w-5 h-5 ${isValidating || isRefreshing ? 'animate-spin' : ''
+                    }`}
                 />
                 {isValidating || isRefreshing ? 'Янгиланяпти...' : 'Янгилаш'}
               </motion.button>
@@ -396,7 +389,7 @@ export const StatsPage = () => {
           <h2 className='text-xl font-bold text-gray-800 mb-6 text-center'>
             Ўсиш кўрсаткичлари
           </h2>
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='text-center p-4 bg-green-50 rounded-xl border border-green-200'>
               <p className='text-sm text-gray-600 mb-2'>Даромад ўсиши</p>
               {renderGrowth(stats.daily.growth.revenue, '')}
@@ -405,14 +398,14 @@ export const StatsPage = () => {
               <p className='text-sm text-gray-600 mb-2'>Буюртмалар ўсиши</p>
               {renderGrowth(stats.daily.growth.orders, '')}
             </div>
-            <div className='text-center p-4 bg-purple-50 rounded-xl border border-purple-200'>
+            {/* <div className='text-center p-4 bg-purple-50 rounded-xl border border-purple-200'>
               <p className='text-sm text-gray-600 mb-2'>Маҳсулотлар ўсиши</p>
               {renderGrowth(stats.daily.growth.products, '')}
             </div>
             <div className='text-center p-4 bg-amber-50 rounded-xl border border-amber-200'>
               <p className='text-sm text-gray-600 mb-2'>Қолдиқ ўсиши</p>
               {renderGrowth(stats.daily.growth.stock, '')}
-            </div>
+            </div> */}
           </div>
         </motion.div>
 
