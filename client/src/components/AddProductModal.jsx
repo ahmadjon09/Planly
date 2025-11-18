@@ -322,7 +322,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                       setShowClientDropdown(true)
                     }}
                     onFocus={() => setShowClientDropdown(true)}
-                    onBlur={() => setShowClientDropdown(false)}
+                    // onBlur={() => setShowClientDropdown(false)}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white"
                     placeholder="Клиент исми ёки телефони бўйича излаш..."
                   />
