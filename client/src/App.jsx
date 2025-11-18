@@ -14,8 +14,11 @@ import { Admins } from './pages/Admins'
 import { Workers } from './pages/Workers'
 import { StatsPage } from './pages/StatsPage'
 import { ViewOrders } from './pages/Orders'
+import { Ready } from './pages/Ready'
+import { Raw } from './pages/Raw'
+import { ClientProductsView } from './pages/ProductsClient'
 
-export default function App () {
+export default function App() {
   const { setUser, user, netErr } = useContext(ContextData)
   const [isLoading, setIsLoading] = useState(false)
   const token = Cookies.get('user_token')
@@ -55,11 +58,14 @@ export default function App () {
   if (isLoading) return <Loading />
   const isAdmin = user.role === 'admin'
   const routes = [
-    { index: true, element: <ProductsPage /> },
+    { index: true, element: user.ability == "ready" ? <Ready /> : user.ability == "!ready" ? <Raw /> : <ProductsPage /> },
     { path: 'user/edit/:id', element: <UserManagement /> },
+    { path: 'ready', element: <Ready /> },
+    { path: 'raw', element: <Raw /> },
     isAdmin && { path: 'user/:admin', element: <UserManagement /> },
     isAdmin && { path: 'user', element: <UserManagement /> },
-    isAdmin && { path: 'static', element: <StatsPage /> },
+    { path: 'static', element: <StatsPage /> },
+    { path: 'static/products', element: <ClientProductsView /> },
     { path: 'orders', element: <ViewOrders /> },
     { path: 'admin', element: <Admins /> },
     { path: 'workers', element: <Workers /> },

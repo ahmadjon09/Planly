@@ -7,7 +7,7 @@ const KEY = process.env.JWTSECRET_KEY
 
 export const RegisterUser = async (req, res) => {
   try {
-    const { phoneNumber, firstName, lastName, role, password } = req.body
+    const { phoneNumber, firstName, lastName, role, password, ability } = req.body
 
     const existingUser = await User.findOne({ phoneNumber })
     if (existingUser) {
@@ -21,6 +21,7 @@ export const RegisterUser = async (req, res) => {
       firstName,
       lastName,
       role,
+      ability,
       password: hashedPassword
     })
 

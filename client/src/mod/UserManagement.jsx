@@ -11,7 +11,10 @@ import {
   User,
   Phone,
   Key,
-  Info
+  Info,
+  Eye,
+  Package,
+  CheckCircle
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
@@ -28,7 +31,8 @@ export const UserManagement = () => {
     lastName: '',
     phoneNumber: '+998',
     role: 'worker',
-    password: ''
+    password: '',
+    ability: 'both' // default qiymat
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -43,7 +47,8 @@ export const UserManagement = () => {
         lastName: '',
         phoneNumber: '+998',
         role: 'admin',
-        password: ''
+        password: '',
+        ability: 'both' // admin uchun har doim both
       })
     }
   }, [id, admin])
@@ -57,7 +62,8 @@ export const UserManagement = () => {
         lastName: data.data.lastName || '',
         phoneNumber: data.data.phoneNumber || '+998',
         role: data.data.role || 'worker',
-        password: ''
+        password: '',
+        ability: data.data.ability || 'both'
       })
     } catch (error) {
       setError('Сервер хатоси. Илтимос кейинроқ уриниб кўринг!')
@@ -90,11 +96,16 @@ export const UserManagement = () => {
       return
     }
 
+    // Agar admin bo'lsa, ability har doim 'both' bo'ladi
+    const submitData = {
+      ...adminData,
+      ...(adminData.role === 'admin' && { ability: 'both' })
+    }
+
     try {
       setIsSubmitting(true)
       setError('')
 
-      const submitData = { ...adminData }
       if (isEditing && !submitData.password) {
         delete submitData.password
       }
@@ -112,7 +123,7 @@ export const UserManagement = () => {
     } catch (error) {
       setError(
         error.response?.data?.message ||
-          'Сервер хатоси. Илтимос кейинроқ уриниб кўринг!'
+        'Сервер хатоси. Илтимос кейинроқ уриниб кўринг!'
       )
     } finally {
       setIsSubmitting(false)
@@ -275,6 +286,58 @@ export const UserManagement = () => {
                 />
               </div>
 
+              {/* Role */}
+              {!isEditing && <div className='space-y-2'>
+                <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                  <Shield className='h-4 w-4 text-orange-500' />
+                  Рол
+                  <button
+                    type='button'
+                    onClick={() => setOpenX(true)}
+                    className='text-red-500 font-bold ml-1'
+                  >
+                    *
+                  </button>
+                </label>
+                <select
+                  className='w-full p-3 border border-gray-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all bg-white text-sm appearance-none'
+                  name='role'
+                  value={adminData.role}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value='worker'>Ходим</option>
+                  <option value='admin'>Админ</option>
+                </select>
+              </div>}
+
+              {!isEditing && adminData.role === 'worker' && (
+                <div className='space-y-2'>
+                  <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                    <Eye className='h-4 w-4 text-purple-500' />
+                    Кўриш ҳуқуқи
+                    <button
+                      type='button'
+                      onClick={() => setOpenX(true)}
+                      className='text-red-500 font-bold ml-1'
+                    >
+                      *
+                    </button>
+                  </label>
+                  <select
+                    className='w-full p-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all bg-white text-sm appearance-none'
+                    name='ability'
+                    value={adminData.ability}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value='both'>Ҳаммасини кўра олади</option>
+                    <option value='ready'>Фақат тайёр маҳсулотлар</option>
+                    <option value='!ready'>Фақат хом ашё</option>
+                  </select>
+                </div>
+              )}
+
               {/* Password */}
               <div className='space-y-2'>
                 <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
@@ -307,6 +370,45 @@ export const UserManagement = () => {
               </div>
             </div>
 
+            {/* Ability ma'nolari */}
+            {!isEditing && adminData.role === 'worker' && (
+              <div className='bg-purple-50 rounded-lg p-3 border border-purple-100'>
+                <div className='flex items-start gap-2'>
+                  <Info className='h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0' />
+                  <div className='text-xs text-gray-600'>
+                    <p className='font-medium text-purple-700 mb-1'>Кўриш ҳуқуқи изоҳи:</p>
+                    <ul className='space-y-1'>
+                      <li className='flex items-center gap-2'>
+                        <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                        <span><strong>Ҳаммасини кўра олади</strong> - Барча маҳсулот ва хом ашёлар</span>
+                      </li>
+                      <li className='flex items-center gap-2'>
+                        <div className='w-2 h-2 bg-blue-500 rounded-full'></div>
+                        <span><strong>Фақат тайёр маҳсулотлар</strong> - Тайёр бўлган маҳсулотларнигина кўради</span>
+                      </li>
+                      <li className='flex items-center gap-2'>
+                        <div className='w-2 h-2 bg-orange-500 rounded-full'></div>
+                        <span><strong>Фақат хом ашё</strong> - Хом ашё ва тайёр бўлмаган маҳсулотларнигина кўради</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Admin ability info */}
+            {adminData.role === 'admin' && (
+              <div className='bg-green-50 rounded-lg p-3 border border-green-100'>
+                <div className='flex items-start gap-2'>
+                  <CheckCircle className='h-4 w-4 text-green-500 mt-0.5 flex-shrink-0' />
+                  <div className='text-xs text-gray-600'>
+                    <p className='font-medium text-green-700 mb-1'>Админ ҳуқуқлари:</p>
+                    <p>Админ роли учун барча маҳсулот ва хом ашёларни кўриш ҳуқуқи автомат равишда берилади.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Help Info */}
             <div className='bg-blue-50 rounded-lg p-3 border border-blue-100'>
               <div className='flex items-start gap-2'>
@@ -317,6 +419,8 @@ export const UserManagement = () => {
                     <li>• Мажбурий майдонлар * белгиси билан</li>
                     <li>• Пароль камида 8 та белги</li>
                     <li>• Телефон +998 форматида</li>
+                    <li>• Админ - барча маҳсулотларни кўради</li>
+                    <li>• Ходим - танланган кўриш ҳуқуқига эга</li>
                   </ul>
                 </div>
               </div>
@@ -341,11 +445,10 @@ export const UserManagement = () => {
               <button
                 type='submit'
                 disabled={isSubmitting}
-                className={`${
-                  isSubmitting
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-500 hover:bg-blue-600'
-                } rounded-lg text-white py-3 font-medium transition-colors cursor-pointer flex justify-center items-center gap-2 text-sm`}
+                className={`${isSubmitting
+                  ? 'bg-blue-400 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600'
+                  } rounded-lg text-white py-3 font-medium transition-colors cursor-pointer flex justify-center items-center gap-2 text-sm`}
               >
                 {isSubmitting ? (
                   <>

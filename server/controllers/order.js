@@ -14,7 +14,7 @@ import Order from '../models/order.js'
 import User from '../models/user.js'
 import Product from '../models/product.js'
 import { sendErrorResponse } from '../middlewares/sendErrorResponse.js'
-
+import Client from "../models/client.js"
 export const GetOrderStats = async (req, res) => {
   try {
     const { year, month, day } = req.query
@@ -238,85 +238,116 @@ export const AllOrders = async (_, res) => {
   }
 }
 
-export const GetOneOrder = async (req, res) => {
-  const { id } = req.params
-  try {
-    const order = await Order.findById(id)
-    if (!order) {
-      return sendErrorResponse(res, 404, 'Order not found!')
-    }
-    return res.status(200).json({ data: order })
-  } catch (error) {
-    sendErrorResponse(res, 500, 'Server Error. Please Try Again Later!')
-  }
-}
 
 export const NewOrder = async (req, res) => {
   try {
-    const { products } = req.body
+    let { customer, client, clientId = "", products, status } = req.body;
 
-    if (!req.body || !products?.length) {
-      return sendErrorResponse(res, 400, 'Invalid order data!')
+    if (!customer) {
+      return sendErrorResponse(res, 400, "Мижоз (customer) маълумоти йўқ!");
     }
 
-    // 1️⃣ Avval barcha productlarni bazadan topamiz
-    const productIds = products.map(p => p.product)
-    const foundProducts = await Product.find({ _id: { $in: productIds } })
+    if (!products || !products.length) {
+      return sendErrorResponse(res, 400, "Буюртмада маҳсулотлар йўқ!");
+    }
+
+    // 1️⃣ Agar client kelmasa → yangi client yaratamiz
+    if (!clientId) {
+      const newClient = await Client.create({
+        name: client.name,
+        phoneNumber: client.phoneNumber,
+        clientn: true
+      });
+
+      client = newClient._id;
+    }
+
+
+    const productIds = products.map((p) => p.product);
+    const foundProducts = await Product.find({ _id: { $in: productIds } });
 
     if (foundProducts.length !== products.length) {
-      return sendErrorResponse(res, 404, 'Some products were not found!')
+      return sendErrorResponse(res, 404, "Айрим маҳсулотлар топилмади!");
     }
 
-    // 2️⃣ Har bir mahsulot uchun stock tekshirish
     for (const item of products) {
-      const product = foundProducts.find(p => p._id.toString() === item.product)
-      if (!product) continue
-
+      const product = foundProducts.find(
+        (p) => p._id.toString() === item.product
+      );
       if (product.stock < item.amount) {
         return sendErrorResponse(
           res,
           400,
-          `Not enough stock for "${product.title}"!`
-        )
+          `“${product.title}” маҳсулоти учун омборда етарли миқдор йўқ!`
+        );
       }
     }
 
-    // 3️⃣ Barcha mahsulotlar uchun stockni kamaytirish (parallel)
-    await Promise.all(
-      products.map(async item => {
-        const product = foundProducts.find(
-          p => p._id.toString() === item.product
-        )
-        if (product) {
-          product.stock -= item.amount
-          await product.save()
-        }
-      })
-    )
+    const orderProducts = products.map((item) => {
+      const dbProduct = foundProducts.find(
+        (p) => p._id.toString() === item.product
+      );
 
-    // 4️⃣ Orderni yaratish
-    const newOrder = new Order(req.body)
-    await newOrder.save()
+      return {
+        product: item.product,
+        amount: item.amount,
+        unit: item.unit || dbProduct.unit,
+        price: 0
+      };
+    });
+
+    await Promise.all(
+      products.map(async (item) => {
+        const p = foundProducts.find(
+          (fp) => fp._id.toString() === item.product
+        );
+        p.stock -= item.amount;
+        await p.save();
+      })
+    );
+
+    const newOrder = new Order({
+      customer,
+      client: client || clientId,
+      products: orderProducts,
+      totalPrice: 0,
+      paid: false,
+      status: status,
+      orderDate: new Date()
+    });
+
+    await newOrder.save();
 
     return res.status(201).json({
-      data: newOrder,
-      message: 'Order created successfully ✅'
-    })
+      message: "Буюртма муваффақиятли яратилди ✅",
+      data: newOrder
+    });
   } catch (error) {
-    console.error('❌ Error creating order:', error)
-    sendErrorResponse(res, 500, 'Server Error. Please Try Again Later!')
+    console.error("❌ Буюртма яратишда хатолик:", error);
+    sendErrorResponse(
+      res,
+      500,
+      "Сервер хатолиги! Илтимос, кейинроқ қайта уриниб кўринг."
+    );
   }
-}
+};
+
 
 export const CancelOrder = async (req, res) => {
   try {
     const { id } = req.params
-    const canceledOrder = await Order.findByIdAndDelete(id)
-    if (!canceledOrder) {
-      return sendErrorResponse(res, 404, 'Order not found!')
+
+    const order = await Order.findById(id)
+    if (!order) {
+      return sendErrorResponse(res, 404, "Буюртма топилмади!")
     }
 
-    const restoreTasks = canceledOrder.products.map(async item => {
+    if (order.paid) {
+      return sendErrorResponse(res, 400, "Тўлов қилинган буюртмани бекор қилиш мумкин эмас!")
+    }
+
+
+    const restoreTasks = order.products.map(async item => {
       const product = await Product.findById(item.product)
       if (product) {
         product.stock += item.amount
@@ -325,36 +356,72 @@ export const CancelOrder = async (req, res) => {
     })
     await Promise.all(restoreTasks)
 
+    const canceledOrder = await Order.findByIdAndDelete(id)
+
     return res.status(200).json({
       data: canceledOrder,
-      message: 'Order has been canceled ❌'
+      message: "Буюртма бекор қилинди ❌"
     })
   } catch (error) {
-    console.error('❌ Error canceling order:', error)
-    sendErrorResponse(res, 500, 'Server Error. Please Try Again Later!')
+    console.error("❌ Буюртма бекор қилишда хатолик:", error)
+    sendErrorResponse(res, 500, "Сервер хатолиги! Илтимос, кейинроқ қайта уриниб кўринг.")
   }
 }
 
 export const UpdateOrder = async (req, res) => {
   try {
     const { id } = req.params
-    const updateData = req.body
+    const { products, status } = req.body
 
-    const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true
-    })
+    const order = await Order.findById(id)
+    if (!order) {
+      return sendErrorResponse(res, 404, "Буюртма топилмади!")
+    }
 
-    if (!updatedOrder) {
-      return sendErrorResponse(res, 404, 'Order not found!')
+
+    let totalPrice = 0
+
+    if (products && products.length) {
+      const updatedProducts = products.map(item => {
+        const price = Number(item.price) || 0
+        const amount = Number(item.amount) || 0
+
+        totalPrice += price * amount
+
+        return {
+          product: item.product,
+          amount,
+          unit: item.unit || 'дона',
+          price
+        }
+      })
+
+      order.products = updatedProducts
+    }
+
+
+    if (status) order.status = status
+
+    order.paid = true
+    order.totalPrice = totalPrice
+
+    await order.save()
+
+    if (totalPrice > 0) {
+      await Client.findByIdAndUpdate(
+        order.client,
+        { $inc: { debtUZ: totalPrice } },
+        { new: true }
+      )
     }
 
     return res.status(200).json({
-      data: updatedOrder,
-      message: 'Order updated successfully ✅'
+      data: order,
+      message: "Буюртма муваффақиятли янгиланди ✅"
     })
   } catch (error) {
-    console.error('❌ Error updating order:', error)
-    sendErrorResponse(res, 500, 'Server Error. Please Try Again Later!')
+    console.error("❌ Буюртма янгилашда хатолик:", error)
+    sendErrorResponse(res, 500, "Сервер хатолиги! Илтимос, кейинроқ қайта уриниб кўринг.")
   }
 }
+

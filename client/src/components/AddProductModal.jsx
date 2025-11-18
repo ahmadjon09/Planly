@@ -9,26 +9,41 @@ import {
   Ruler,
   User,
   Phone,
-  MapPin
+  MapPin,
+  Search,
+  ChevronLeft
 } from 'lucide-react'
-import { useState, useContext } from 'react'
+import { useState, useContext, useEffect } from 'react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
 
-export default function AddProductModal ({ open, setOpen, mutate }) {
+export default function AddProductModal({ open, setOpen, mutate }) {
   const { user } = useContext(ContextData)
   const [products, setProducts] = useState([
     {
       title: '',
-      price: null,
+      price: 0,
       stock: 1,
       unit: 'дона',
       ready: false,
       ID: '',
-      from: { phoneNumber: '', address: '', name: '' }
+      priceType: 'uz'
     }
   ])
+
   const [loading, setLoading] = useState(false)
+  const [clients, setClients] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showClientDropdown, setShowClientDropdown] = useState(false)
+  const [selectedClient, setSelectedClient] = useState(null)
+
+  // Client ma'lumotlari
+  const [clientData, setClientData] = useState({
+    clientId: '',
+    name: '',
+    phoneNumber: '',
+    address: ''
+  })
 
   const availableUnits = [
     'дона',
@@ -41,17 +56,67 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
     'упаковка'
   ]
 
-  // 🔄 Input change handler
+  // 🔍 Clientlarni yuklash - products/clients endpointidan
+  useEffect(() => {
+    if (open) {
+      fetchClients()
+    }
+  }, [open])
+
+  const fetchClients = async () => {
+    try {
+      const response = await Fetch.get('/products/clients')
+      setClients((response.data?.data || []).filter(c => c.clietn === false));
+    } catch (error) {
+      console.error('Clientlarni yuklashda xatolik:', error)
+      // Agar products/clients ishlamasa, oddiy clients endpointiga murojaat qilamiz
+      try {
+        const backupResponse = await Fetch.get('/clients')
+        setClients(backupResponse.data || [])
+      } catch (backupError) {
+        console.error('Backup client yuklashda xatolik:', backupError)
+      }
+    }
+  }
+
+  // 🔄 Product input change handler
   const handleChange = (i, field, value) => {
     const newProducts = [...products]
     newProducts[i][field] = value
     setProducts(newProducts)
   }
 
-  const handleFromChange = (i, field, value) => {
-    const newProducts = [...products]
-    newProducts[i].from[field] = value
-    setProducts(newProducts)
+  // 🔄 Client ma'lumotlarini o'zgartirish
+  const handleClientChange = (field, value) => {
+    setClientData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  // 🔍 Client tanlash
+  const handleClientSelect = (client) => {
+    setSelectedClient(client)
+    setClientData({
+      clientId: client._id,
+      name: client.name,
+      phoneNumber: client.phoneNumber,
+      address: client.address || ''
+    })
+    setShowClientDropdown(false)
+    setSearchTerm('')
+  }
+
+  // Client tanlovini bekor qilish
+  const handleClearClient = () => {
+    setSelectedClient(null)
+    setClientData({
+      clientId: '',
+      name: '',
+      phoneNumber: '',
+      address: ''
+    })
+    setSearchTerm('')
   }
 
   // ➕ Add/remove rows
@@ -60,12 +125,12 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
       ...products,
       {
         title: '',
-        price: null,
+        price: 0,
         stock: 1,
         unit: 'дона',
         ready: false,
         ID: '',
-        from: { phoneNumber: '', address: '', name: '' }
+        priceType: 'uz'
       }
     ])
 
@@ -86,23 +151,39 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
       }
     }
 
+    // Validate client fields
+    if (!clientData.name.trim() || !clientData.phoneNumber.trim()) {
+      alert('❌ Клиент исми ва телефон рақамини киритинг')
+      return
+    }
+
     setLoading(true)
     try {
-      await Fetch.post('/products/create', products)
+      // Payload tayyorlash
+      const payload = {
+        ...(clientData.clientId ? { clientId: clientData.clientId } : {
+          client: {
+            name: clientData.name,
+            phoneNumber: clientData.phoneNumber,
+            address: clientData.address
+          }
+        }),
+        products: products.map(p => ({
+          title: p.title,
+          price: Number(p.price) || 0,
+          stock: Number(p.stock) || 1,
+          unit: p.unit,
+          ready: p.ready,
+          priceType: p.priceType
+        }))
+      }
+
+      console.log('Payload:', payload)
+
+      await Fetch.post('/products/create', payload)
       mutate()
       setOpen(false)
-      setProducts([
-        {
-          title: '',
-          price: 0,
-          stock: 1,
-          unit: 'дона',
-          ready: false,
-          ID: '',
-          from: { phoneNumber: '', address: '', name: '' }
-        }
-      ])
-      alert('✅ Маҳсулот(лар) муваффақиятли қўшилди!')
+      resetForm()
     } catch (err) {
       console.error(err)
       alert('❌ Маҳсулот қўшишда хатолик юз берди')
@@ -110,6 +191,35 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
       setLoading(false)
     }
   }
+
+  // 🔄 Formani tozalash
+  const resetForm = () => {
+    setProducts([
+      {
+        title: '',
+        price: 0,
+        stock: 1,
+        unit: 'дона',
+        ready: false,
+        ID: '',
+        priceType: 'uz'
+      }
+    ])
+    setClientData({
+      clientId: '',
+      name: '',
+      phoneNumber: '',
+      address: ''
+    })
+    setSelectedClient(null)
+    setSearchTerm('')
+  }
+
+  // 🔍 Filtered clients
+  const filteredClients = clients.filter(client =>
+    client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.phoneNumber?.includes(searchTerm)
+  )
 
   if (!open) return null
 
@@ -127,7 +237,7 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
                 Янги маҳсулот(лар) қўшиш
               </h2>
               <p className='text-sm text-gray-600 mt-1'>
-                Бир нечта маҳсулотни бир вақтнинг ўзида қўшиш имкони
+                Бир нечта маҳсулотни бир вақтниң ўзида қўшиш имкони
               </p>
             </div>
           </div>
@@ -139,6 +249,157 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
           >
             <X size={24} />
           </button>
+        </div>
+
+        {/* 📋 CLIENT маълумотлари */}
+        <div className='bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-blue-200 p-6'>
+          <div className='flex items-center gap-3 mb-6'>
+            <div className='bg-indigo-100 p-2 rounded-lg'>
+              <User size={20} className='text-indigo-600' />
+            </div>
+            <div>
+              <h3 className='font-semibold text-gray-800 text-lg'>
+                Манба ҳақида маълумот
+              </h3>
+              <p className='text-sm text-gray-600'>
+                Барча маҳсулотлар учун бир Манба
+              </p>
+            </div>
+          </div>
+
+          {selectedClient ? (
+            // Selected client view
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-3'>
+                  <div className='bg-green-100 p-2 rounded-lg'>
+                    <User size={20} className='text-green-600' />
+                  </div>
+                  <div>
+                    <h4 className='font-semibold text-gray-800'>{selectedClient.name}</h4>
+                    <p className='text-sm text-gray-600'>{selectedClient.phoneNumber}</p>
+                    {selectedClient.address && (
+                      <p className='text-xs text-gray-500'>{selectedClient.address}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={handleClearClient}
+                  className='flex items-center gap-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-all duration-200'
+                >
+                  <X size={16} />
+                  Ўзгартириш
+                </button>
+              </div>
+
+              {selectedClient.products && selectedClient.products.length > 0 && (
+                <div className='bg-yellow-50 border border-yellow-200 rounded-xl p-4'>
+                  <h5 className='font-medium text-yellow-800 mb-2 flex items-center gap-2'>
+                    <Package size={16} />
+                    Мавжуд маҳсулотлар: {selectedClient.products.length} та
+                  </h5>
+                  <div className='text-sm text-yellow-700'>
+                    Ушбу манбада {selectedClient.products.length} та маҳсулот мавжуд
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Client search and selection
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+              {/* 🔍 Mavjud clientlarni qidirish */}
+              <div className='space-y-2'>
+                <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                  <Search size={16} className='text-blue-500' />
+                  Манба танлаш
+                </label>
+                <div className='relative'>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value)
+                      setShowClientDropdown(true)
+                    }}
+                    onFocus={() => setShowClientDropdown(true)}
+                    onBlur={() => setShowClientDropdown(false)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white"
+                    placeholder="Клиент исми ёки телефони бўйича излаш..."
+                  />
+
+                  <Search size={18} className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
+
+                  {/* Client dropdown */}
+                  {showClientDropdown && filteredClients.length > 0 && (
+                    <div className='absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto'>
+                      {filteredClients.map(client => (
+                        <div
+                          key={client._id}
+                          onClick={() => handleClientSelect(client)}
+                          className='p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0'
+                        >
+                          <div className='flex justify-between items-start'>
+                            <div>
+                              <div className='font-medium text-gray-800'>{client.name}</div>
+                              <div className='text-sm text-gray-600'>{client.phoneNumber}</div>
+                              {client.address && (
+                                <div className='text-xs text-gray-500'>{client.address}</div>
+                              )}
+                            </div>
+                            {client.products && (
+                              <div className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
+                                {client.products.length} маҳсулот
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className='space-y-4'>
+                <div className='text-center text-gray-500 py-4 border-2 border-dashed border-gray-300 rounded-xl'>
+                  <User size={32} className='mx-auto mb-2 text-gray-400' />
+                  <p className='text-sm'>Ёки янги клиент қўшинг</p>
+                </div>
+              </div>
+
+              {/* Yangi client ma'lumotlari */}
+              <div className='lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200'>
+                <div className='space-y-2'>
+                  <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                    <User size={16} className='text-gray-500' />
+                    Исм / Номи <span className='text-red-500'>*</span>
+                  </label>
+                  <input
+                    type='text'
+                    value={clientData.name}
+                    onChange={e => handleClientChange('name', e.target.value)}
+                    className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
+                    placeholder='Аҳмаджон'
+                    required
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                    <Phone size={16} className='text-gray-500' />
+                    Телефон рақам <span className='text-red-500'>*</span>
+                  </label>
+                  <input
+                    type='text'
+                    value={clientData.phoneNumber}
+                    onChange={e => handleClientChange('phoneNumber', e.target.value)}
+                    className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
+                    placeholder='+998 90 123 45 67'
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 🔽 Product rows */}
@@ -207,7 +468,7 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
                         required
                       />
                       <span className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm'>
-                        сўм
+                        {p.priceType == "uz" ? "сўм" : "$"}
                       </span>
                     </div>
                   </div>
@@ -248,90 +509,59 @@ export default function AddProductModal ({ open, setOpen, mutate }) {
                 </div>
               </div>
 
-              {/* ✅ Тайёрлиги (ready) */}
-              <div className='flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200'>
-                <div
-                  className={`p-1 rounded-lg ${
-                    p.ready ? 'bg-green-500' : 'bg-gray-400'
-                  }`}
-                >
-                  <CheckCircle size={16} className='text-white' />
-                </div>
-                <div className='flex-1'>
-                  <label className='text-sm font-semibold text-gray-700 cursor-pointer'>
-                    Маҳсулот тайёр
+              {/* Narx turi va ready status */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {/* 💵 Narx turi */}
+                <div className='space-y-2'>
+                  <label className='text-sm font-semibold text-gray-700'>
+                    Нарх тури
                   </label>
-                  <p className='text-xs text-gray-600'>
-                    Белгиланса, маҳсулот тайёр деб ҳисобланади
-                  </p>
+                  <div className='flex gap-4'>
+                    <label className='flex items-center gap-2 cursor-pointer'>
+                      <input
+                        type='radio'
+                        value='uz'
+                        checked={p.priceType === 'uz'}
+                        onChange={e => handleChange(i, 'priceType', e.target.value)}
+                        className='w-4 h-4 text-blue-600'
+                      />
+                      <span className='text-sm'>Сўм (UZS)</span>
+                    </label>
+                    <label className='flex items-center gap-2 cursor-pointer'>
+                      <input
+                        type='radio'
+                        value='en'
+                        checked={p.priceType === 'en'}
+                        onChange={e => handleChange(i, 'priceType', e.target.value)}
+                        className='w-4 h-4 text-blue-600'
+                      />
+                      <span className='text-sm'>Доллар ($)</span>
+                    </label>
+                  </div>
                 </div>
-                <input
-                  type='checkbox'
-                  checked={p.ready}
-                  onChange={e => handleChange(i, 'ready', e.target.checked)}
-                  className='w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer'
-                />
-              </div>
 
-              {/* 📋 FROM маълумотлари */}
-              <div className='bg-gray-50 rounded-xl p-5 border border-gray-200'>
-                <div className='flex items-center gap-3 mb-4'>
-                  <div className='bg-indigo-100 p-2 rounded-lg'>
-                    <User size={18} className='text-indigo-600' />
+                {/* ✅ Тайёрлиги (ready) */}
+                <div className='flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200'>
+                  <div
+                    className={`p-1 rounded-lg ${p.ready ? 'bg-green-500' : 'bg-gray-400'
+                      }`}
+                  >
+                    <CheckCircle size={16} className='text-white' />
                   </div>
-                  <h3 className='font-semibold text-gray-800'>
-                    Келган жой ҳақида маълумот
-                  </h3>
-                </div>
-
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                  <div className='space-y-2'>
-                    <label className='text-sm font-medium text-gray-700 flex items-center gap-2'>
-                      <User size={14} className='text-gray-500' />
-                      Исм / Номи
+                  <div className='flex-1'>
+                    <label className='text-sm font-semibold text-gray-700 cursor-pointer'>
+                      Маҳсулот тайёр
                     </label>
-                    <input
-                      type='text'
-                      value={p.from.name}
-                      onChange={e =>
-                        handleFromChange(i, 'name', e.target.value)
-                      }
-                      className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
-                      placeholder='Аҳмаджон'
-                    />
+                    <p className='text-xs text-gray-600'>
+                      Белгиланса, маҳсулот тайёр деб ҳисобланади
+                    </p>
                   </div>
-
-                  <div className='space-y-2'>
-                    <label className='text-sm font-medium text-gray-700 flex items-center gap-2'>
-                      <Phone size={14} className='text-gray-500' />
-                      Телефон рақам
-                    </label>
-                    <input
-                      type='text'
-                      value={p.from.phoneNumber}
-                      onChange={e =>
-                        handleFromChange(i, 'phoneNumber', e.target.value)
-                      }
-                      className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
-                      placeholder='+998 90 123 45 67'
-                    />
-                  </div>
-
-                  <div className='space-y-2'>
-                    <label className='text-sm font-medium text-gray-700 flex items-center gap-2'>
-                      <MapPin size={14} className='text-gray-500' />
-                      Манзил
-                    </label>
-                    <input
-                      type='text'
-                      value={p.from.address}
-                      onChange={e =>
-                        handleFromChange(i, 'address', e.target.value)
-                      }
-                      className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
-                      placeholder='Наманган, Юнусобод...'
-                    />
-                  </div>
+                  <input
+                    type='checkbox'
+                    checked={p.ready}
+                    onChange={e => handleChange(i, 'ready', e.target.checked)}
+                    className='w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer'
+                  />
                 </div>
               </div>
             </div>

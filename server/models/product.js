@@ -4,6 +4,7 @@ const ProductSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     price: { type: Number, required: true },
+    priceType: { type: String, enum: ["uz", "en"], default: "uz" },
     ID: { type: Number, required: true },
     stock: { type: Number, default: 1 },
     unit: {
@@ -13,9 +14,9 @@ const ProductSchema = new mongoose.Schema(
     },
     ready: { type: Boolean, default: false },
     from: {
-      phoneNumber: { type: String },
-      address: { type: String },
-      name: { type: String }
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Clients',
+      required: true
     }
   },
   { timestamps: true }

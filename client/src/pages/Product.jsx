@@ -24,7 +24,8 @@ import {
   Edit3,
   ChevronDown,
   MoreVertical,
-  Calculator
+  Calculator,
+  Circle
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import AddProductModal from '../components/AddProductModal'
@@ -206,7 +207,7 @@ export const ProductsPage = () => {
           className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200'
         >
           <div className='flex flex-col md:flex-row gap-6'>
-            <div className='flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+            <div className='flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
               <div className='relative'>
                 <Hash className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5' />
                 <input
@@ -238,19 +239,6 @@ export const ProductsPage = () => {
                   className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
                 />
               </div>
-
-              <div className='relative'>
-                <Filter className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5' />
-                <select
-                  value={readyFilter}
-                  onChange={e => setReadyFilter(e.target.value)}
-                  className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50 appearance-none'
-                >
-                  <option value='all'>Ҳамма маҳсулотлар</option>
-                  <option value='ready'>Тайёр маҳсулотлар</option>
-                  <option value='not-ready'>Тайёр бўлмаган</option>
-                </select>
-              </div>
             </div>
           </div>
         </motion.div>
@@ -278,25 +266,25 @@ export const ProductsPage = () => {
             {/* Table Header */}
             <div className='px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50'>
               <div className='flex items-center justify-between'>
-                <h3 className='text-xl font-semibold text-gray-800'>
-                  Маҳсулотлар рўйхати ({filteredProducts.length})
+                <h3 className='text-xl font-semibold text-gray-800 flex gap-1 items-center'>
+                  <Circle size={18} color='green' /> Маҳсулотлар рўйхати ({filteredProducts.length})
                 </h3>
                 {(searchID ||
                   searchTitle ||
                   searchDate ||
                   readyFilter !== 'all') && (
-                  <button
-                    onClick={() => {
-                      setSearchID('')
-                      setSearchTitle('')
-                      setSearchDate('')
-                      setReadyFilter('all')
-                    }}
-                    className='text-blue-500 hover:text-blue-700 font-medium text-sm'
-                  >
-                    Филтрни тозалаш
-                  </button>
-                )}
+                    <button
+                      onClick={() => {
+                        setSearchID('')
+                        setSearchTitle('')
+                        setSearchDate('')
+                        setReadyFilter('all')
+                      }}
+                      className='text-blue-500 hover:text-blue-700 font-medium text-sm'
+                    >
+                      Филтрни тозалаш
+                    </button>
+                  )}
               </div>
             </div>
 
@@ -334,13 +322,13 @@ export const ProductsPage = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className='hover:bg-blue-50 transition-all duration-200 group'
+                        className={`${product.stock == 0 ? "bg-red-400 text-white" : ""} transition-all duration-200 group`}
                       >
                         {/* Product Info */}
                         <td className='px-8 py-4'>
                           <div className='flex items-center gap-4'>
-                            <div className='bg-blue-100 p-3 rounded-xl'>
-                              <Package className='h-6 w-6 text-blue-600' />
+                            <div className={`bg-${product.ready ? "blue" : "red"}-100 p-3 rounded-xl`}>
+                              <Circle className={`h-6 w-6 text-${product.ready ? "blue" : "red"}-600`} />
                             </div>
                             <div>
                               <p className='font-bold text-gray-800 text-lg'>
@@ -357,7 +345,7 @@ export const ProductsPage = () => {
                         <td className='px-8 py-4'>
                           <div className='space-y-2'>
                             <div className='flex items-center gap-2'>
-                              <DollarSign className='h-4 w-4 text-green-500' />
+                              <p className='text-green-500 font-bold'>{product.priceType == "uz" ? "сўм" : "$"}</p>
                               {user.role === 'admin' ? (
                                 <input
                                   type='number'
@@ -373,7 +361,7 @@ export const ProductsPage = () => {
                                 />
                               ) : (
                                 <span className='font-semibold text-green-600'>
-                                  {product.price?.toLocaleString()} сўм
+                                  {product.price?.toLocaleString()}
                                 </span>
                               )}
                             </div>
@@ -427,7 +415,7 @@ export const ProductsPage = () => {
                               className='border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
                             >
                               <option value='true'>Тайёр</option>
-                              <option value='false'>Тайёр эмас</option>
+                              <option value='false'>Хом ашё</option>
                             </select>
                           ) : (
                             <span
@@ -436,7 +424,7 @@ export const ProductsPage = () => {
                               )}`}
                             >
                               {getStatusIcon(product.ready)}
-                              {product.ready ? 'Тайёр' : 'Тайёр эмас'}
+                              {product.ready ? 'Тайёр' : 'Хом ашё'}
                             </span>
                           )}
                         </td>
@@ -511,9 +499,9 @@ export const ProductsPage = () => {
                 </h3>
                 <p className='text-gray-500 mb-6'>
                   {searchID ||
-                  searchTitle ||
-                  searchDate ||
-                  readyFilter !== 'all'
+                    searchTitle ||
+                    searchDate ||
+                    readyFilter !== 'all'
                     ? 'Қидирув шартларингизга мос келувчи маҳсулотлар топилмади'
                     : 'Ҳали бирор маҳсулот қўшилмаган'}
                 </p>
@@ -521,18 +509,18 @@ export const ProductsPage = () => {
                   searchTitle ||
                   searchDate ||
                   readyFilter !== 'all') && (
-                  <button
-                    onClick={() => {
-                      setSearchID('')
-                      setSearchTitle('')
-                      setSearchDate('')
-                      setReadyFilter('all')
-                    }}
-                    className='text-blue-500 hover:text-blue-700 font-semibold'
-                  >
-                    Филтрни тозалаш
-                  </button>
-                )}
+                    <button
+                      onClick={() => {
+                        setSearchID('')
+                        setSearchTitle('')
+                        setSearchDate('')
+                        setReadyFilter('all')
+                      }}
+                      className='text-blue-500 hover:text-blue-700 font-semibold'
+                    >
+                      Филтрни тозалаш
+                    </button>
+                  )}
               </div>
             )}
           </motion.div>
@@ -628,12 +616,13 @@ export const ProductsPage = () => {
                                       }
                                     />
                                     <span className='text-gray-600 whitespace-nowrap'>
-                                      сўм
+                                      {viewData.priceType == "uz" ? "сўм" : "$"}
                                     </span>
                                   </div>
                                 ) : (
                                   <p className='font-medium'>
-                                    {viewData.price?.toLocaleString()} сўм
+                                    {viewData.price?.toLocaleString()}
+                                    {viewData.priceType == "uz" ? "сўм" : "$"}
                                   </p>
                                 )}
                               </div>
@@ -732,11 +721,10 @@ export const ProductsPage = () => {
                                   </select>
                                 ) : (
                                   <p
-                                    className={`font-medium ${
-                                      viewData.ready
-                                        ? 'text-green-600'
-                                        : 'text-red-600'
-                                    }`}
+                                    className={`font-medium ${viewData.ready
+                                      ? 'text-green-600'
+                                      : 'text-red-600'
+                                      }`}
                                   >
                                     {viewData.ready ? 'Тайёр' : 'Тайёр эмас'}
                                   </p>
@@ -748,7 +736,7 @@ export const ProductsPage = () => {
 
                         <div className='bg-gray-50 rounded-xl p-4 mt-4'>
                           <h3 className='font-semibold text-gray-700 mb-3 flex items-center gap-2'>
-                            📦 Келган жой ҳақида
+                            📦 Манба ҳақида
                           </h3>
 
                           <div className='space-y-3'>
@@ -759,26 +747,9 @@ export const ProductsPage = () => {
                               />
                               <div className='flex-1'>
                                 <p className='text-sm text-gray-500'>Номи</p>
-                                {user.role === 'admin' ? (
-                                  <input
-                                    type='text'
-                                    defaultValue={viewData.from?.name || ''}
-                                    placeholder='Номи'
-                                    className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
-                                    onChange={e =>
-                                      handleChange(viewData._id, 'from', {
-                                        ...(editing[viewData._id]?.from ||
-                                          viewData.from ||
-                                          {}),
-                                        name: e.target.value
-                                      })
-                                    }
-                                  />
-                                ) : (
-                                  <p className='font-medium'>
-                                    {viewData.from?.name || '—'}
-                                  </p>
-                                )}
+                                <p className='font-medium'>
+                                  {viewData.client?.name || '—'}
+                                </p>
                               </div>
                             </div>
 
@@ -789,60 +760,13 @@ export const ProductsPage = () => {
                               />
                               <div className='flex-1'>
                                 <p className='text-sm text-gray-500'>Телефон</p>
-                                {user.role === 'admin' ? (
-                                  <input
-                                    type='text'
-                                    defaultValue={
-                                      viewData.from?.phoneNumber || ''
-                                    }
-                                    placeholder='Телефон рақами'
-                                    className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
-                                    onChange={e =>
-                                      handleChange(viewData._id, 'from', {
-                                        ...(editing[viewData._id]?.from ||
-                                          viewData.from ||
-                                          {}),
-                                        phoneNumber: e.target.value
-                                      })
-                                    }
-                                  />
-                                ) : (
-                                  <p className='font-medium'>
-                                    {viewData.from?.phoneNumber || '—'}
-                                  </p>
-                                )}
+
+                                <p className='font-medium'>
+                                  {viewData.client?.phoneNumber || '—'}
+                                </p>
                               </div>
                             </div>
 
-                            <div className='flex items-center gap-3'>
-                              <MapPin
-                                size={16}
-                                className='text-gray-500 flex-shrink-0'
-                              />
-                              <div className='flex-1'>
-                                <p className='text-sm text-gray-500'>Манзил</p>
-                                {user.role === 'admin' ? (
-                                  <input
-                                    type='text'
-                                    defaultValue={viewData.from?.address || ''}
-                                    placeholder='Манзил'
-                                    className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
-                                    onChange={e =>
-                                      handleChange(viewData._id, 'from', {
-                                        ...(editing[viewData._id]?.from ||
-                                          viewData.from ||
-                                          {}),
-                                        address: e.target.value
-                                      })
-                                    }
-                                  />
-                                ) : (
-                                  <p className='font-medium'>
-                                    {viewData.from?.address || '—'}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
                           </div>
                         </div>
 

@@ -1,7 +1,7 @@
 import os from 'os'
 import si from 'systeminformation' 
 
-export const getSystemHealth = async (req, res) => {
+export const getSystemHealth = async (_, res) => {
   try {
     const [
       cpu,

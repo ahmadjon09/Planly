@@ -5,8 +5,9 @@ const User = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   role: { type: String, required: true },
+  ability: { type: String, enum: ["both", "ready", "!ready"], default: "both" },
   owner: { type: Boolean, default: false },
   password: { type: String, required: true }
-})  
+})
 
 export default mongoose.model('Users', User)

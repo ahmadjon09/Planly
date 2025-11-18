@@ -25,17 +25,17 @@ const OrderSchema = new mongoose.Schema({
       },
       price: {
         type: Number,
-        required: true
-      }
+        default: 0
+      },
     }
   ],
   client: {
-    fullName: { type: String, required: true },
-    phoneNumber: { type: String, required: true },
-    address: { type: String }
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Clients",
+    required: true
   },
   status: { type: String, required: true },
-  payType: { type: String, default: '--' },
+  paid: { type: Boolean, default: false },
   totalPrice: { type: Number, default: 0 },
   orderDate: {
     type: Date,

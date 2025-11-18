@@ -8,7 +8,8 @@ import {
   Shield,
   Crown,
   Users,
-  Search
+  Search,
+  Circle
 } from 'lucide-react'
 import useSWR, { mutate } from 'swr'
 import Axios from '../middlewares/fetcher'
@@ -229,6 +230,9 @@ export const Workers = () => {
                     <th className='py-5 px-8 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
                       Лавозим
                     </th>
+                    <th className='py-5 px-8 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                      Склад
+                    </th>
                     {user.owner && (
                       <th className='py-5 px-8 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider'>
                         Амаллар
@@ -243,21 +247,19 @@ export const Workers = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className={`hover:bg-blue-50 transition-all duration-200 group ${
-                        worker._id === isBoss
-                          ? 'bg-amber-50 hover:bg-amber-100'
-                          : ''
-                      }`}
+                      className={`hover:bg-blue-50 transition-all duration-200 group ${worker._id === isBoss
+                        ? 'bg-amber-50 hover:bg-amber-100'
+                        : ''
+                        }`}
                     >
                       {/* Worker Info */}
                       <td className='py-5 px-8'>
                         <div className='flex items-center gap-4'>
                           <div
-                            className={`p-3 rounded-xl shadow-sm ${
-                              worker._id === isBoss
-                                ? 'bg-amber-100 text-amber-600'
-                                : 'bg-blue-100 text-blue-600'
-                            }`}
+                            className={`p-3 rounded-xl shadow-sm ${worker._id === isBoss
+                              ? 'bg-amber-100 text-amber-600'
+                              : 'bg-blue-100 text-blue-600'
+                              }`}
                           >
                             <User className='h-6 w-6' />
                           </div>
@@ -313,7 +315,9 @@ export const Workers = () => {
                           {getRoleText(worker)}
                         </span>
                       </td>
-
+                      <td className='py-5 px-12'>
+                        <Circle size={18} color={` ${worker.ability == "ready" ? "blue" : worker.ability == "!ready" ? "red" : "green"}`} />
+                      </td>
                       {/* Actions */}
                       {user.owner && (
                         <td className='py-5 px-8 text-center'>
