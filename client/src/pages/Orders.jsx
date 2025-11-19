@@ -33,7 +33,7 @@ import { LoadingState } from '../components/loading-state'
 
 export const ViewOrders = () => {
   const { data, error, isLoading, mutate } = useSWR('/orders/clients', Fetch, {
-    refreshInterval: 10000,
+    refreshInterval: 5000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true
   })
@@ -88,8 +88,14 @@ export const ViewOrders = () => {
       orders = orders.filter(order => order.status === statusFilter)
     }
 
+    // Yangi orderlar tepada bo‘lishi uchun sort
+    orders = orders.sort((a, b) =>
+      new Date(b.createdAt || b.orderDate) - new Date(a.createdAt || a.orderDate)
+    )
+
     return orders
   }, [selectedClient, searchDate, statusFilter])
+
 
   // Status iconlari
   const getStatusIcon = status => {
@@ -304,6 +310,7 @@ export const ViewOrders = () => {
     )
   }
 
+
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6'>
       <div className='mx-auto space-y-6'>
@@ -415,7 +422,7 @@ export const ViewOrders = () => {
             )}
           </div>
         </motion.div>
-        <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
+        {selectedClient == null ? null : < div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
           <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
             <Plus size={20} className='text-purple-500' />
             Қарзни ёпиш
@@ -445,6 +452,7 @@ export const ViewOrders = () => {
             )}
           </div>
         </div>
+        }
         {/* Clients List */}
         {!selectedClient && (
           <motion.div
@@ -520,8 +528,8 @@ export const ViewOrders = () => {
 
                       <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
                         <span className='text-sm text-gray-500'>Қарз:</span>
-                        <span className='font-bold text-red-600 text-lg'>
-                          -{(client.debtUZ || 0).toLocaleString()} сўм
+                        <span className={`font-bold text-red-500 text-lg`}>
+                          {(client.debtUZ || 0).toLocaleString()} сўм
                         </span>
                       </div>
                     </motion.div>
@@ -931,6 +939,6 @@ export const ViewOrders = () => {
       </AnimatePresence>
 
       {isOpen && <AddNewOrder onClose={() => setIsOpen(false)} isOpen={isOpen} />}
-    </div>
+    </div >
   )
 }

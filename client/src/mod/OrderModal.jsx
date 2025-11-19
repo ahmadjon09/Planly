@@ -12,7 +12,8 @@ import {
   Phone,
   MapPin,
   Users,
-  Package
+  Package,
+  Filter
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
@@ -37,6 +38,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState(null)
   const [showClientsList, setShowClientsList] = useState(false)
+  const [productType, setProductType] = useState('ready') // 'ready' yoki 'raw'
 
   // Client ma'lumotlari
   const [clientData, setClientData] = useState({
@@ -51,8 +53,8 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
       setLoading(true)
       setClientsLoading(true)
       try {
-        // Mahsulotlarni olish
-        const productsRes = await Fetch.get('/products')
+        // Mahsulotlarni olish - tayyor va xomashyo alohida
+        const productsRes = await Fetch.get(`/products/${productType}`)
         setProducts(productsRes.data?.data || [])
 
         // Clientlarni olish - products/clients endpointidan
@@ -67,7 +69,26 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
       }
     }
     fetchData()
-  }, [])
+  }, [productType])
+
+  // Product type o'zgarganda mahsulotlarni qayta yuklash
+  useEffect(() => {
+    if (isOpen) {
+      const fetchProducts = async () => {
+        setLoading(true)
+        try {
+          const productsRes = await Fetch.get(`/products/${productType}`)
+          setProducts(productsRes.data?.data || [])
+        } catch (err) {
+          console.error('❌ Маҳсулотларни олишда хатолик:', err)
+          setMessage({ type: 'error', text: 'Маҳсулотларни юклашда хатолик!' })
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchProducts()
+    }
+  }, [productType, isOpen])
 
   // Clientlarni filter qilish
   const filteredClients = clients.filter(client => {
@@ -142,7 +163,8 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
           ...product,
           quantity: 1,
           price: product.price,
-          unit: product.unit || 'дона'
+          unit: product.unit || 'дона',
+          productType: productType // Mahsulot turini saqlaymiz
         }
       ])
     }
@@ -204,7 +226,8 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
           product: p._id,
           amount: p.quantity,
           unit: p.unit,
-          price: p.price
+          price: p.price,
+          productType: p.productType // Mahsulot turini serverga yuboramiz
         })),
         ...(clientData.clientId ? { clientId: clientData.clientId } : {
           client: {
@@ -449,10 +472,39 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
 
             {/* Mahsulotlar qidiruv */}
             <div className='bg-white rounded-2xl border border-gray-200 p-6'>
-              <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
-                <Package size={20} className='text-blue-600' />
-                Маҳсулотларни танлаш
-              </h3>
+              <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4'>
+                <h3 className='text-lg font-semibold text-gray-800 flex items-center gap-2'>
+                  <Package size={20} className='text-blue-600' />
+                  Маҳсулотларни танлаш
+                </h3>
+
+                {/* Mahsulot turini tanlash */}
+                <div className='flex items-center gap-3'>
+                  <Filter size={18} className='text-gray-500' />
+                  <div className='flex bg-gray-100 rounded-lg p-1'>
+                    <button
+                      type='button'
+                      onClick={() => setProductType('ready')}
+                      className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${productType === 'ready'
+                        ? 'bg-blue-500 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                      Тайёр маҳсулотлар
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => setProductType('raw')}
+                      className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${productType === 'raw'
+                        ? 'bg-green-500 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                      Хом ашё
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               <div className='relative mb-6'>
                 <input
@@ -468,6 +520,19 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                 />
               </div>
 
+              {/* Mahsulot turi indikatori */}
+              <div className='mb-4'>
+                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${productType === 'ready'
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                  : 'bg-green-100 text-green-700 border border-green-200'
+                  }`}>
+                  <div className={`w-2 h-2 rounded-full ${productType === 'ready' ? 'bg-blue-500' : 'bg-green-500'
+                    }`}></div>
+                  {productType === 'ready' ? 'Тайёр маҳсулотлар' : 'Хом ашё'}
+                  ({filteredProducts.length} та мавжуд)
+                </div>
+              </div>
+
               {/* Mahsulotlar */}
               <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-xl bg-gray-50'>
                 {loading ? (
@@ -481,11 +546,16 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                       key={product._id}
                       onClick={() => handleAddProduct(product)}
                       disabled={product.stock === 0}
-                      className={`p-4 bg-white border rounded-xl transition-all duration-200 text-left ${product.stock === 0
+                      className={`p-4 bg-white border rounded-xl transition-all duration-200 text-left relative ${product.stock === 0
                         ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300'
                         : 'hover:bg-blue-50 hover:border-blue-300 border-gray-200 shadow-sm hover:shadow-md'
+                        } ${productType === 'raw' ? 'border-l-4 border-l-green-400' : 'border-l-4 border-l-blue-400'
                         }`}
                     >
+                      {/* Mahsulot turi indikatori */}
+                      <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${productType === 'ready' ? 'bg-blue-400' : 'bg-green-400'
+                        }`}></div>
+
                       <div className='space-y-2'>
                         <span className='font-medium text-gray-800 block'>
                           {product.title}
@@ -497,6 +567,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                         >
                           Қолдиқ: {product.stock} {product.unit || 'дона'}
                         </p>
+
                       </div>
                     </button>
                   ))
@@ -504,6 +575,12 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                   <div className='text-center py-8 col-span-full'>
                     <Package size={48} className='mx-auto mb-3 text-gray-400' />
                     <p className='text-gray-500 font-medium'>Маҳсулот топилмади</p>
+                    <p className='text-sm text-gray-400 mt-1'>
+                      {productType === 'ready'
+                        ? 'Тайёр маҳсулотлар мавжуд эмас'
+                        : 'Хом ашё мавжуд эмас'
+                      }
+                    </p>
                   </div>
                 )}
               </div>
@@ -528,93 +605,74 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                   <CheckCircle size={20} className='text-green-600' />
                   Танланган маҳсулотлар ({selectedProducts.length})
                 </h3>
-                <div className='space-y-3'>
-                  {selectedProducts.map(item => (
-                    <div
-                      key={item._id}
-                      className='flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50 hover:bg-blue-50 transition-all duration-200'
-                    >
-                      <div className='flex-1 min-w-0'>
-                        <div className='font-medium text-gray-800 mb-1'>{item.title}</div>
-                        <div className='text-sm text-gray-600'>ID: {item.ID}</div>
-                      </div>
 
-                      <div className='flex items-center gap-4'>
-                        <div className='flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-300'>
-                          <button
-                            type='button'
-                            onClick={() => handleQuantityChange(item._id, -1)}
-                            className='p-1 bg-gray-100 rounded-full hover:bg-gray-200 transition'
-                          >
-                            <Minus size={16} />
-                          </button>
-                          <input
-                            type='number'
-                            min='1'
-                            max={item.stock}
-                            value={item.quantity}
-                            onChange={e =>
-                              handleInputQuantityChange(item._id, e.target.value)
-                            }
-                            className='w-12 text-center border-0 bg-transparent outline-none'
-                          />
-                          <button
-                            type='button'
-                            onClick={() => handleQuantityChange(item._id, 1)}
-                            className='p-1 bg-gray-100 rounded-full hover:bg-gray-200 transition'
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-
-                        <span className='text-gray-700 font-medium w-20 text-center'>
-                          {item.unit || 'дона'}
-                        </span>
-                        <button
-                          type='button'
-                          onClick={() =>
-                            setSelectedProducts(prev =>
-                              prev.filter(p => p._id !== item._id)
-                            )
-                          }
-                          className='p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition'
-                          title='Маҳсулотни ўчириш'
-                        >
-                          <X size={18} />
-                        </button>
+                {/* Mahsulot turlari bo'yicha guruhlash */}
+                <div className='space-y-4'>
+                  {/* Tayyor mahsulotlar */}
+                  {selectedProducts.filter(p => p.productType === 'ready').length > 0 && (
+                    <div>
+                      <h4 className='text-sm font-medium text-blue-700 mb-2 flex items-center gap-2'>
+                        <div className='w-2 h-2 bg-blue-500 rounded-full'></div>
+                        Тайёр маҳсулотлар
+                      </h4>
+                      <div className='space-y-3'>
+                        {selectedProducts
+                          .filter(p => p.productType === 'ready')
+                          .map(item => (
+                            <ProductItem
+                              key={item._id}
+                              item={item}
+                              onQuantityChange={handleQuantityChange}
+                              onInputQuantityChange={handleInputQuantityChange}
+                              onRemove={() => setSelectedProducts(prev => prev.filter(p => p._id !== item._id))}
+                              color="blue"
+                            />
+                          ))}
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Xomashyo mahsulotlar */}
+                  {selectedProducts.filter(p => p.productType === 'raw').length > 0 && (
+                    <div>
+                      <h4 className='text-sm font-medium text-green-700 mb-2 flex items-center gap-2'>
+                        <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                        Хом ашё
+                      </h4>
+                      <div className='space-y-3'>
+                        {selectedProducts
+                          .filter(p => p.productType === 'raw')
+                          .map(item => (
+                            <ProductItem
+                              key={item._id}
+                              item={item}
+                              onQuantityChange={handleQuantityChange}
+                              onInputQuantityChange={handleInputQuantityChange}
+                              onRemove={() => setSelectedProducts(prev => prev.filter(p => p._id !== item._id))}
+                              color="green"
+                            />
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Order details */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[{
-                label: "Ҳолат",
-                value: status,
-                onChange: e => setStatus(e.target.value),
-                options: ["Янги", "Қабул қилинди", "Юборилди", "Бажарилди"]
-              },
-              ].map((item, idx) => (
-                <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">{item.label}</label>
-                  {item.isPrice ? (
-                    <p className="text-green-600 text-2xl font-bold">{item.value.toLocaleString()} сўм</p>
-                  ) : (
-                    <select
-                      value={item.value}
-                      onChange={item.onChange}
-                      className="border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      {item.options.map((opt, i) => (
-                        <option key={i} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              ))}
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Ҳолат</label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value)}
+                  className="border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                >
+                  {["Янги", "Қабул қилинди", "Юборилди", "Бажарилди"].map((opt, i) => (
+                    <option key={i} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Submit buttons */}
@@ -643,6 +701,65 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
             </div>
           </form>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Alohida ProductItem komponenti
+const ProductItem = ({ item, onQuantityChange, onInputQuantityChange, onRemove, color }) => {
+  const colorClasses = {
+    blue: 'border-l-blue-400 hover:bg-blue-50',
+    green: 'border-l-green-400 hover:bg-green-50'
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50 transition-all duration-200 border-l-4 ${colorClasses[color]}`}
+    >
+      <div className='flex-1 min-w-0'>
+        <div className='font-medium text-gray-800 mb-1'>{item.title}</div>
+        <div className='text-sm text-gray-600'>ID: {item.ID}</div>
+
+      </div>
+
+      <div className='flex items-center gap-4'>
+        <div className='flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-300'>
+          <button
+            type='button'
+            onClick={() => onQuantityChange(item._id, -1)}
+            className='p-1 bg-gray-100 rounded-full hover:bg-gray-200 transition'
+          >
+            <Minus size={16} />
+          </button>
+          <input
+            type='number'
+            min='1'
+            max={item.stock}
+            value={item.quantity}
+            onChange={e => onInputQuantityChange(item._id, e.target.value)}
+            className='w-12 text-center border-0 bg-transparent outline-none'
+          />
+          <button
+            type='button'
+            onClick={() => onQuantityChange(item._id, 1)}
+            className='p-1 bg-gray-100 rounded-full hover:bg-gray-200 transition'
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
+        <span className='text-gray-700 font-medium w-20 text-center'>
+          {item.unit || 'дона'}
+        </span>
+        <button
+          type='button'
+          onClick={onRemove}
+          className='p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition'
+          title='Маҳсулотни ўчириш'
+        >
+          <X size={18} />
+        </button>
       </div>
     </div>
   )

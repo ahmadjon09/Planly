@@ -19,7 +19,9 @@ import {
     Eye,
     Edit,
     Trash2,
-    Loader2
+    Loader2,
+    Send,
+    Plus
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
@@ -39,6 +41,12 @@ export const ClientProductsView = () => {
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [editingProduct, setEditingProduct] = useState(null)
     const [loading, setLoading] = useState(null)
+
+    // Qarz to'lash state lari
+    const [debtUZ, setDebtUZ] = useState(0)
+    const [debtEN, setDebtEN] = useState(0)
+    const [debtLUZ, setDebtLUZ] = useState(false)
+    const [debtLEN, setDebtLEN] = useState(false)
 
     const clients = (data?.data.data || []).filter(u => u.clietn === false)
 
@@ -196,6 +204,82 @@ export const ClientProductsView = () => {
         }))
     }
 
+    // Qarz to'lash funksiyasi (so'm)
+    const handlePayDebtUZ = async () => {
+        if (!selectedClient) {
+            alert('❌ Мижоз танланмаган')
+            return
+        }
+
+        if (!debtUZ || debtUZ <= 0) {
+            alert('❌ Тўлов суммасини киритинг')
+            return
+        }
+
+        try {
+            setDebtLUZ(true)
+            console.log('Sending request to server...', {
+                clientId: selectedClient._id,
+                uz: Number(debtUZ)
+            })
+
+            const response = await Fetch.post("/products/pay", {
+                clientId: selectedClient._id,
+                uz: Number(debtUZ)
+            })
+
+            console.log('Server response:', response)
+
+            setDebtUZ(0)
+            mutate()
+            alert("✅ Қарз муваффақиятли тўланди")
+        } catch (error) {
+            console.error('Pay debt error:', error)
+            console.error('Error details:', error.response?.data || error.message)
+            alert("❌ Тўловда хатолик юз берди: " + (error.response?.data?.message || error.message))
+        } finally {
+            setDebtLUZ(false)
+        }
+    }
+
+    // Qarz to'lash funksiyasi (dollar)
+    const handlePayDebtEN = async () => {
+        if (!selectedClient) {
+            alert('❌ Мижоз танланмаган')
+            return
+        }
+
+        if (!debtEN || debtEN <= 0) {
+            alert('❌ Тўлов суммасини киритинг')
+            return
+        }
+
+        try {
+            setDebtLEN(true)
+            console.log('Sending request to server...', {
+                clientId: selectedClient._id,
+                en: Number(debtEN)
+            })
+
+            const response = await Fetch.post("/products/pay", {
+                clientId: selectedClient._id,
+                en: Number(debtEN)
+            })
+
+            console.log('Server response:', response)
+
+            setDebtEN(0)
+            mutate()
+            alert("✅ Қарз муваффақиятли тўланди")
+        } catch (error) {
+            console.error('Pay debt error:', error)
+            console.error('Error details:', error.response?.data || error.message)
+            alert("❌ Тўловда хатолик юз берди: " + (error.response?.data?.message || error.message))
+        } finally {
+            setDebtLEN(false)
+        }
+    }
+
     if (isLoading) {
         return (
             <div className='min-h-screen flex justify-center items-center'>
@@ -303,6 +387,73 @@ export const ClientProductsView = () => {
                     </div>
                 </motion.div>
 
+                {/* Qarz to'lash section */}
+                {selectedClient && (
+                    <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
+                        <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+                            <Plus size={20} className='text-purple-500' />
+                            Қарзни ёпиш
+                        </h3>
+                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                            {/* So'mda to'lash */}
+                            {selectedClient.debtUZ > 0 && <div className='space-y-3 relative'>
+                                <label className='text-sm font-medium text-gray-700'>
+                                    Сўмда тўлаш:
+                                </label>
+                                <input
+                                    type='text'
+                                    placeholder="Ёпилаётган қиймат"
+                                    value={debtUZ}
+                                    onChange={e => {
+                                        const value = e.target.value;
+                                        if (/^\d*$/.test(value)) {
+                                            setDebtUZ(value);
+                                        }
+                                    }}
+                                    className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                />
+                                {debtUZ > 0 && (
+                                    <button
+                                        onClick={handlePayDebtUZ}
+                                        disabled={debtLUZ}
+                                        className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
+                                    >
+                                        {debtLUZ ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
+                                    </button>
+                                )}
+                            </div>
+                            }
+                            {/* Dollarda to'lash */}
+                            {selectedClient.debtEN > 0 && <div className='space-y-3 relative'>
+                                <label className='text-sm font-medium text-gray-700'>
+                                    Долларда тўлаш:
+                                </label>
+                                <input
+                                    type='text'
+                                    placeholder="Ёпилаётган қиймат"
+                                    value={debtEN}
+                                    onChange={e => {
+                                        const value = e.target.value;
+                                        if (/^\d*$/.test(value)) {
+                                            setDebtEN(value);
+                                        }
+                                    }}
+                                    className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                />
+                                {debtEN > 0 && (
+                                    <button
+                                        onClick={handlePayDebtEN}
+                                        disabled={debtLEN}
+                                        className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
+                                    >
+                                        {debtLEN ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
+                                    </button>
+                                )}
+                            </div>}
+                        </div>
+                    </div>
+                )}
+
                 {!selectedClient && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -340,7 +491,7 @@ export const ClientProductsView = () => {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
                                             onClick={() => setSelectedClient(client)}
-                                            className={`${client.debtEN || client.debtUZ ? "bg-red-200" : "bg-white"} rounded-2xl shadow-lg p-6 border border-gray-200 hover:shadow-xl hover:border-green-300 transition-all duration-300 cursor-pointer group`}
+                                            className={`${(client.debtEN && client.debtEN > 0) || (client.debtUZ && client.debtUZ > 0) ? "bg-red-200" : "bg-white"} rounded-2xl shadow-lg p-6 border border-gray-200 hover:shadow-xl hover:border-green-300 transition-all duration-300 cursor-pointer group`}
                                         >
                                             <div className='flex items-start justify-between mb-4'>
                                                 <div className='flex items-center gap-3'>
@@ -371,6 +522,25 @@ export const ClientProductsView = () => {
                                                     {client.address || 'Манзил кўрсатилмаган'}
                                                 </span>
                                             </div>
+
+                                            {/* Qarz ma'lumotlari */}
+                                            {(client.debtUZ || client.debtEN) && (
+                                                <div className='mb-3 p-3 bg-red-50 rounded-lg border border-red-200'>
+                                                    <h4 className='text-sm font-semibold text-red-700 mb-1'>
+                                                        Қарзларим:
+                                                    </h4>
+                                                    {client.debtUZ && (
+                                                        <div className='text-sm text-red-600'>
+                                                            Сўм: {formatCurrency(client.debtUZ)}
+                                                        </div>
+                                                    )}
+                                                    {client.debtEN && (
+                                                        <div className='text-sm text-red-600'>
+                                                            Доллар: ${client.debtEN.toLocaleString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {/* Product Balances Summary */}
                                             <div className='mb-4'>
@@ -440,20 +610,23 @@ export const ClientProductsView = () => {
                                             <MapPin size={16} />
                                             <span>{selectedClient.address || 'Манзил кўрсатилмаган'}</span>
                                         </div>
-                                        <p>
-                                            Қарзларим:
-                                        </p>
-                                        {selectedClient.debtUZ && (
-                                            <div className={`flex items-center gap-2 text-sm ${selectedClient.debtUZ < 0 ? "text-green-600" : "text-red-600"}`}>
-                                                <TrendingUp size={16} />
-                                                <span>Қарз: {formatCurrency(selectedClient.debtUZ)}</span>
-                                            </div>
-                                        )}
 
-                                        {selectedClient.debtEN && (
-                                            <div className={`flex items-center gap-2 text-sm ${selectedClient.debtEN < 0 ? "text-green-600" : "text-red-600"}`}>
-                                                <DollarSign size={16} />
-                                                <span>Қарз ($): ${selectedClient.debtEN.toLocaleString()}</span>
+                                        {/* Qarz ma'lumotlari */}
+                                        {(selectedClient.debtUZ || selectedClient.debtEN) && (
+                                            <div className='p-3 bg-red-50 rounded-lg border border-red-200'>
+                                                <p className='text-sm font-semibold text-red-700 mb-1'>Қарзлари:</p>
+                                                {selectedClient.debtUZ && (
+                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtUZ < 0 ? "text-green-600" : "text-red-600"}`}>
+                                                        <TrendingUp size={16} />
+                                                        <span>Қарз: {formatCurrency(selectedClient.debtUZ)}</span>
+                                                    </div>
+                                                )}
+                                                {selectedClient.debtEN && (
+                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtEN < 0 ? "text-green-600" : "text-red-600"}`}>
+                                                        <DollarSign size={16} />
+                                                        <span>Қарз ($): ${selectedClient.debtEN.toLocaleString()}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

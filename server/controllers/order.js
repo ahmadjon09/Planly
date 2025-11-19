@@ -15,6 +15,7 @@ import User from '../models/user.js'
 import Product from '../models/product.js'
 import { sendErrorResponse } from '../middlewares/sendErrorResponse.js'
 import Client from "../models/client.js"
+
 export const GetOrderStats = async (req, res) => {
   try {
     const { year, month, day } = req.query
@@ -56,6 +57,24 @@ export const GetOrderStats = async (req, res) => {
         _id: { $in: allProductIds }
       })
 
+      // 🔥 CLIENT STATISTIKASI - barcha clientlarni olish
+      const allClients = await Client.find({})
+
+      // Clientlarni turi bo'yicha ajratish
+      const suppliers = allClients.filter(client => client.clietn === false) // manbalar (biz ularga qarzdamiz)
+      const customers = allClients.filter(client => client.clietn === true)   // mijozlar (ular bizga qarzdi)
+
+      // Qarz hisob-kitoblari
+      const totalSupplierDebtUZ = suppliers.reduce((sum, client) => sum + (client.debtUZ || 0), 0)
+      const totalSupplierDebtEN = suppliers.reduce((sum, client) => sum + (client.debtEN || 0), 0)
+      const totalCustomerDebtUZ = customers.reduce((sum, client) => sum + (client.debtUZ || 0), 0)
+      const totalCustomerDebtEN = customers.reduce((sum, client) => sum + (client.debtEN || 0), 0)
+
+      // Qarzdor clientlar soni
+      const debtorSuppliers = suppliers.filter(client => (client.debtUZ || 0) > 0 || (client.debtEN || 0) > 0).length
+      const debtorCustomers = customers.filter(client => (client.debtUZ || 0) > 0 || (client.debtEN || 0) > 0).length
+
+      // 📊 Buyurtma statistikasi
       const totalOrders = orders.length
       const totalOrderPrice = orders.reduce(
         (acc, o) => acc + (o.totalPrice || 0),
@@ -126,6 +145,7 @@ export const GetOrderStats = async (req, res) => {
         totalOrders > 0 ? Math.round(revenue / totalOrders) : 0
 
       return {
+        // Buyurtma statistikasi
         totalOrders,
         totalOrderPrice: Math.round(revenue),
         totalProducts,
@@ -136,7 +156,40 @@ export const GetOrderStats = async (req, res) => {
         cost: Math.round(cost),
         margin,
         averageOrderValue,
-        topSelling
+        topSelling,
+
+        // Client statistikasi
+        clients: {
+          total: allClients.length,
+          suppliers: suppliers.length,
+          customers: customers.length,
+          debtorSuppliers,
+          debtorCustomers
+        },
+        debts: {
+          // Manbalarga qarzlarimiz (biz ularga berishimiz kerak)
+          supplierDebts: {
+            totalUZ: totalSupplierDebtUZ,
+            totalEN: totalSupplierDebtEN,
+            count: debtorSuppliers,
+            averageUZ: debtorSuppliers > 0 ? totalSupplierDebtUZ / debtorSuppliers : 0,
+            averageEN: debtorSuppliers > 0 ? totalSupplierDebtEN / debtorSuppliers : 0
+          },
+          // Mijozlardan olishimiz kerak bo'lgan qarzlar
+          customerDebts: {
+            totalUZ: totalCustomerDebtUZ,
+            totalEN: totalCustomerDebtEN,
+            count: debtorCustomers,
+            averageUZ: debtorCustomers > 0 ? totalCustomerDebtUZ / debtorCustomers : 0,
+            averageEN: debtorCustomers > 0 ? totalCustomerDebtEN / debtorCustomers : 0
+          },
+          // Umumiy qarz balansi
+          netBalance: {
+            uz: totalCustomerDebtUZ - totalSupplierDebtUZ, // ijobiy = bizga ko'proq qarzdorlar
+            en: totalCustomerDebtEN - totalSupplierDebtEN,
+            status: totalCustomerDebtUZ - totalSupplierDebtUZ >= 0 ? 'positive' : 'negative'
+          }
+        }
       }
     }
 
@@ -168,7 +221,10 @@ export const GetOrderStats = async (req, res) => {
         previous: prevDay,
         growth: {
           revenue: growthRate(daily.revenue, prevDay.revenue),
-          orders: growthRate(daily.totalOrders, prevDay.totalOrders)
+          orders: growthRate(daily.totalOrders, prevDay.totalOrders),
+          clients: growthRate(daily.clients.total, prevDay.clients.total),
+          customerDebts: growthRate(daily.debts.customerDebts.totalUZ, prevDay.debts.customerDebts.totalUZ),
+          supplierDebts: growthRate(daily.debts.supplierDebts.totalUZ, prevDay.debts.supplierDebts.totalUZ)
         }
       },
       monthly: {
@@ -176,7 +232,10 @@ export const GetOrderStats = async (req, res) => {
         previous: prevMonth,
         growth: {
           revenue: growthRate(monthly.revenue, prevMonth.revenue),
-          orders: growthRate(monthly.totalOrders, prevMonth.totalOrders)
+          orders: growthRate(monthly.totalOrders, prevMonth.totalOrders),
+          clients: growthRate(monthly.clients.total, prevMonth.clients.total),
+          customerDebts: growthRate(monthly.debts.customerDebts.totalUZ, prevMonth.debts.customerDebts.totalUZ),
+          supplierDebts: growthRate(monthly.debts.supplierDebts.totalUZ, prevMonth.debts.supplierDebts.totalUZ)
         }
       },
       yearly: {
@@ -184,7 +243,10 @@ export const GetOrderStats = async (req, res) => {
         previous: prevYear,
         growth: {
           revenue: growthRate(yearly.revenue, prevYear.revenue),
-          orders: growthRate(yearly.totalOrders, prevYear.totalOrders)
+          orders: growthRate(yearly.totalOrders, prevYear.totalOrders),
+          clients: growthRate(yearly.clients.total, prevYear.clients.total),
+          customerDebts: growthRate(yearly.debts.customerDebts.totalUZ, prevYear.debts.customerDebts.totalUZ),
+          supplierDebts: growthRate(yearly.debts.supplierDebts.totalUZ, prevYear.debts.supplierDebts.totalUZ)
         }
       }
     }
@@ -197,7 +259,6 @@ export const GetOrderStats = async (req, res) => {
     })
   }
 }
-
 export const AllOrders = async (_, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 })
