@@ -13,12 +13,9 @@ export const ContextProvider = ({ children }) => {
   const removeUserToken = () => {
     Cookies.remove('user_token')
   }
-  const [kurs, setKurs] = useState(12500)
   return (
     <ContextData.Provider
       value={{
-        setKurs,
-        kurs,
         setUserToken,
         removeUserToken,
         setUser,

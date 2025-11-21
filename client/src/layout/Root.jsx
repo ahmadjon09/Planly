@@ -15,7 +15,7 @@ export const Root = () => {
         <Outlet />
         <Ping />
         <AboutModal />
-        {/* <USDToUZSWidget /> */}
+        <USDToUZSWidget />
       </main>
       <Footer />
     </>
