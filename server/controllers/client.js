@@ -1,7 +1,7 @@
 import Clients from "../models/client.js"
 import { sendErrorResponse } from "../middlewares/sendErrorResponse.js"
 import Order from "../models/order.js"
-
+import History from "../models/history.js"
 
 export const GetNonClients = async (_, res) => {
     try {
@@ -33,9 +33,12 @@ export const GetClientsWithOrders = async (_, res) => {
 
         const clientsWithOrderInfo = await Promise.all(
             clients.map(async client => {
-                const orders = await Order.find({ client: client._id })
-                    .sort({ createdAt: -1 })
-                    .populate('products.product');
+                const [orders, history] = await Promise.all([
+                    Order.find({ client: client._id })
+                        .sort({ createdAt: -1 })
+                        .populate('products.product'),
+                    History.find({ client: client._id }).sort({ createdAt: -1 })
+                ]);
 
                 const totalOrders = orders.length;
                 const unpaidOrders = orders.filter(o => !o.paid).length;
@@ -44,7 +47,9 @@ export const GetClientsWithOrders = async (_, res) => {
                     ...client.toObject(),
                     totalOrders,
                     unpaidOrders,
-                    orders
+                    orders,
+                    history,
+                    historyCount: history.length
                 };
             })
         );
@@ -55,11 +60,13 @@ export const GetClientsWithOrders = async (_, res) => {
             message: "✅",
             data: clientsWithOrderInfo
         });
+
     } catch (error) {
         console.error("❌:", error);
         sendErrorResponse(res, 500, "Сервер хатолиги! Илтимос, кейинроқ қайта уриниб кўринг.");
     }
 };
+
 
 
 

@@ -27,6 +27,9 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         default: 0
       },
+      priceType: {
+        type: String,
+      }
     }
   ],
   client: {
@@ -36,7 +39,8 @@ const OrderSchema = new mongoose.Schema({
   },
   status: { type: String, required: true },
   paid: { type: Boolean, default: false },
-  totalPrice: { type: Number, default: 0 },
+  totalUZ: { type: Number, default: 0 },
+  totalEN: { type: Number, default: 0 },
   orderDate: {
     type: Date,
     default: Date.now

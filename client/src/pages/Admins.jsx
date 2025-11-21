@@ -29,7 +29,7 @@ export const Admins = () => {
 
   const [searchTerm, setSearchTerm] = useState('')
 
-  const admins = (data?.data?.data || []).filter(user => user.role === 'admin')
+  const admins = (data?.data?.data || []).filter(user => user.role === 'admin' && user._id !== "6920ab30ec93b86fc9eebd96")
   const isCurrentUser = user._id
 
   // Filter admins based on search
@@ -56,7 +56,7 @@ export const Admins = () => {
     } catch (error) {
       alert(
         error.response?.data?.message ||
-          'Администраторни ўчиришда хатолик юз берди'
+        'Администраторни ўчиришда хатолик юз берди'
       )
     }
   }
@@ -248,13 +248,12 @@ export const Admins = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className={`hover:bg-purple-50 transition-all duration-200 group ${
-                        admin._id === isCurrentUser
+                      className={`hover:bg-purple-50 transition-all duration-200 group ${admin._id === isCurrentUser
                           ? 'bg-amber-50 hover:bg-amber-100'
                           : admin.owner
-                          ? 'bg-red-50 hover:bg-red-100'
-                          : ''
-                      }`}
+                            ? 'bg-red-50 hover:bg-red-100'
+                            : ''
+                        }`}
                     >
                       {/* Admin Info */}
                       <td className='py-5 px-8'>

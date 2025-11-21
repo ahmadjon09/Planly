@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 const ProductSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
+    normalizedTitle: { type: String, required: true },
     price: { type: Number, required: true },
     priceType: { type: String, enum: ["uz", "en"], default: "uz" },
     ID: { type: Number, required: true },
@@ -13,11 +14,6 @@ const ProductSchema = new mongoose.Schema(
       default: 'дона'
     },
     ready: { type: Boolean, default: false },
-    from: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Clients',
-      required: true
-    }
   },
   { timestamps: true }
 )

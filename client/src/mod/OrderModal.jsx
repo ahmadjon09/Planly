@@ -27,7 +27,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
   const [clients, setClients] = useState([])
   const [selectedProducts, setSelectedProducts] = useState([])
   const [customer, setCustomer] = useState(user._id)
-  const [status, setStatus] = useState('Янги')
+  const [status, setStatus] = useState('Юборилди')
   const [payType, setPayType] = useState('Нақд')
   const [totalPrice, setTotalPrice] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
@@ -660,7 +660,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
             )}
 
             {/* Order details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-3">Ҳолат</label>
                 <select
@@ -673,7 +673,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
                   ))}
                 </select>
               </div>
-            </div>
+            </div> */}
 
             {/* Submit buttons */}
             <div className='flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200'>

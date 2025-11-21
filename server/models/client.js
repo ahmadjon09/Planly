@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 const Client = new mongoose.Schema({
     phoneNumber: { type: String, required: true, },
     name: { type: String, required: true },
-    clietn: { type: Boolean, default: false },
+    clietn: { type: Boolean, default: true },
     debtUZ: { type: Number, default: 0 },
     debtEN: { type: Number, default: 0 },
 })

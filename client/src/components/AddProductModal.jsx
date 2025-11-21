@@ -22,8 +22,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
   const [products, setProducts] = useState([
     {
       title: '',
-      price: 0,
-      stock: 1,
+      price: '',
+      stock: '',
       unit: 'дона',
       ready: false,
       ID: '',
@@ -79,10 +79,22 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     }
   }
 
+  // 🔄 Number filter function - faqat raqamlar va nuqta/rulon
+  const filterNumbers = (value) => {
+    return value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
+  }
+
   // 🔄 Product input change handler
   const handleChange = (i, field, value) => {
     const newProducts = [...products]
-    newProducts[i][field] = value
+
+    // Agar number field bo'lsa, faqat raqamlarga filter qo'llaymiz
+    if (field === 'price' || field === 'stock') {
+      newProducts[i][field] = filterNumbers(value)
+    } else {
+      newProducts[i][field] = value
+    }
+
     setProducts(newProducts)
   }
 
@@ -125,8 +137,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
       ...products,
       {
         title: '',
-        price: 0,
-        stock: 1,
+        price: '',
+        stock: '',
         unit: 'дона',
         ready: false,
         ID: '',
@@ -145,9 +157,11 @@ export default function AddProductModal({ open, setOpen, mutate }) {
         alert(`❌ ${i + 1}-маҳсулот учун номини киритинг`)
         return
       }
-      if (user.role === 'admin' && (!p.price || p.price <= 0)) {
-        alert(`❌ ${i + 1}-маҳсулот учун нархини тўғри киритинг`)
-        return
+      if (user.role === 'admin') {
+        if (!p.price || p.price === '' || Number(p.price) <= 0) {
+          alert(`❌ ${i + 1}-маҳсулот учун нархини тўғри киритинг`)
+          return
+        }
       }
     }
 
@@ -159,7 +173,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
 
     setLoading(true)
     try {
-      // Payload tayyorlash
+      // Payload tayyorlash - number fieldlarni convert qilamiz
       const payload = {
         ...(clientData.clientId ? { clientId: clientData.clientId } : {
           client: {
@@ -170,8 +184,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
         }),
         products: products.map(p => ({
           title: p.title,
-          price: Number(p.price) || 0,
-          stock: Number(p.stock) || 1,
+          price: p.price ? Number(p.price) : 0,
+          stock: p.stock ? Number(p.stock) : 1,
           unit: p.unit,
           ready: p.ready,
           priceType: p.priceType
@@ -197,8 +211,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     setProducts([
       {
         title: '',
-        price: 0,
-        stock: 1,
+        price: '',
+        stock: '',
         unit: 'дона',
         ready: false,
         ID: '',
@@ -259,10 +273,10 @@ export default function AddProductModal({ open, setOpen, mutate }) {
             </div>
             <div>
               <h3 className='font-semibold text-gray-800 text-lg'>
-                Манба ҳақида маълумот
+                Таминотчи ҳақида маълумот
               </h3>
               <p className='text-sm text-gray-600'>
-                Барча маҳсулотлар учун бир Манба
+                Барча маҳсулотлар учун бир Таминотчи
               </p>
             </div>
           </div>
@@ -299,7 +313,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     Мавжуд маҳсулотлар: {selectedClient.products.length} та
                   </h5>
                   <div className='text-sm text-yellow-700'>
-                    Ушбу манбада {selectedClient.products.length} та маҳсулот мавжуд
+                    Ушбу Таминотчида {selectedClient.products.length} та маҳсулот мавжуд
                   </div>
                 </div>
               )}
@@ -311,7 +325,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
               <div className='space-y-2'>
                 <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
                   <Search size={16} className='text-blue-500' />
-                  Манба танлаш
+                  Таминотчи танлаш
                 </label>
                 <div className='relative'>
                   <input
@@ -322,16 +336,22 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                       setShowClientDropdown(true)
                     }}
                     onFocus={() => setShowClientDropdown(true)}
-                    // onBlur={() => setShowClientDropdown(false)}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowClientDropdown(false)
+                      }, 100)
+                    }}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white"
                     placeholder="Клиент исми ёки телефони бўйича излаш..."
                   />
 
                   <Search size={18} className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
 
-                  {/* Client dropdown */}
                   {showClientDropdown && filteredClients.length > 0 && (
-                    <div className='absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto'>
+                    <div
+                      className='absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto'
+                      onMouseDown={(e) => e.preventDefault()} // 👈 dropdown bosilganda blur bo‘lmasin
+                    >
                       {filteredClients.map(client => (
                         <div
                           key={client._id}
@@ -357,6 +377,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     </div>
                   )}
                 </div>
+
               </div>
 
               <div className='space-y-4'>
@@ -457,14 +478,13 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     </label>
                     <div className='relative'>
                       <input
-                        type='number'
+                        type='text'
                         value={p.price}
                         onChange={e =>
-                          handleChange(i, 'price', +e.target.value)
+                          handleChange(i, 'price', e.target.value)
                         }
                         className='w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
                         placeholder='0'
-                        min='0'
                         required
                       />
                       <span className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm'>
@@ -481,11 +501,11 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     Миқдор
                   </label>
                   <input
-                    type='number'
+                    type='text'
                     value={p.stock}
-                    onChange={e => handleChange(i, 'stock', +e.target.value)}
+                    onChange={e => handleChange(i, 'stock', e.target.value)}
                     className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
-                    min='0'
+                    placeholder='1'
                   />
                 </div>
 

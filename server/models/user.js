@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 const User = new mongoose.Schema({
   phoneNumber: { type: String, required: true, unique: true },
   firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
+  lastName: { type: String },
   role: { type: String, required: true },
   ability: { type: String, enum: ["both", "ready", "!ready"], default: "both" },
   owner: { type: Boolean, default: false },

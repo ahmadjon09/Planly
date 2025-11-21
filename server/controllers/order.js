@@ -429,60 +429,76 @@ export const CancelOrder = async (req, res) => {
   }
 }
 
+
+
+
+
 export const UpdateOrder = async (req, res) => {
   try {
-    const { id } = req.params
-    const { products, status } = req.body
+    const { id } = req.params;
+    const { products, status } = req.body;
 
-    const order = await Order.findById(id)
-    if (!order) {
-      return sendErrorResponse(res, 404, "Буюртма топилмади!")
-    }
+    const order = await Order.findById(id);
+    if (!order) return sendErrorResponse(res, 404, "Буюртма топилмади!");
 
+    let totalPriceUZ = 0;
+    let totalPriceEN = 0;
 
-    let totalPrice = 0
+    let updatedProducts = [];
 
     if (products && products.length) {
-      const updatedProducts = products.map(item => {
-        const price = Number(item.price) || 0
-        const amount = Number(item.amount) || 0
+      updatedProducts = products.map(item => {
+        const price = Number(item.price) || 0;
+        const amount = Number(item.amount) || 0;
+        const priceType = item.priceType === "en" ? "en" : "uz";
 
-        totalPrice += price * amount
+        const productTotal = price * amount;
+
+        if (priceType === 'en') totalPriceEN += productTotal;
+        else totalPriceUZ += productTotal;
 
         return {
           product: item.product,
           amount,
           unit: item.unit || 'дона',
-          price
+          price,
+          priceType
         }
-      })
+      });
 
-      order.products = updatedProducts
+      order.products = updatedProducts;
     }
 
+    if (status) order.status = status;
 
-    if (status) order.status = status
+    order.paid = true;
+    order.totalUZ = Number(totalPriceUZ.toFixed(2));
+    order.totalEN = Number(totalPriceEN.toFixed(2));
 
-    order.paid = true
-    order.totalPrice = totalPrice
+    await order.save();
 
-    await order.save()
-
-    if (totalPrice > 0) {
+    // Client qarzini update qilish
+    if (totalPriceUZ > 0 || totalPriceEN > 0) {
       await Client.findByIdAndUpdate(
         order.client,
-        { $inc: { debtUZ: totalPrice } },
+        {
+          $inc: {
+            debtUZ: totalPriceUZ,
+            debtEN: totalPriceEN
+          }
+        },
         { new: true }
-      )
+      );
     }
 
     return res.status(200).json({
       data: order,
       message: "Буюртма муваффақиятли янгиланди ✅"
-    })
+    });
+
   } catch (error) {
-    console.error("❌ Буюртма янгилашда хатолик:", error)
-    sendErrorResponse(res, 500, "Сервер хатолиги! Илтимос, кейинроқ қайта уриниб кўринг.")
+    console.error("❌ Буюртма янгилашда хатолик:", error);
+    sendErrorResponse(res, 500, "Сервер хатолиги! Илтимос, кейинроқ қайта уриниб кўринг.");
   }
-}
+};
 

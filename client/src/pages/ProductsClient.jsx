@@ -1,4 +1,4 @@
-import { useState, useContext, useMemo } from 'react'
+import { useState, useContext, useMemo, useEffect } from 'react'
 import useSWR from 'swr'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -21,7 +21,12 @@ import {
     Trash2,
     Loader2,
     Send,
-    Plus
+    Plus,
+    History,
+    ChevronRight,
+    ChevronLeft as ChevronLeftIcon,
+    Filter,
+    RefreshCw
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
@@ -29,7 +34,7 @@ import { LoadingState } from '../components/loading-state'
 
 export const ClientProductsView = () => {
     const { data, error, isLoading, mutate } = useSWR('/products/clients', Fetch, {
-        refreshInterval: 5000,
+        refreshInterval: 3000,
         revalidateOnFocus: true,
         revalidateOnReconnect: true
     })
@@ -43,13 +48,44 @@ export const ClientProductsView = () => {
     const [loading, setLoading] = useState(null)
 
     // Qarz to'lash state lari
-    const [debtUZ, setDebtUZ] = useState(0)
-    const [debtEN, setDebtEN] = useState(0)
+    const [debtUZ, setDebtUZ] = useState('')
+    const [debtEN, setDebtEN] = useState('')
     const [debtLUZ, setDebtLUZ] = useState(false)
     const [debtLEN, setDebtLEN] = useState(false)
 
-    const clients = (data?.data.data || []).filter(u => u.clietn === false)
+    // Pagination state lari
+    const [currentClientPage, setCurrentClientPage] = useState(1)
+    const [currentProductPage, setCurrentProductPage] = useState(1)
+    const [currentHistoryPage, setCurrentHistoryPage] = useState(1)
 
+    const clientsPerPage = 10
+    const productsPerPage = 10
+    const historyPerPage = 10
+
+    // Auto-refresh effect
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!selectedClient) {
+                mutate()
+            }
+        }, 10000)
+
+        return () => clearInterval(interval)
+    }, [selectedClient, mutate])
+
+    // Update selected client when data changes
+    useEffect(() => {
+        if (selectedClient && data?.data?.data) {
+            const updatedClient = data.data.data.find(client =>
+                client._id === selectedClient._id
+            )
+            if (updatedClient) {
+                setSelectedClient(updatedClient)
+            }
+        }
+    }, [data, selectedClient])
+
+    const clients = (data?.data.data || []).filter(u => u.clietn === false)
     // Filter clients
     const filteredClients = useMemo(() => {
         return clients.filter(client => {
@@ -63,6 +99,25 @@ export const ClientProductsView = () => {
             return phoneMatch && nameMatch
         })
     }, [clients, searchPhone, searchName])
+
+    // Client pagination
+    const currentClients = useMemo(() => {
+        const startIndex = (currentClientPage - 1) * clientsPerPage
+        const endIndex = startIndex + clientsPerPage
+        return filteredClients.slice(startIndex, endIndex)
+    }, [filteredClients, currentClientPage])
+
+    const totalClientPages = Math.ceil(filteredClients.length / clientsPerPage)
+
+    // Product pagination for selected client
+    const currentProducts = useMemo(() => {
+        if (!selectedClient?.products) return []
+        const startIndex = (currentProductPage - 1) * productsPerPage
+        const endIndex = startIndex + productsPerPage
+        return selectedClient.products.slice(startIndex, endIndex)
+    }, [selectedClient, currentProductPage])
+
+    const totalProductPages = Math.ceil((selectedClient?.products?.length || 0) / productsPerPage)
 
     // Calculate product balances by unit for a single client
     const calculateClientProductBalances = (products) => {
@@ -148,13 +203,36 @@ export const ClientProductsView = () => {
         }
     }
 
-    // Format currency
+    // Format currency with better UX
     const formatCurrency = (amount, currency = 'UZS') => {
+        if (!amount && amount !== 0) return '0'
+
         return new Intl.NumberFormat('uz-UZ', {
             style: 'currency',
             currency: currency,
             minimumFractionDigits: 0
         }).format(amount)
+    }
+
+    // Format number with thousands separator
+    const formatNumber = (number) => {
+        if (!number && number !== 0) return '0'
+        return new Intl.NumberFormat('uz-UZ').format(number)
+    }
+
+    // Allow only numbers and dots for decimal input
+    const handleDecimalInput = (value, setter) => {
+        // Allow only numbers and dots
+        const cleanedValue = value.replace(/[^\d.]/g, '')
+
+        // Ensure only one dot
+        const parts = cleanedValue.split('.')
+        if (parts.length > 2) {
+            // If more than one dot, keep only the first part and first decimal
+            setter(parts[0] + '.' + parts.slice(1).join(''))
+        } else {
+            setter(cleanedValue)
+        }
     }
 
     // Handle product edit
@@ -170,7 +248,7 @@ export const ClientProductsView = () => {
             setLoading(editingProduct._id)
             await Fetch.put(`/products/${editingProduct._id}`, editingProduct)
             setEditingProduct(null)
-            mutate()
+            await mutate()
         } catch (err) {
             console.error('Update error:', err)
             alert('❌ Сақлашда хатолик юз берди')
@@ -187,7 +265,7 @@ export const ClientProductsView = () => {
         try {
             setLoading(productId)
             await Fetch.delete(`/products/${productId}`)
-            mutate()
+            await mutate()
         } catch (err) {
             console.error('Delete error:', err)
             alert('❌ Маҳсулотни ўчиришда хатолик юз берди')
@@ -196,12 +274,28 @@ export const ClientProductsView = () => {
         }
     }
 
-    // Handle input change for editing
+    // Handle input change for editing - allow only numbers and dots for numeric fields
     const handleInputChange = (field, value) => {
-        setEditingProduct(prev => ({
-            ...prev,
-            [field]: value
-        }))
+        if (field === 'price' || field === 'stock') {
+            // Allow only numbers and dots for price and stock
+            const cleanedValue = value.replace(/[^\d.]/g, '')
+
+            // Ensure only one dot
+            const parts = cleanedValue.split('.')
+            const formattedValue = parts.length > 2
+                ? parts[0] + '.' + parts.slice(1).join('')
+                : cleanedValue
+
+            setEditingProduct(prev => ({
+                ...prev,
+                [field]: formattedValue
+            }))
+        } else {
+            setEditingProduct(prev => ({
+                ...prev,
+                [field]: value
+            }))
+        }
     }
 
     // Qarz to'lash funksiyasi (so'm)
@@ -211,31 +305,24 @@ export const ClientProductsView = () => {
             return
         }
 
-        if (!debtUZ || debtUZ <= 0) {
+        const amount = parseFloat(debtUZ.replace(/[^\d.]/g, ''))
+        if (!amount || amount <= 0) {
             alert('❌ Тўлов суммасини киритинг')
             return
         }
 
         try {
             setDebtLUZ(true)
-            console.log('Sending request to server...', {
-                clientId: selectedClient._id,
-                uz: Number(debtUZ)
-            })
-
             const response = await Fetch.post("/products/pay", {
                 clientId: selectedClient._id,
-                uz: Number(debtUZ)
+                uz: amount
             })
 
-            console.log('Server response:', response)
-
-            setDebtUZ(0)
-            mutate()
+            setDebtUZ('')
+            await mutate()
             alert("✅ Қарз муваффақиятли тўланди")
         } catch (error) {
             console.error('Pay debt error:', error)
-            console.error('Error details:', error.response?.data || error.message)
             alert("❌ Тўловда хатолик юз берди: " + (error.response?.data?.message || error.message))
         } finally {
             setDebtLUZ(false)
@@ -249,35 +336,101 @@ export const ClientProductsView = () => {
             return
         }
 
-        if (!debtEN || debtEN <= 0) {
+        const amount = parseFloat(debtEN.replace(/[^\d.]/g, ''))
+        if (!amount || amount <= 0) {
             alert('❌ Тўлов суммасини киритинг')
             return
         }
 
         try {
             setDebtLEN(true)
-            console.log('Sending request to server...', {
-                clientId: selectedClient._id,
-                en: Number(debtEN)
-            })
-
             const response = await Fetch.post("/products/pay", {
                 clientId: selectedClient._id,
-                en: Number(debtEN)
+                en: amount
             })
 
-            console.log('Server response:', response)
-
-            setDebtEN(0)
-            mutate()
+            setDebtEN('')
+            await mutate()
             alert("✅ Қарз муваффақиятли тўланди")
         } catch (error) {
             console.error('Pay debt error:', error)
-            console.error('Error details:', error.response?.data || error.message)
             alert("❌ Тўловда хатолик юз берди: " + (error.response?.data?.message || error.message))
         } finally {
             setDebtLEN(false)
         }
+    }
+
+    // Handle debt input changes - allow only numbers and dots
+    const handleDebtUZChange = (value) => {
+        handleDecimalInput(value, setDebtUZ)
+    }
+
+    const handleDebtENChange = (value) => {
+        handleDecimalInput(value, setDebtEN)
+    }
+
+    // History pagination hisoblash
+    const getCurrentHistory = () => {
+        if (!selectedClient || !selectedClient.history) return []
+
+        const startIndex = (currentHistoryPage - 1) * historyPerPage
+        const endIndex = startIndex + historyPerPage
+        return selectedClient.history.slice(startIndex, endIndex)
+    }
+
+    const totalHistoryPages = Math.ceil((selectedClient?.history?.length || 0) / historyPerPage)
+
+    // Sahifalash funksiyalari
+    const goToNextHistoryPage = () => {
+        if (currentHistoryPage < totalHistoryPages) {
+            setCurrentHistoryPage(currentHistoryPage + 1)
+        }
+    }
+
+    const goToPrevHistoryPage = () => {
+        if (currentHistoryPage > 1) {
+            setCurrentHistoryPage(currentHistoryPage - 1)
+        }
+    }
+
+    const goToNextClientPage = () => {
+        if (currentClientPage < totalClientPages) {
+            setCurrentClientPage(currentClientPage + 1)
+        }
+    }
+
+    const goToPrevClientPage = () => {
+        if (currentClientPage > 1) {
+            setCurrentClientPage(currentClientPage - 1)
+        }
+    }
+
+    const goToNextProductPage = () => {
+        if (currentProductPage < totalProductPages) {
+            setCurrentProductPage(currentProductPage + 1)
+        }
+    }
+
+    const goToPrevProductPage = () => {
+        if (currentProductPage > 1) {
+            setCurrentProductPage(currentProductPage - 1)
+        }
+    }
+
+    // Reset pagination when client changes
+    useEffect(() => {
+        setCurrentProductPage(1)
+        setCurrentHistoryPage(1)
+    }, [selectedClient])
+
+    // Reset client pagination when search changes
+    useEffect(() => {
+        setCurrentClientPage(1)
+    }, [searchPhone, searchName])
+
+    // Manual refresh function
+    const handleRefresh = async () => {
+        await mutate()
     }
 
     if (isLoading) {
@@ -301,8 +454,14 @@ export const ClientProductsView = () => {
                         Юклашда хатолик
                     </h3>
                     <p className='text-red-600'>
-                        Манба маълумотларини юклашда хатолик юз берди. Илтимос, қайта уриниб кўринг.
+                        Таминотчилар маълумотларини юклашда хатолик юз берди. Илтимос, қайта уриниб кўринг.
                     </p>
+                    <button
+                        onClick={handleRefresh}
+                        className='mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'
+                    >
+                        Қайта уриниш
+                    </button>
                 </motion.div>
             </div>
         )
@@ -322,7 +481,11 @@ export const ClientProductsView = () => {
                                 <motion.button
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    onClick={() => setSelectedClient(null)}
+                                    onClick={() => {
+                                        setSelectedClient(null)
+                                        setCurrentHistoryPage(1)
+                                        setCurrentClientPage(1)
+                                    }}
                                     className='flex items-center gap-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-all duration-300'
                                 >
                                     <ChevronLeft size={20} />
@@ -337,7 +500,7 @@ export const ClientProductsView = () => {
                                 <h1 className='text-2xl md:text-3xl font-bold text-gray-800'>
                                     {selectedClient
                                         ? `${selectedClient.name} маҳсулотлари`
-                                        : 'Манба ва маҳсулотлар'}
+                                        : 'Таминотчилар ва маҳсулотлар'}
                                 </h1>
                                 <p className='text-gray-600 mt-1'>
                                     {selectedClient
@@ -345,6 +508,16 @@ export const ClientProductsView = () => {
                                         : `${filteredClients.length} та мижоз топилди`}
                                 </p>
                             </div>
+                        </div>
+
+                        <div className='flex items-center gap-3'>
+                            <button
+                                onClick={handleRefresh}
+                                className='flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors duration-300'
+                            >
+                                <RefreshCw size={18} />
+                                Янгилаш
+                            </button>
                         </div>
                     </div>
                 </motion.div>
@@ -396,60 +569,53 @@ export const ClientProductsView = () => {
                         </h3>
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                             {/* So'mda to'lash */}
-                            {selectedClient.debtUZ > 0 && <div className='space-y-3 relative'>
-                                <label className='text-sm font-medium text-gray-700'>
-                                    Сўмда тўлаш:
-                                </label>
-                                <input
-                                    type='text'
-                                    placeholder="Ёпилаётган қиймат"
-                                    value={debtUZ}
-                                    onChange={e => {
-                                        const value = e.target.value;
-                                        if (/^\d*$/.test(value)) {
-                                            setDebtUZ(value);
-                                        }
-                                    }}
-                                    className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
-                                />
-                                {debtUZ > 0 && (
-                                    <button
-                                        onClick={handlePayDebtUZ}
-                                        disabled={debtLUZ}
-                                        className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
-                                    >
-                                        {debtLUZ ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
-                                    </button>
-                                )}
-                            </div>
-                            }
+                            {selectedClient.debtUZ > 0 && (
+                                <div className='space-y-3 relative'>
+                                    <label className='text-sm font-medium text-gray-700'>
+                                        Сўмда тўлаш (Қарз: {formatCurrency(selectedClient.debtUZ)}):
+                                    </label>
+                                    <input
+                                        type='text'
+                                        placeholder="Тўлов суммаси"
+                                        value={debtUZ}
+                                        onChange={e => handleDebtUZChange(e.target.value)}
+                                        className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                    />
+                                    {debtUZ && (
+                                        <button
+                                            onClick={handlePayDebtUZ}
+                                            disabled={debtLUZ}
+                                            className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
+                                        >
+                                            {debtLUZ ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                             {/* Dollarda to'lash */}
-                            {selectedClient.debtEN > 0 && <div className='space-y-3 relative'>
-                                <label className='text-sm font-medium text-gray-700'>
-                                    Долларда тўлаш:
-                                </label>
-                                <input
-                                    type='text'
-                                    placeholder="Ёпилаётган қиймат"
-                                    value={debtEN}
-                                    onChange={e => {
-                                        const value = e.target.value;
-                                        if (/^\d*$/.test(value)) {
-                                            setDebtEN(value);
-                                        }
-                                    }}
-                                    className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
-                                />
-                                {debtEN > 0 && (
-                                    <button
-                                        onClick={handlePayDebtEN}
-                                        disabled={debtLEN}
-                                        className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
-                                    >
-                                        {debtLEN ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
-                                    </button>
-                                )}
-                            </div>}
+                            {selectedClient.debtEN > 0 && (
+                                <div className='space-y-3 relative'>
+                                    <label className='text-sm font-medium text-gray-700'>
+                                        Долларда тўлаш (Қарз: ${formatNumber(selectedClient.debtEN)}):
+                                    </label>
+                                    <input
+                                        type='text'
+                                        placeholder="Тўлов суммаси"
+                                        value={debtEN}
+                                        onChange={e => handleDebtENChange(e.target.value)}
+                                        className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                    />
+                                    {debtEN && (
+                                        <button
+                                            onClick={handlePayDebtEN}
+                                            disabled={debtLEN}
+                                            className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
+                                        >
+                                            {debtLEN ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -464,10 +630,10 @@ export const ClientProductsView = () => {
                             <div className='bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-200'>
                                 <User className='mx-auto text-gray-400 mb-4' size={64} />
                                 <h3 className='text-xl font-semibold text-gray-600 mb-2'>
-                                    Манба топилмади
+                                    Таминотчилар топилмади
                                 </h3>
                                 <p className='text-gray-500 mb-6'>
-                                    Қидирув шартларингизга мос келувчи Манба мавжуд эмас
+                                    Қидирув шартларингизга мос келувчи Таминотчилар мавжуд эмас
                                 </p>
                                 <button
                                     onClick={() => {
@@ -480,103 +646,137 @@ export const ClientProductsView = () => {
                                 </button>
                             </div>
                         ) : (
-                            <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
-                                {filteredClients.map((client, index) => {
-                                    const productBalances = calculateClientProductBalances(client.products || [])
+                            <>
+                                <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
+                                    {currentClients.map((client, index) => {
+                                        const productBalances = calculateClientProductBalances(client.products || [])
 
-                                    return (
-                                        <motion.div
-                                            key={client._id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.1 }}
-                                            onClick={() => setSelectedClient(client)}
-                                            className={`${(client.debtEN && client.debtEN > 0) || (client.debtUZ && client.debtUZ > 0) ? "bg-red-200" : "bg-white"} rounded-2xl shadow-lg p-6 border border-gray-200 hover:shadow-xl hover:border-green-300 transition-all duration-300 cursor-pointer group`}
-                                        >
-                                            <div className='flex items-start justify-between mb-4'>
-                                                <div className='flex items-center gap-3'>
-                                                    <div className='bg-gradient-to-r from-green-500 to-emerald-500 p-3 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300'>
-                                                        <User className='text-white' size={24} />
+                                        return (
+                                            <motion.div
+                                                key={client._id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                                onClick={() => {
+                                                    setSelectedClient(client)
+                                                    setCurrentHistoryPage(1)
+                                                }}
+                                                className={`${(client.debtEN && client.debtEN > 0) || (client.debtUZ && client.debtUZ > 0) ? "bg-red-200" : "bg-white"} rounded-2xl shadow-lg p-6 border border-gray-200 hover:shadow-xl hover:border-green-300 transition-all duration-300 cursor-pointer group`}
+                                            >
+                                                <div className='flex items-start justify-between mb-4'>
+                                                    <div className='flex items-center gap-3'>
+                                                        <div className='bg-gradient-to-r from-green-500 to-emerald-500 p-3 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300'>
+                                                            <User className='text-white' size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className='font-bold text-lg text-gray-800'>
+                                                                {client.name || 'Номаълум'}
+                                                            </h3>
+                                                            <p className='text-gray-600 text-sm'>
+                                                                {client.phoneNumber}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h3 className='font-bold text-lg text-gray-800'>
-                                                            {client.name || 'Номаълум'}
-                                                        </h3>
-                                                        <p className='text-gray-600 text-sm'>
-                                                            {client.phoneNumber}
-                                                        </p>
+                                                    <div className='text-right'>
+                                                        <div className='flex items-center gap-1 text-blue-600 font-semibold text-lg'>
+                                                            <Package size={18} />
+                                                            <span>{client.productCount || 0}</span>
+                                                        </div>
+                                                        <div className='text-xs text-gray-500'>маҳсулот</div>
                                                     </div>
                                                 </div>
-                                                <div className='text-right'>
-                                                    <div className='flex items-center gap-1 text-blue-600 font-semibold text-lg'>
-                                                        <Package size={18} />
-                                                        <span>{client.productCount || 0}</span>
-                                                    </div>
-                                                    <div className='text-xs text-gray-500'>маҳсулот</div>
+
+                                                <div className='flex items-center gap-2 text-sm text-gray-600 mb-3'>
+                                                    <MapPin size={16} />
+                                                    <span className='truncate'>
+                                                        {client.address || 'Манзил кўрсатилмаган'}
+                                                    </span>
                                                 </div>
-                                            </div>
 
-                                            <div className='flex items-center gap-2 text-sm text-gray-600 mb-3'>
-                                                <MapPin size={16} />
-                                                <span className='truncate'>
-                                                    {client.address || 'Манзил кўрсатилмаган'}
-                                                </span>
-                                            </div>
+                                                {/* Qarz ma'lumotlari */}
+                                                {(client.debtUZ || client.debtEN) && (
+                                                    <div className='mb-3 p-3 bg-red-50 rounded-lg border border-red-200'>
+                                                        <h4 className='text-sm font-semibold text-red-700 mb-1'>
+                                                            Қарзларим:
+                                                        </h4>
+                                                        {client.debtUZ && (
+                                                            <div className='text-sm text-red-600'>
+                                                                Сўм: {formatCurrency(client.debtUZ)}
+                                                            </div>
+                                                        )}
+                                                        {client.debtEN && (
+                                                            <div className='text-sm text-red-600'>
+                                                                Доллар: ${formatNumber(client.debtEN)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
 
-                                            {/* Qarz ma'lumotlari */}
-                                            {(client.debtUZ || client.debtEN) && (
-                                                <div className='mb-3 p-3 bg-red-50 rounded-lg border border-red-200'>
-                                                    <h4 className='text-sm font-semibold text-red-700 mb-1'>
-                                                        Қарзларим:
+                                                {/* Product Balances Summary */}
+                                                <div className='mb-4'>
+                                                    <h4 className='text-sm font-semibold text-gray-700 mb-2'>
+                                                        Маҳсулот қолдиқлари:
                                                     </h4>
-                                                    {client.debtUZ && (
-                                                        <div className='text-sm text-red-600'>
-                                                            Сўм: {formatCurrency(client.debtUZ)}
-                                                        </div>
-                                                    )}
-                                                    {client.debtEN && (
-                                                        <div className='text-sm text-red-600'>
-                                                            Доллар: ${client.debtEN.toLocaleString()}
-                                                        </div>
-                                                    )}
+                                                    <div className='space-y-1 max-h-20 overflow-y-auto'>
+                                                        {Object.entries(productBalances.balances).slice(0, 3).map(([productName, units]) => (
+                                                            <div key={productName} className='flex items-center gap-2 text-xs'>
+                                                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                                                <span className='font-medium text-gray-800 truncate'>{productName}</span>
+                                                                <span className='text-gray-600'>
+                                                                    {Object.entries(units).map(([unit, qty]) =>
+                                                                        `${formatNumber(qty)} ${unit}`
+                                                                    ).join(', ')}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                        {Object.keys(productBalances.balances).length > 3 && (
+                                                            <div className='text-xs text-blue-500 font-medium'>
+                                                                + {Object.keys(productBalances.balances).length - 3} та бошқа маҳсулот
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            )}
 
-                                            {/* Product Balances Summary */}
-                                            <div className='mb-4'>
-                                                <h4 className='text-sm font-semibold text-gray-700 mb-2'>
-                                                    Маҳсулот қолдиқлари:
-                                                </h4>
-                                                <div className='space-y-1 max-h-20 overflow-y-auto'>
-                                                    {Object.entries(productBalances.balances).slice(0, 3).map(([productName, units]) => (
-                                                        <div key={productName} className='flex items-center gap-2 text-xs'>
-                                                            <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                                            <span className='font-medium text-gray-800 truncate'>{productName}</span>
-                                                            <span className='text-gray-600'>
-                                                                {Object.entries(units).map(([unit, qty]) =>
-                                                                    `${qty} ${unit}`
-                                                                ).join(', ')}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                    {Object.keys(productBalances.balances).length > 3 && (
-                                                        <div className='text-xs text-blue-500 font-medium'>
-                                                            + {Object.keys(productBalances.balances).length - 3} та бошқа маҳсулот
-                                                        </div>
-                                                    )}
+                                                <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
+                                                    <span className='text-sm text-gray-500'>Умумий маҳсулот:</span>
+                                                    <span className='font-bold text-blue-600'>
+                                                        {formatNumber(client.products?.length || 0)} та
+                                                    </span>
                                                 </div>
-                                            </div>
+                                            </motion.div>
+                                        )
+                                    })}
+                                </div>
 
-                                            <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
-                                                <span className='text-sm text-gray-500'>Умумий маҳсулот:</span>
-                                                <span className='font-bold text-blue-600'>
-                                                    {client.products?.length || 0} та
-                                                </span>
-                                            </div>
-                                        </motion.div>
-                                    )
-                                })}
-                            </div>
+                                {/* Client Pagination */}
+                                {totalClientPages > 1 && (
+                                    <div className='mt-6 flex justify-center'>
+                                        <div className='bg-white rounded-xl shadow-lg p-4 flex items-center gap-4'>
+                                            <button
+                                                onClick={goToPrevClientPage}
+                                                disabled={currentClientPage === 1}
+                                                className='flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                                            >
+                                                <ChevronLeft size={18} />
+                                                Олдинги
+                                            </button>
+
+                                            <span className='text-gray-700 font-medium'>
+                                                Саҳифа {currentClientPage} / {totalClientPages}
+                                            </span>
+
+                                            <button
+                                                onClick={goToNextClientPage}
+                                                disabled={currentClientPage === totalClientPages}
+                                                className='flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                                            >
+                                                Кейинги
+                                                <ChevronRight size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </motion.div>
                 )}
@@ -584,6 +784,7 @@ export const ClientProductsView = () => {
                 {selectedClient && (() => {
                     const clientStats = calculateClientProductBalances(selectedClient.products || [])
                     const overallBalances = calculateOverallBalances(selectedClient.products || [])
+                    const currentHistory = getCurrentHistory()
 
                     return (
                         <motion.div
@@ -624,7 +825,7 @@ export const ClientProductsView = () => {
                                                 {selectedClient.debtEN && (
                                                     <div className={`flex items-center gap-2 text-sm ${selectedClient.debtEN < 0 ? "text-green-600" : "text-red-600"}`}>
                                                         <DollarSign size={16} />
-                                                        <span>Қарз ($): ${selectedClient.debtEN.toLocaleString()}</span>
+                                                        <span>Қарз ($): ${formatNumber(selectedClient.debtEN)}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -641,15 +842,19 @@ export const ClientProductsView = () => {
                                     <div className='space-y-3'>
                                         <div className='flex justify-between items-center'>
                                             <span className='text-gray-600'>Жами маҳсулот:</span>
-                                            <span className='font-bold text-blue-600'>{clientStats.totalProducts} та</span>
+                                            <span className='font-bold text-blue-600'>{formatNumber(clientStats.totalProducts)} та</span>
                                         </div>
                                         <div className='flex justify-between items-center'>
                                             <span className='text-gray-600'>Тайёр маҳсулот:</span>
-                                            <span className='font-bold text-green-600'>{clientStats.totalReadyProducts} та</span>
+                                            <span className='font-bold text-green-600'>{formatNumber(clientStats.totalReadyProducts)} та</span>
                                         </div>
                                         <div className='flex justify-between items-center'>
                                             <span className='text-gray-600'>Хом ашё:</span>
-                                            <span className='font-bold text-yellow-600'>{clientStats.totalRawProducts} та</span>
+                                            <span className='font-bold text-yellow-600'>{formatNumber(clientStats.totalRawProducts)} та</span>
+                                        </div>
+                                        <div className='flex justify-between items-center'>
+                                            <span className='text-gray-600'>Тарих санавлари:</span>
+                                            <span className='font-bold text-purple-600'>{formatNumber(selectedClient.history?.length || 0)} та</span>
                                         </div>
                                     </div>
                                 </div>
@@ -667,7 +872,7 @@ export const ClientProductsView = () => {
                                                     {getUnitIcon(unit)}
                                                     <span className='text-gray-600 capitalize'>{unit}:</span>
                                                 </div>
-                                                <span className='font-bold text-gray-800'>{quantity}</span>
+                                                <span className='font-bold text-gray-800'>{formatNumber(quantity)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -686,163 +891,297 @@ export const ClientProductsView = () => {
                                     </p>
                                 </div>
                             ) : (
+                                <>
+                                    <div className='bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-6'>
+                                        <div className='overflow-x-auto'>
+                                            <table className='w-full'>
+                                                <thead className='bg-gradient-to-r from-gray-50 to-gray-100'>
+                                                    <tr>
+                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                            Маҳсулот номи
+                                                        </th>
+                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                            ID
+                                                        </th>
+                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                            Миқдор
+                                                        </th>
+                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                            Нарх
+                                                        </th>
+                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                            Ҳолати
+                                                        </th>
+                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                            Сана
+                                                        </th>
+                                                        <th className='px-6 py-4 text-center text-sm font-semibold text-gray-700'>
+                                                            Амалиёт
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className='divide-y divide-gray-200'>
+                                                    {currentProducts.map((product, index) => (
+                                                        <motion.tr
+                                                            key={product._id}
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={{ delay: index * 0.05 }}
+                                                            className='hover:bg-blue-50 transition-colors duration-200'
+                                                        >
+                                                            <td className='px-6 py-4'>
+                                                                <div className='flex items-center gap-3'>
+                                                                    <div className='bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg'>
+                                                                        {getUnitIcon(product.unit)}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className='font-medium text-gray-800'>
+                                                                            {product.title}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+                                                            <td className='px-6 py-4 text-sm text-gray-600'>
+                                                                {product.ID}
+                                                            </td>
+
+                                                            <td className='px-6 py-4'>
+                                                                {editingProduct?._id === product._id ? (
+                                                                    <input
+                                                                        type='text'
+                                                                        value={editingProduct.stock}
+                                                                        onChange={(e) => handleInputChange('stock', e.target.value)}
+                                                                        className='w-24 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                        placeholder='0'
+                                                                    />
+                                                                ) : (
+                                                                    <div className='font-bold text-blue-600'>
+                                                                        {formatNumber(product.stock)} {product.unit}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+
+                                                            <td className='px-6 py-4'>
+                                                                {user.role === 'admin' ? (
+                                                                    editingProduct?._id === product._id ? (
+                                                                        <div className='flex items-center gap-2'>
+                                                                            <input
+                                                                                type='text'
+                                                                                value={editingProduct.price}
+                                                                                onChange={(e) => handleInputChange('price', e.target.value)}
+                                                                                className='w-32 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                                placeholder='0'
+                                                                            />
+                                                                            <select
+                                                                                value={editingProduct.priceType}
+                                                                                onChange={(e) => handleInputChange('priceType', e.target.value)}
+                                                                                className='border border-gray-300 rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                            >
+                                                                                <option value='uz'>сўм</option>
+                                                                                <option value='en'>$</option>
+                                                                            </select>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className='font-bold text-green-600'>
+                                                                            {formatNumber(product.price)} {product.priceType === 'uz' ? 'сўм' : '$'}
+                                                                        </div>
+                                                                    )
+                                                                ) : (
+                                                                    <div className='text-gray-400'>---</div>
+                                                                )}
+                                                            </td>
+
+                                                            <td className='px-6 py-4'>
+                                                                {editingProduct?._id === product._id ? (
+                                                                    <select
+                                                                        value={editingProduct.ready}
+                                                                        onChange={(e) => handleInputChange('ready', e.target.value === 'true')}
+                                                                        className='border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                    >
+                                                                        <option value={true}>Тайёр</option>
+                                                                        <option value={false}>Хом ашё</option>
+                                                                    </select>
+                                                                ) : (
+                                                                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${product.ready
+                                                                        ? 'bg-green-100 text-green-800 border-green-200'
+                                                                        : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                                                        }`}>
+                                                                        {product.ready ? 'Тайёр' : 'Хом ашё'}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+
+                                                            <td className='px-6 py-4 text-sm text-gray-600'>
+                                                                {new Date(product.createdAt).toLocaleDateString()}
+                                                            </td>
+
+                                                            <td className='px-6 py-4'>
+                                                                <div className='flex items-center justify-center gap-2'>
+                                                                    <motion.button
+                                                                        whileHover={{ scale: 1.05 }}
+                                                                        whileTap={{ scale: 0.95 }}
+                                                                        onClick={() => setSelectedProduct(product)}
+                                                                        className='flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200'
+                                                                    >
+                                                                        <Eye size={16} />
+                                                                    </motion.button>
+
+                                                                    {user.role === 'admin' && (
+                                                                        <>
+                                                                            <motion.button
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                                onClick={() => handleDelete(product._id)}
+                                                                                disabled={loading === product._id}
+                                                                                className='flex items-center gap-2 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors duration-200'
+                                                                            >
+                                                                                {loading === product._id ? (
+                                                                                    <Loader2 className='animate-spin' size={16} />
+                                                                                ) : (
+                                                                                    <Trash2 size={16} />
+                                                                                )}
+                                                                            </motion.button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </motion.tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Product Pagination */}
+                                    {totalProductPages > 1 && (
+                                        <div className='mb-6 flex justify-center'>
+                                            <div className='bg-white rounded-xl shadow-lg p-4 flex items-center gap-4'>
+                                                <button
+                                                    onClick={goToPrevProductPage}
+                                                    disabled={currentProductPage === 1}
+                                                    className='flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                                                >
+                                                    <ChevronLeft size={18} />
+                                                    Олдинги
+                                                </button>
+
+                                                <span className='text-gray-700 font-medium'>
+                                                    Саҳифа {currentProductPage} / {totalProductPages}
+                                                </span>
+
+                                                <button
+                                                    onClick={goToNextProductPage}
+                                                    disabled={currentProductPage === totalProductPages}
+                                                    className='flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                                                >
+                                                    Кейинги
+                                                    <ChevronRight size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* History Section */}
+                            {selectedClient.history && selectedClient.history.length > 0 && (
                                 <div className='bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden'>
+                                    <div className='p-6 border-b border-gray-200'>
+                                        <h3 className='text-lg font-semibold text-gray-800 flex items-center gap-2'>
+                                            <History size={20} className='text-orange-500' />
+                                            Тарих ({formatNumber(selectedClient.history.length)} та)
+                                        </h3>
+                                    </div>
+
                                     <div className='overflow-x-auto'>
                                         <table className='w-full'>
-                                            <thead className='bg-gradient-to-r from-gray-50 to-gray-100'>
+                                            <thead className='bg-gradient-to-r from-orange-50 to-amber-50'>
                                                 <tr>
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
-                                                        Маҳсулот номи
-                                                    </th>
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
-                                                        ID
-                                                    </th>
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
-                                                        Миқдор
-                                                    </th>
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
-                                                        Нарх
-                                                    </th>
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
-                                                        Ҳолати
-                                                    </th>
                                                     <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
                                                         Сана
                                                     </th>
-                                                    <th className='px-6 py-4 text-center text-sm font-semibold text-gray-700'>
-                                                        Амалиёт
+
+                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        Тафсилот
+                                                    </th>
+                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        Сумма
                                                     </th>
                                                 </tr>
                                             </thead>
                                             <tbody className='divide-y divide-gray-200'>
-                                                {selectedClient.products?.map((product, index) => (
+                                                {currentHistory.map((historyItem, index) => (
                                                     <motion.tr
-                                                        key={product._id}
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
+                                                        key={historyItem._id}
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
                                                         transition={{ delay: index * 0.05 }}
-                                                        className='hover:bg-blue-50 transition-colors duration-200'
+                                                        className='hover:bg-orange-50 transition-colors duration-200'
                                                     >
+                                                        <td className='px-6 py-4 text-sm text-gray-600'>
+                                                            {new Date(historyItem.createdAt).toLocaleDateString()}
+                                                            <br />
+                                                            <span className='text-xs text-gray-400'>
+                                                                {new Date(historyItem.createdAt).toLocaleTimeString()}
+                                                            </span>
+                                                        </td>
                                                         <td className='px-6 py-4'>
-                                                            <div className='flex items-center gap-3'>
-                                                                <div className='bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg'>
-                                                                    {getUnitIcon(product.unit)}
-                                                                </div>
-                                                                <div>
-                                                                    <div className='font-medium text-gray-800'>
-                                                                        {product.title}
-                                                                    </div>
-                                                                </div>
+                                                            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${historyItem.type === 'payment'
+                                                                ? 'bg-green-100 text-green-800 border-green-200'
+                                                                : 'bg-blue-100 text-blue-800 border-blue-200'
+                                                                }`}>
+                                                                {historyItem.type === 'payment' ? 'Тўлов' : 'Тўлов'}
                                                             </div>
                                                         </td>
 
-                                                        <td className='px-6 py-4 text-sm text-gray-600'>
-                                                            {product.ID}
-                                                        </td>
-
                                                         <td className='px-6 py-4'>
-                                                            {editingProduct?._id === product._id ? (
-                                                                <input
-                                                                    type='number'
-                                                                    value={editingProduct.stock}
-                                                                    onChange={(e) => handleInputChange('stock', e.target.value)}
-                                                                    className='w-24 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
-                                                                />
-                                                            ) : (
-                                                                <div className='font-bold text-blue-600'>
-                                                                    {product.stock} {product.unit}
+                                                            {historyItem.type == "uz" ? (
+                                                                <div className='font-bold text-green-600'>
+                                                                    {formatNumber(historyItem.price)} сўм
                                                                 </div>
-                                                            )}
-                                                        </td>
-
-                                                        <td className='px-6 py-4'>
-                                                            {user.role === 'admin' ? (
-                                                                editingProduct?._id === product._id ? (
-                                                                    <div className='flex items-center gap-2'>
-                                                                        <input
-                                                                            type='number'
-                                                                            value={editingProduct.price}
-                                                                            onChange={(e) => handleInputChange('price', e.target.value)}
-                                                                            className='w-32 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
-                                                                        />
-                                                                        <select
-                                                                            value={editingProduct.priceType}
-                                                                            onChange={(e) => handleInputChange('priceType', e.target.value)}
-                                                                            className='border border-gray-300 rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
-                                                                        >
-                                                                            <option value='uz'>сўм</option>
-                                                                            <option value='en'>$</option>
-                                                                        </select>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className='font-bold text-green-600'>
-                                                                        {product.price?.toLocaleString()} {product.priceType === 'uz' ? 'сўм' : '$'}
-                                                                    </div>
-                                                                )
+                                                            ) : historyItem.type == "en" ? (
+                                                                <div className='font-bold text-blue-600'>
+                                                                    {formatNumber(historyItem.price)} $
+                                                                </div>
                                                             ) : (
                                                                 <div className='text-gray-400'>---</div>
                                                             )}
-                                                        </td>
-
-                                                        <td className='px-6 py-4'>
-                                                            {editingProduct?._id === product._id ? (
-                                                                <select
-                                                                    value={editingProduct.ready}
-                                                                    onChange={(e) => handleInputChange('ready', e.target.value === 'true')}
-                                                                    className='border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
-                                                                >
-                                                                    <option value={true}>Тайёр</option>
-                                                                    <option value={false}>Хом ашё</option>
-                                                                </select>
-                                                            ) : (
-                                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${product.ready
-                                                                    ? 'bg-green-100 text-green-800 border-green-200'
-                                                                    : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                                                    }`}>
-                                                                    {product.ready ? 'Тайёр' : 'Хом ашё'}
-                                                                </div>
-                                                            )}
-                                                        </td>
-
-                                                        <td className='px-6 py-4 text-sm text-gray-600'>
-                                                            {new Date(product.createdAt).toLocaleDateString()}
-                                                        </td>
-
-                                                        <td className='px-6 py-4'>
-                                                            <div className='flex items-center justify-center gap-2'>
-                                                                <motion.button
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    whileTap={{ scale: 0.95 }}
-                                                                    onClick={() => setSelectedProduct(product)}
-                                                                    className='flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200'
-                                                                >
-                                                                    <Eye size={16} />
-                                                                </motion.button>
-
-                                                                {user.role === 'admin' && (
-                                                                    <>
-                                                                        <motion.button
-                                                                            whileHover={{ scale: 1.05 }}
-                                                                            whileTap={{ scale: 0.95 }}
-                                                                            onClick={() => handleDelete(product._id)}
-                                                                            disabled={loading === product._id}
-                                                                            className='flex items-center gap-2 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors duration-200'
-                                                                        >
-                                                                            {loading === product._id ? (
-                                                                                <Loader2 className='animate-spin' size={16} />
-                                                                            ) : (
-                                                                                <Trash2 size={16} />
-                                                                            )}
-                                                                        </motion.button>
-                                                                    </>
-                                                                )}
-                                                            </div>
                                                         </td>
                                                     </motion.tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    {/* Pagination Controls */}
+                                    {totalHistoryPages > 1 && (
+                                        <div className='p-4 border-t border-gray-200 bg-gray-50'>
+                                            <div className='flex items-center justify-between'>
+                                                <div className='text-sm text-gray-600'>
+                                                    Саҳифа {currentHistoryPage} / {totalHistoryPages}
+                                                </div>
+                                                <div className='flex items-center gap-2'>
+                                                    <button
+                                                        onClick={goToPrevHistoryPage}
+                                                        disabled={currentHistoryPage === 1}
+                                                        className='flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
+                                                    >
+                                                        <ChevronLeftIcon size={16} />
+                                                        Олдинги
+                                                    </button>
+                                                    <button
+                                                        onClick={goToNextHistoryPage}
+                                                        disabled={currentHistoryPage === totalHistoryPages}
+                                                        className='flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
+                                                    >
+                                                        Кейинги
+                                                        <ChevronRight size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </motion.div>
@@ -889,7 +1228,7 @@ export const ClientProductsView = () => {
                                     <div className='flex justify-between items-center p-3 bg-blue-50 rounded-xl'>
                                         <span className='text-gray-600'>Миқдор:</span>
                                         <span className='font-bold text-lg text-blue-600'>
-                                            {selectedProduct.stock} {selectedProduct.unit}
+                                            {formatNumber(selectedProduct.stock)} {selectedProduct.unit}
                                         </span>
                                     </div>
 
@@ -897,7 +1236,7 @@ export const ClientProductsView = () => {
                                         <div className='flex justify-between items-center p-3 bg-green-50 rounded-xl'>
                                             <span className='text-gray-600'>Нархи:</span>
                                             <span className='font-bold text-lg text-green-600'>
-                                                {selectedProduct.price?.toLocaleString()} {selectedProduct.priceType === 'uz' ? 'сўм' : '$'}
+                                                {formatNumber(selectedProduct.price)} {selectedProduct.priceType === 'uz' ? 'сўм' : '$'}
                                             </span>
                                         </div>
                                     )}

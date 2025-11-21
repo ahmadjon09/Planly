@@ -14,8 +14,6 @@ import { Admins } from './pages/Admins'
 import { Workers } from './pages/Workers'
 import { StatsPage } from './pages/StatsPage'
 import { ViewOrders } from './pages/Orders'
-import { Ready } from './pages/Ready'
-import { Raw } from './pages/Raw'
 import { ClientProductsView } from './pages/ProductsClient'
 
 export default function App() {
@@ -58,10 +56,9 @@ export default function App() {
   if (isLoading) return <Loading />
   const isAdmin = user.role === 'admin'
   const routes = [
-    { index: true, element: user.ability == "ready" ? <Ready /> : user.ability == "!ready" ? <Raw /> : <ProductsPage /> },
+    { index: true, element: <ProductsPage /> },
     { path: 'user/edit/:id', element: <UserManagement /> },
-    { path: 'ready', element: <Ready /> },
-    { path: 'raw', element: <Raw /> },
+    { path: 'products/:type', element: <ProductsPage /> },
     isAdmin && { path: 'user/:admin', element: <UserManagement /> },
     isAdmin && { path: 'user', element: <UserManagement /> },
     { path: 'static', element: <StatsPage /> },

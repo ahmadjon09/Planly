@@ -15,8 +15,6 @@ import {
   Users,
   UserPlus,
   Circle,
-  TrendingUp,
-  Calendar,
   PieChart
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
@@ -35,9 +33,8 @@ export const Nav = () => {
 
   const getSkladMenu = (ability) => {
     const allDropdowns = [
-      { name: 'Барча маҳсулотлар', path: '/', icon: <Circle color='green' size={18} /> },
-      { name: 'Тайёр маҳсулотлар', path: '/ready', icon: <Circle color='blue' size={18} /> },
-      { name: 'Хом ашё', path: '/raw', icon: <Circle color='red' size={18} /> },
+      { name: 'Тайёр маҳсулотлар', path: '/products/ready', icon: <Circle color='blue' size={18} /> },
+      { name: 'Хом ашё', path: '/products/raw', icon: <Circle color='red' size={18} /> },
     ];
 
     if (ability === "both") {
@@ -73,7 +70,7 @@ export const Nav = () => {
   const navLinks = [
     {
       name: 'Склад',
-      path: user.ability === "ready" ? "/ready" : user.ability === "!ready" ? "/raw" : "/",
+      path: user.ability === "ready" ? "/products/ready" : user.ability === "!ready" ? "/products/raw" : "/",
       icon: <Boxes size={20} />,
       hasDropdown: true,
       dropdownItems: getSkladMenu(user.ability)
@@ -97,9 +94,9 @@ export const Nav = () => {
       icon: <BarChart3 size={20} />,
       hasDropdown: true,
       dropdownItems: [
-        { name: 'Умумий статистика', path: '/static', icon: <PieChart size={18} /> },
-        { name: 'Қолдиқ маҳсулотлар', path: '/static/products', icon: <Boxes size={18} /> },
-        { name: 'Ойлик таҳлил', path: '/static/monthly', icon: <TrendingUp size={18} /> }
+        { name: 'Умумий қарзлар', path: '/static', icon: <PieChart size={18} /> },
+        { name: 'Таминотчилар', path: '/static/products', icon: <Users size={18} /> },
+        // { name: 'Ойлик таҳлил', path: '/static/monthly', icon: <TrendingUp size={18} /> }
       ]
     },
     ...(user.role === 'admin' ? [
@@ -157,8 +154,8 @@ export const Nav = () => {
   }
 
   const getDefaultPath = () => {
-    if (user.ability === "ready") return "/ready"
-    if (user.ability === "!ready") return "/raw"
+    if (user.ability === "ready") return "/products/ready"
+    if (user.ability === "!ready") return "/products/raw"
     return "/"
   }
 

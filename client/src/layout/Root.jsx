@@ -3,6 +3,7 @@ import { Nav } from '../components/Nav'
 import { Ping } from '../components/Ping'
 import { AboutModal } from '../mod/Info'
 import { Footer } from '../components/Footer'
+import { USDToUZSWidget } from '../mod/Kurs'
 
 export const Root = () => {
   return (
@@ -10,10 +11,11 @@ export const Root = () => {
       <Nav />
       <br />
       <br />
-      <main className='pt-[10px] text-gray-700 container'>
+      <main className='pt-2.5 text-gray-700 container'>
         <Outlet />
         <Ping />
         <AboutModal />
+        {/* <USDToUZSWidget /> */}
       </main>
       <Footer />
     </>

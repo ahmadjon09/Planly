@@ -1,12 +1,11 @@
 import { useState, useContext } from 'react'
+import { useParams } from 'react-router-dom'
 import useSWR from 'swr'
 import {
   Boxes,
   Loader2,
   Plus,
   Save,
-  Search,
-  Trash2,
   Eye,
   Hash,
   Tag,
@@ -14,17 +13,8 @@ import {
   Package,
   Ruler,
   Calendar,
-  MapPin,
-  Phone,
-  User,
-  Shield,
   CheckCircle,
   XCircle,
-  Filter,
-  Edit3,
-  ChevronDown,
-  MoreVertical,
-  Calculator,
   Circle
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
@@ -35,7 +25,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export const ProductsPage = () => {
   const { user } = useContext(ContextData)
-  const { data, error, isLoading, mutate } = useSWR('/products', Fetch, {
+  const { type } = useParams()
+
+  const apiEndpoint = type === 'ready' ? '/products/ready' : '/products/raw'
+
+  const { data, error, isLoading, mutate } = useSWR(apiEndpoint, Fetch, {
     refreshInterval: 5000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true
@@ -46,23 +40,41 @@ export const ProductsPage = () => {
   const [editing, setEditing] = useState({})
   const [loading, setLoading] = useState(null)
   const [deleting, setDeleting] = useState(null)
-  const [activeMenu, setActiveMenu] = useState(null)
 
   const [searchID, setSearchID] = useState('')
   const [searchTitle, setSearchTitle] = useState('')
   const [searchDate, setSearchDate] = useState('')
-  const [readyFilter, setReadyFilter] = useState('all')
 
-  const availableUnits = [
-    'дона',
-    'кг',
-    'метр',
-    'литр',
-    'м²',
-    'м³',
-    'сет',
-    'упаковка'
-  ]
+  // Format number with thousand separators
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return ''
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  }
+
+  // Parse formatted number back to raw number
+  const parseNumber = (str) => {
+    return Number(str.replace(/,/g, ''))
+  }
+
+  // Handle number input with formatting
+  const handleNumberChange = (id, field, value) => {
+    // Allow only numbers and dots
+    const cleanedValue = value.replace(/[^\d.]/g, '')
+
+    // Ensure only one dot
+    const parts = cleanedValue.split('.')
+    const formattedValue = parts.length > 2
+      ? parts[0] + '.' + parts.slice(1).join('')
+      : cleanedValue
+
+    setEditing(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: formattedValue
+      }
+    }))
+  }
 
   const handleChange = (id, field, value) => {
     setEditing(prev => ({
@@ -77,7 +89,14 @@ export const ProductsPage = () => {
   const handleSave = async id => {
     try {
       setLoading(id)
-      await Fetch.put(`/products/${id}`, editing[id])
+      // Parse the formatted price back to number
+      const rawPrice = editing[id].price ? parseNumber(editing[id].price) : 0
+
+      const updateData = {
+        price: rawPrice,
+        priceType: editing[id].priceType
+      }
+      await Fetch.put(`/products/${id}`, updateData)
       setEditing(prev => {
         const copy = { ...prev }
         delete copy[id]
@@ -89,23 +108,6 @@ export const ProductsPage = () => {
       alert('❌ Сақлашда хатолик юз берди')
     } finally {
       setLoading(null)
-    }
-  }
-
-  const handleDelete = async (id, title) => {
-    const confirmMessage = `🗑️ Сиз ростдан ҳам "${title}" маҳсулотини ўчирмоқчимисиз?\n\nБу амални кейин тиклаб бўлмайди. Давом этасизми?`
-    const confirmed = window.confirm(confirmMessage)
-    if (!confirmed) return
-
-    try {
-      setDeleting(id)
-      await Fetch.delete(`/products/${id}`)
-      mutate()
-    } catch (err) {
-      console.error('Delete error:', err)
-      alert('❌ Ўчириш жараёнида хатолик юз берди.')
-    } finally {
-      setDeleting(null)
     }
   }
 
@@ -125,26 +127,23 @@ export const ProductsPage = () => {
         const createdDate = new Date(p.createdAt).toISOString().split('T')[0]
         match = match && createdDate === searchDate
       }
-      if (readyFilter === 'ready') {
-        match = match && p.ready === true
-      } else if (readyFilter === 'not-ready') {
-        match = match && p.ready === false
-      }
       return match
     }) || []
 
-  const getStatusColor = ready => {
-    return ready
-      ? 'bg-green-100 text-green-800 border-green-200'
-      : 'bg-red-100 text-red-800 border-red-200'
+  const getPageTitle = () => {
+    switch (type) {
+      case 'ready': return 'Тайёр маҳсулотлар'
+      case 'raw': return 'Хом ашё маҳсулотлар'
+      default: return 'Хом ашё маҳсулотлар'
+    }
   }
 
-  const getStatusIcon = ready => {
-    return ready ? (
-      <CheckCircle className='h-4 w-4 text-green-600' />
-    ) : (
-      <XCircle className='h-4 w-4 text-red-600' />
-    )
+  const getPageDescription = () => {
+    switch (type) {
+      case 'ready': return 'Тайёр бўлган маҳсулотлар рўйхати'
+      case 'raw': return 'Хом ашё маҳсулотлар рўйхати'
+      default: return 'Хом ашё маҳсулотлар'
+    }
   }
 
   return (
@@ -163,10 +162,10 @@ export const ProductsPage = () => {
               </div>
               <div>
                 <h1 className='text-3xl font-bold text-gray-800'>
-                  Маҳсулотлар бошқаруви
+                  {getPageTitle()}
                 </h1>
                 <p className='text-gray-600 mt-2'>
-                  Барча маҳсулотлар ҳақида маълумот
+                  {getPageDescription()}
                 </p>
               </div>
             </div>
@@ -183,20 +182,6 @@ export const ProductsPage = () => {
               </motion.button>
             </div>
           </div>
-
-          {user.role !== 'admin' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className='mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 w-fit'
-            >
-              <Shield size={16} className='text-blue-600' />
-              <span className='text-blue-700 text-sm font-medium'>
-                Фақат кўриш
-              </span>
-            </motion.div>
-          )}
         </motion.div>
 
         {/* Search and Filter Section */}
@@ -211,7 +196,7 @@ export const ProductsPage = () => {
               <div className='relative'>
                 <Hash className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5' />
                 <input
-                  type='number'
+                  type='text'
                   placeholder='ID бўйича'
                   value={searchID}
                   onChange={e => setSearchID(e.target.value)}
@@ -267,24 +252,20 @@ export const ProductsPage = () => {
             <div className='px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50'>
               <div className='flex items-center justify-between'>
                 <h3 className='text-xl font-semibold text-gray-800 flex gap-1 items-center'>
-                  <Circle size={18} color='green' /> Маҳсулотлар рўйхати ({filteredProducts.length})
+                  <Circle size={18} color='green' /> {getPageTitle()} ({filteredProducts.length})
                 </h3>
-                {(searchID ||
-                  searchTitle ||
-                  searchDate ||
-                  readyFilter !== 'all') && (
-                    <button
-                      onClick={() => {
-                        setSearchID('')
-                        setSearchTitle('')
-                        setSearchDate('')
-                        setReadyFilter('all')
-                      }}
-                      className='text-blue-500 hover:text-blue-700 font-medium text-sm'
-                    >
-                      Филтрни тозалаш
-                    </button>
-                  )}
+                {(searchID || searchTitle || searchDate) && (
+                  <button
+                    onClick={() => {
+                      setSearchID('')
+                      setSearchTitle('')
+                      setSearchDate('')
+                    }}
+                    className='text-blue-500 hover:text-blue-700 font-medium text-sm'
+                  >
+                    Филтрни тозалаш
+                  </button>
+                )}
               </div>
             </div>
 
@@ -297,13 +278,13 @@ export const ProductsPage = () => {
                       Маҳсулот
                     </th>
                     <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
-                      Нарх ва Миқдор
+                      Нарх
+                    </th>
+                    <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                      Миқдор
                     </th>
                     <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
                       Бирлик
-                    </th>
-                    <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
-                      Ҳолати
                     </th>
                     <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
                       Сана
@@ -322,7 +303,7 @@ export const ProductsPage = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className={`${product.stock == 0 ? "bg-red-400 text-white" : ""} transition-all duration-200 group`}
+                        className={`${product.stock == 0 ? "bg-red-300" : "bg-green-300"} transition-all duration-200 group`}
                       >
                         {/* Product Info */}
                         <td className='px-8 py-4'>
@@ -341,92 +322,49 @@ export const ProductsPage = () => {
                           </div>
                         </td>
 
-                        {/* Price and Stock */}
+                        {/* Price */}
                         <td className='px-8 py-4'>
                           <div className='space-y-2'>
-                            <div className='flex items-center gap-2'>
-                              <p className='text-green-500 font-bold'>{product.priceType == "uz" ? "сўм" : "$"}</p>
-                              {user.role === 'admin' ? (
+                            {user.role === 'admin' ? (
+                              <div className='flex items-center gap-2'>
+                                <select
+                                  value={editing[product._id]?.priceType || product.priceType}
+                                  onChange={e => handleChange(product._id, 'priceType', e.target.value)}
+                                  className='border border-gray-800 text-gray-800 rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
+                                >
+                                  <option value="uz">сўм</option>
+                                  <option value="usd">$</option>
+                                </select>
                                 <input
-                                  type='number'
-                                  defaultValue={product.price}
-                                  className='border border-gray-300 rounded-lg px-3 py-2 w-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
-                                  onChange={e =>
-                                    handleChange(
-                                      product._id,
-                                      'price',
-                                      Number(e.target.value)
-                                    )
+                                  type='text'
+                                  value={editing[product._id]?.price !== undefined
+                                    ? editing[product._id].price
+                                    : formatNumber(product.price)
                                   }
+                                  onChange={e => handleNumberChange(product._id, 'price', e.target.value)}
+                                  className='border border-gray-800 rounded-lg px-3 py-2 w-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
+                                  placeholder='0'
                                 />
-                              ) : (
+                              </div>
+                            ) : (
+                              <div className='flex items-center gap-2'>
+                                <span className='text-green-500 font-bold'>{product.priceType == "uz" ? "сўм" : "$"}</span>
                                 <span className='font-semibold text-green-600'>
-                                  {product.price?.toLocaleString()}
+                                  {formatNumber(product.price)}
                                 </span>
-                              )}
-                            </div>
-                            <div className='flex items-center gap-2'>
-                              <Calculator className='h-4 w-4 text-blue-500' />
-                              <input
-                                type='number'
-                                defaultValue={product.stock}
-                                className='border border-gray-300 rounded-lg px-3 py-2 w-24 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
-                                onChange={e =>
-                                  handleChange(
-                                    product._id,
-                                    'stock',
-                                    Number(e.target.value)
-                                  )
-                                }
-                              />
-                            </div>
+                              </div>
+                            )}
                           </div>
+                        </td>
+
+                        {/* Stock */}
+                        <td className='px-8 py-4'>
+                          <p className='text-xl'>{formatNumber(product.stock)}</p>
                         </td>
 
                         {/* Unit */}
                         <td className='px-8 py-4'>
-                          <select
-                            defaultValue={product.unit || 'дона'}
-                            onChange={e =>
-                              handleChange(product._id, 'unit', e.target.value)
-                            }
-                            className='border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
-                          >
-                            {availableUnits.map(u => (
-                              <option key={u} value={u}>
-                                {u}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Status */}
-                        <td className='px-8 py-4'>
-                          {user.role === 'admin' ? (
-                            <select
-                              defaultValue={product.ready ? 'true' : 'false'}
-                              onChange={e =>
-                                handleChange(
-                                  product._id,
-                                  'ready',
-                                  e.target.value === 'true'
-                                )
-                              }
-                              className='border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
-                            >
-                              <option value='true'>Тайёр</option>
-                              <option value='false'>Хом ашё</option>
-                            </select>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
-                                product.ready
-                              )}`}
-                            >
-                              {getStatusIcon(product.ready)}
-                              {product.ready ? 'Тайёр' : 'Хом ашё'}
-                            </span>
-                          )}
+                          <p className='text-xl'>{product.unit}</p>
                         </td>
 
                         {/* Date */}
@@ -447,7 +385,7 @@ export const ProductsPage = () => {
                               Кўриш
                             </motion.button>
 
-                            {isEdited && (
+                            {user.role === 'admin' && isEdited && (
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -461,25 +399,6 @@ export const ProductsPage = () => {
                                   <Save size={16} />
                                 )}
                                 Сақлаш
-                              </motion.button>
-                            )}
-
-                            {user.role === 'admin' && (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() =>
-                                  handleDelete(product._id, product.title)
-                                }
-                                disabled={deleting === product._id}
-                                className='flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors'
-                              >
-                                {deleting === product._id ? (
-                                  <Loader2 className='animate-spin' size={16} />
-                                ) : (
-                                  <Trash2 size={16} />
-                                )}
-                                Ўчириш
                               </motion.button>
                             )}
                           </div>
@@ -498,29 +417,22 @@ export const ProductsPage = () => {
                   Маҳсулотлар топилмади
                 </h3>
                 <p className='text-gray-500 mb-6'>
-                  {searchID ||
-                    searchTitle ||
-                    searchDate ||
-                    readyFilter !== 'all'
+                  {searchID || searchTitle || searchDate
                     ? 'Қидирув шартларингизга мос келувчи маҳсулотлар топилмади'
                     : 'Ҳали бирор маҳсулот қўшилмаган'}
                 </p>
-                {(searchID ||
-                  searchTitle ||
-                  searchDate ||
-                  readyFilter !== 'all') && (
-                    <button
-                      onClick={() => {
-                        setSearchID('')
-                        setSearchTitle('')
-                        setSearchDate('')
-                        setReadyFilter('all')
-                      }}
-                      className='text-blue-500 hover:text-blue-700 font-semibold'
-                    >
-                      Филтрни тозалаш
-                    </button>
-                  )}
+                {(searchID || searchTitle || searchDate) && (
+                  <button
+                    onClick={() => {
+                      setSearchID('')
+                      setSearchTitle('')
+                      setSearchDate('')
+                    }}
+                    className='text-blue-500 hover:text-blue-700 font-semibold'
+                  >
+                    Филтрни тозалаш
+                  </button>
+                )}
               </div>
             )}
           </motion.div>
@@ -543,282 +455,144 @@ export const ProductsPage = () => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 onClick={e => e.stopPropagation()}
-                className='bg-white w-full max-w-4xl rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto'
+                className='bg-white w-full max-w-md rounded-3xl shadow-2xl relative'
               >
-                {/* Modal content remains the same as your original */}
-                {viewData && (
-                  <div
+                <div className='sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex justify-between items-center'>
+                  <h2 className='text-xl font-bold flex items-center gap-2 text-gray-800'>
+                    <Tag size={22} className='text-blue-600' />
+                    Маҳсулот маълумотлари
+                  </h2>
+                  <button
                     onClick={() => setViewData(null)}
-                    className='fixed inset-0 bg-black/70 flex justify-center items-center z-[100] p-3 md:p-6'
+                    className='text-gray-500 hover:text-black transition p-1 rounded-full hover:bg-gray-100'
                   >
-                    <div
-                      onClick={e => e.stopPropagation()}
-                      className='bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto'
-                    >
-                      <div className='sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex justify-between items-center'>
-                        <h2 className='text-xl font-bold flex items-center gap-2 text-gray-800'>
-                          <Tag size={22} className='text-blue-600' />
-                          Маҳсулот маълумотлари
-                        </h2>
-                        <button
-                          onClick={() => setViewData(null)}
-                          className='text-gray-500 hover:text-black transition p-1 rounded-full hover:bg-gray-100'
-                        >
-                          ✖
-                        </button>
+                    ✖
+                  </button>
+                </div>
+
+                <div className='p-6 space-y-4'>
+                  {/* Basic Information */}
+                  <div className='space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='bg-blue-100 p-2 rounded-lg'>
+                        <Hash size={18} className='text-blue-600' />
                       </div>
-
-                      <div className='p-6 space-y-4'>
-                        {/* Asosiy ma'lumotlar */}
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                          <div className='space-y-4'>
-                            <div className='flex items-center gap-3'>
-                              <div className='bg-blue-100 p-2 rounded-lg'>
-                                <Hash size={18} className='text-blue-600' />
-                              </div>
-                              <div>
-                                <p className='text-sm text-gray-500'>ID</p>
-                                <p className='font-medium'>{viewData.ID}</p>
-                              </div>
-                            </div>
-
-                            <div className='flex items-center gap-3'>
-                              <div className='bg-blue-100 p-2 rounded-lg'>
-                                <Boxes size={18} className='text-blue-600' />
-                              </div>
-                              <div>
-                                <p className='text-sm text-gray-500'>Номи</p>
-                                <p className='font-medium'>{viewData.title}</p>
-                              </div>
-                            </div>
-
-                            <div className='flex items-center gap-3'>
-                              <div className='bg-blue-100 p-2 rounded-lg'>
-                                <DollarSign
-                                  size={18}
-                                  className='text-blue-600'
-                                />
-                              </div>
-                              <div className='flex-1'>
-                                <p className='text-sm text-gray-500'>Нархи</p>
-                                {user.role === 'admin' ? (
-                                  <div className='flex items-center gap-2'>
-                                    <input
-                                      type='number'
-                                      defaultValue={viewData.price}
-                                      className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
-                                      onChange={e =>
-                                        handleChange(
-                                          viewData._id,
-                                          'price',
-                                          Number(e.target.value)
-                                        )
-                                      }
-                                    />
-                                    <span className='text-gray-600 whitespace-nowrap'>
-                                      {viewData.priceType == "uz" ? "сўм" : "$"}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <p className='font-medium'>
-                                    {viewData.price?.toLocaleString()}
-                                    {viewData.priceType == "uz" ? "сўм" : "$"}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className='space-y-4'>
-                            <div className='flex items-center gap-3'>
-                              <div className='bg-blue-100 p-2 rounded-lg'>
-                                <Package size={18} className='text-blue-600' />
-                              </div>
-                              <div className='flex-1'>
-                                <p className='text-sm text-gray-500'>Миқдори</p>
-                                {user.role === 'admin' ? (
-                                  <input
-                                    type='number'
-                                    defaultValue={viewData.stock}
-                                    className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
-                                    onChange={e =>
-                                      handleChange(
-                                        viewData._id,
-                                        'stock',
-                                        Number(e.target.value)
-                                      )
-                                    }
-                                  />
-                                ) : (
-                                  <p className='font-medium'>
-                                    {viewData.stock}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className='flex items-center gap-3'>
-                              <div className='bg-blue-100 p-2 rounded-lg'>
-                                <Ruler size={18} className='text-blue-600' />
-                              </div>
-                              <div className='flex-1'>
-                                <p className='text-sm text-gray-500'>Бирлик</p>
-                                {user.role === 'admin' ? (
-                                  <select
-                                    defaultValue={viewData.unit || 'дона'}
-                                    onChange={e =>
-                                      handleChange(
-                                        viewData._id,
-                                        'unit',
-                                        e.target.value
-                                      )
-                                    }
-                                    className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
-                                  >
-                                    {availableUnits.map(u => (
-                                      <option key={u} value={u}>
-                                        {u}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <p className='font-medium'>
-                                    {viewData.unit || 'дона'}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className='flex items-center gap-3'>
-                              <div className='bg-blue-100 p-2 rounded-lg'>
-                                {viewData.ready ? (
-                                  <CheckCircle
-                                    size={18}
-                                    className='text-green-600'
-                                  />
-                                ) : (
-                                  <XCircle size={18} className='text-red-600' />
-                                )}
-                              </div>
-                              <div className='flex-1'>
-                                <p className='text-sm text-gray-500'>Ҳолати</p>
-                                {user.role === 'admin' ? (
-                                  <select
-                                    defaultValue={
-                                      viewData.ready ? 'true' : 'false'
-                                    }
-                                    onChange={e =>
-                                      handleChange(
-                                        viewData._id,
-                                        'ready',
-                                        e.target.value === 'true'
-                                      )
-                                    }
-                                    className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
-                                  >
-                                    <option value='true'>Тайёр</option>
-                                    <option value='false'>Тайёр эмас</option>
-                                  </select>
-                                ) : (
-                                  <p
-                                    className={`font-medium ${viewData.ready
-                                      ? 'text-green-600'
-                                      : 'text-red-600'
-                                      }`}
-                                  >
-                                    {viewData.ready ? 'Тайёр' : 'Тайёр эмас'}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className='bg-gray-50 rounded-xl p-4 mt-4'>
-                          <h3 className='font-semibold text-gray-700 mb-3 flex items-center gap-2'>
-                            📦 Манба ҳақида
-                          </h3>
-
-                          <div className='space-y-3'>
-                            <div className='flex items-center gap-3'>
-                              <User
-                                size={16}
-                                className='text-gray-500 flex-shrink-0'
-                              />
-                              <div className='flex-1'>
-                                <p className='text-sm text-gray-500'>Номи</p>
-                                <p className='font-medium'>
-                                  {viewData.client?.name || '—'}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className='flex items-center gap-3'>
-                              <Phone
-                                size={16}
-                                className='text-gray-500 flex-shrink-0'
-                              />
-                              <div className='flex-1'>
-                                <p className='text-sm text-gray-500'>Телефон</p>
-
-                                <p className='font-medium'>
-                                  {viewData.client?.phoneNumber || '—'}
-                                </p>
-                              </div>
-                            </div>
-
-                          </div>
-                        </div>
-
-                        {/* Vaqt ma'lumotlari */}
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200'>
-                          <div className='flex items-center gap-3'>
-                            <Calendar
-                              size={16}
-                              className='text-gray-500 flex-shrink-0'
-                            />
-                            <div>
-                              <p className='text-sm text-gray-500'>Яратилган</p>
-                              <p className='font-medium'>
-                                {new Date(viewData.createdAt).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className='flex items-center gap-3'>
-                            <Calendar
-                              size={16}
-                              className='text-gray-500 flex-shrink-0'
-                            />
-                            <div>
-                              <p className='text-sm text-gray-500'>
-                                Янгилланган
-                              </p>
-                              <p className='font-medium'>
-                                {new Date(viewData.updatedAt).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                      <div>
+                        <p className='text-sm text-gray-500'>ID</p>
+                        <p className='font-medium'>{viewData.ID}</p>
                       </div>
-
-                      {editing[viewData._id] && (
-                        <div className='sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl flex justify-end'>
-                          <button
-                            onClick={() => handleSave(viewData._id)}
-                            disabled={loading === viewData._id}
-                            className='flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors shadow-sm'
-                          >
-                            {loading === viewData._id ? (
-                              <Loader2 className='animate-spin' size={18} />
-                            ) : (
-                              <Save size={18} />
-                            )}
-                            Сақлаш
-                          </button>
-                        </div>
-                      )}
                     </div>
+
+                    <div className='flex items-center gap-3'>
+                      <div className='bg-blue-100 p-2 rounded-lg'>
+                        <Boxes size={18} className='text-blue-600' />
+                      </div>
+                      <div>
+                        <p className='text-sm text-gray-500'>Номи</p>
+                        <p className='font-medium'>{viewData.title}</p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center gap-3'>
+                      <div className='bg-blue-100 p-2 rounded-lg'>
+                        <DollarSign size={18} className='text-blue-600' />
+                      </div>
+                      <div className='flex-1'>
+                        <p className='text-sm text-gray-500'>Нархи</p>
+                        {user.role === 'admin' ? (
+                          <div className='flex items-center gap-2'>
+                            <select
+                              value={editing[viewData._id]?.priceType || viewData.priceType}
+                              onChange={e => handleChange(viewData._id, 'priceType', e.target.value)}
+                              className='border border-gray-300 rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
+                            >
+                              <option value="uz">сўм</option>
+                              <option value="usd">$</option>
+                            </select>
+                            <input
+                              type='text'
+                              value={editing[viewData._id]?.price !== undefined
+                                ? editing[viewData._id].price
+                                : formatNumber(viewData.price)
+                              }
+                              onChange={e => handleNumberChange(viewData._id, 'price', e.target.value)}
+                              className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
+                              placeholder='0'
+                            />
+                          </div>
+                        ) : (
+                          <p className='font-medium'>
+                            {formatNumber(viewData.price)} {viewData.priceType == "uz" ? "сўм" : "$"}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className='flex items-center gap-3'>
+                      <div className='bg-blue-100 p-2 rounded-lg'>
+                        <Package size={18} className='text-blue-600' />
+                      </div>
+                      <div>
+                        <p className='text-sm text-gray-500'>Миқдори</p>
+                        <p className='font-medium'>{formatNumber(viewData.stock)}</p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center gap-3'>
+                      <div className='bg-blue-100 p-2 rounded-lg'>
+                        <Ruler size={18} className='text-blue-600' />
+                      </div>
+                      <div>
+                        <p className='text-sm text-gray-500'>Бирлик</p>
+                        <p className='font-medium'>{viewData.unit || 'дона'}</p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center gap-3'>
+                      <div className='bg-blue-100 p-2 rounded-lg'>
+                        {viewData.ready ? (
+                          <CheckCircle size={18} className='text-green-600' />
+                        ) : (
+                          <XCircle size={18} className='text-red-600' />
+                        )}
+                      </div>
+                      <div>
+                        <p className='text-sm text-gray-500'>Ҳолати</p>
+                        <p className={`font-medium ${viewData.ready ? 'text-green-600' : 'text-red-600'}`}>
+                          {viewData.ready ? 'Тайёр' : 'Хом ашё'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Time Information */}
+                  <div className='pt-4 border-t border-gray-200'>
+                    <div className='flex items-center gap-3'>
+                      <Calendar size={16} className='text-gray-500 flex-shrink-0' />
+                      <div>
+                        <p className='text-sm text-gray-500'>Қўшилган</p>
+                        <p className='font-medium'>
+                          {new Date(viewData.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {user.role === 'admin' && editing[viewData._id] && (
+                  <div className='sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl flex justify-end'>
+                    <button
+                      onClick={() => handleSave(viewData._id)}
+                      disabled={loading === viewData._id}
+                      className='flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors shadow-sm'
+                    >
+                      {loading === viewData._id ? (
+                        <Loader2 className='animate-spin' size={18} />
+                      ) : (
+                        <Save size={18} />
+                      )}
+                      Сақлаш
+                    </button>
                   </div>
                 )}
               </motion.div>
