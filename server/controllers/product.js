@@ -178,7 +178,7 @@ export const GetAllReadyProducts = async (_, res) => {
     const products = await Product.find({ ready: true }).sort({ createdAt: -1 });
 
     if (products.length === 0) {
-      return res.status(404).json({ message: "No ready products found." });
+      return res.status(404).json({ message: "Маҳсулотлар топилмади❗" });
     }
 
     const productsWithClient = await Promise.all(
@@ -216,7 +216,7 @@ export const GetAllNotReadyProducts = async (_, res) => {
     const products = await Product.find({ ready: false }).sort({ createdAt: -1 });
 
     if (products.length === 0) {
-      return res.status(404).json({ message: "No not-ready products found." });
+      return res.status(404).json({ message: "Маҳсулотлар топилмади❗" });
     }
 
     const productsWithClient = await Promise.all(

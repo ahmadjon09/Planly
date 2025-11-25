@@ -22,7 +22,7 @@ import { ContextData } from '../contextData/Context'
 export const UserManagement = () => {
   const { id, admin } = useParams()
   const navigate = useNavigate()
-  const { user, setUser, setOpenX } = useContext(ContextData)
+  const { user, setUser, setOpenX, dark } = useContext(ContextData)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -130,16 +130,29 @@ export const UserManagement = () => {
     }
   }
 
+  // Dark mode styles
+  const bgColor = dark ? 'bg-gray-900' : 'bg-gray-50'
+  const cardBg = dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+  const textColor = dark ? 'text-white' : 'text-gray-800'
+  const textMuted = dark ? 'text-gray-300' : 'text-gray-600'
+  const inputBg = dark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+  const buttonSecondary = dark ? 'bg-gray-700 hover:bg-gray-600 text-white border-gray-600' : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
+  const headerBg = dark ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-100'
+  const infoBg = dark ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-100'
+  const warningBg = dark ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'
+  const successBg = dark ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-100'
+  const purpleBg = dark ? 'bg-purple-900 border-purple-700' : 'bg-purple-50 border-purple-100'
+
   if (isEditing && id !== user?._id) {
     return (
-      <div className='min-h-screen bg-gray-50 pt-20 flex items-center justify-center px-4'>
-        <div className='max-w-md w-full mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200'>
+      <div className={`min-h-screen pt-20 flex items-center justify-center px-4 ${bgColor}`}>
+        <div className={`max-w-md w-full mx-auto rounded-xl shadow-lg overflow-hidden border ${cardBg}`}>
           <div className='p-6 text-center'>
             <div className='mb-4'>
               <Shield className='h-12 w-12 text-red-500 mx-auto' />
             </div>
-            <h2 className='text-xl font-bold text-red-600 mb-2'>Рухсат Етак</h2>
-            <p className='text-gray-600 mb-4 text-sm'>
+            <h2 className={`text-xl font-bold text-red-600 mb-2 ${textColor}`}>Рухсат Етак</h2>
+            <p className={`mb-4 text-sm ${textMuted}`}>
               Сизда бошқа фойдаланувчиларни таҳрирлаш ҳуқуқи мавжуд эмас
             </p>
             <button
@@ -155,23 +168,23 @@ export const UserManagement = () => {
   }
 
   return (
-    <div className='min-h-screen bg-gray-50 w-full px-4 py-6'>
+    <div className={`min-h-screen w-full px-4 py-6 ${bgColor}`}>
       <div className='mx-auto max-w-2xl'>
         {/* Header */}
         <div className='flex items-center justify-between mb-6'>
           <button
             onClick={() => navigate(-1)}
-            className='flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md'
+            className={`flex items-center gap-2 transition-colors px-4 py-2 rounded-lg shadow-sm hover:shadow-md ${buttonSecondary} ${textColor}`}
           >
             <ArrowLeft className='h-4 w-4' />
             <span className='font-medium text-sm'>Орқага</span>
           </button>
 
           <div className='text-center'>
-            <h1 className='text-xl font-bold text-gray-800'>
+            <h1 className={`text-xl font-bold ${textColor}`}>
               {isEditing ? 'Фойдаланувчини Таҳрирлаш' : 'Янги Фойдаланувчи'}
             </h1>
-            <p className='text-gray-600 text-xs mt-1'>
+            <p className={`text-xs mt-1 ${textMuted}`}>
               {isEditing
                 ? 'Маълумотларни янгиланг'
                 : 'Янги фойдаланувчи қўшинг'}
@@ -181,20 +194,20 @@ export const UserManagement = () => {
           <div className='w-20'></div>
         </div>
 
-        <div className='bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200'>
+        <div className={`rounded-xl shadow-lg overflow-hidden border ${cardBg}`}>
           {/* Form Header */}
-          <div className='bg-blue-50 px-6 py-4 border-b border-blue-100'>
+          <div className={`px-6 py-4 border-b ${headerBg}`}>
             <div className='flex items-center gap-3'>
               <div className='bg-blue-500 p-2 rounded-lg'>
                 <UserCog2 className='h-5 w-5 text-white' />
               </div>
               <div>
-                <h2 className='text-lg font-semibold text-gray-800'>
+                <h2 className={`text-lg font-semibold ${textColor}`}>
                   {isEditing
                     ? 'Фойдаланувчи Маълумотлари'
                     : 'Янги Фойдаланувчи'}
                 </h2>
-                <p className='text-gray-600 text-xs'>
+                <p className={`text-xs ${textMuted}`}>
                   {isEditing
                     ? 'Маълумотларни таҳрирланг'
                     : 'Янги фойдаланувчи қўшинг'}
@@ -207,7 +220,7 @@ export const UserManagement = () => {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               {/* First Name */}
               <div className='space-y-2'>
-                <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                <label className={`block text-sm font-medium flex items-center gap-1 ${textColor}`}>
                   <User className='h-4 w-4 text-blue-500' />
                   Исм
                   <button
@@ -219,7 +232,7 @@ export const UserManagement = () => {
                   </button>
                 </label>
                 <input
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-sm'
+                  className={`w-full p-3 border rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm ${inputBg}`}
                   type='text'
                   name='firstName'
                   value={adminData.firstName}
@@ -231,7 +244,7 @@ export const UserManagement = () => {
 
               {/* Last Name */}
               <div className='space-y-2'>
-                <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                <label className={`block text-sm font-medium flex items-center gap-1 ${textColor}`}>
                   <User className='h-4 w-4 text-blue-500' />
                   Фамилия
                   <button
@@ -243,7 +256,7 @@ export const UserManagement = () => {
                   </button>
                 </label>
                 <input
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-sm'
+                  className={`w-full p-3 border rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm ${inputBg}`}
                   type='text'
                   name='lastName'
                   value={adminData.lastName}
@@ -255,7 +268,7 @@ export const UserManagement = () => {
 
               {/* Phone Number */}
               <div className='space-y-2'>
-                <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                <label className={`block text-sm font-medium flex items-center gap-1 ${textColor}`}>
                   <Phone className='h-4 w-4 text-green-500' />
                   Телефон
                   <button
@@ -267,7 +280,7 @@ export const UserManagement = () => {
                   </button>
                 </label>
                 <input
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all bg-white text-sm'
+                  className={`w-full p-3 border rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all text-sm ${inputBg}`}
                   type='text'
                   name='phoneNumber'
                   value={adminData.phoneNumber}
@@ -288,7 +301,7 @@ export const UserManagement = () => {
 
               {/* Role */}
               {!isEditing && <div className='space-y-2'>
-                <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                <label className={`block text-sm font-medium flex items-center gap-1 ${textColor}`}>
                   <Shield className='h-4 w-4 text-orange-500' />
                   Рол
                   <button
@@ -300,7 +313,7 @@ export const UserManagement = () => {
                   </button>
                 </label>
                 <select
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all bg-white text-sm appearance-none'
+                  className={`w-full p-3 border rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sm appearance-none ${inputBg}`}
                   name='role'
                   value={adminData.role}
                   onChange={handleInputChange}
@@ -313,7 +326,7 @@ export const UserManagement = () => {
 
               {!isEditing && adminData.role === 'worker' && (
                 <div className='space-y-2'>
-                  <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                  <label className={`block text-sm font-medium flex items-center gap-1 ${textColor}`}>
                     <Eye className='h-4 w-4 text-purple-500' />
                     Кўриш ҳуқуқи
                     <button
@@ -325,7 +338,7 @@ export const UserManagement = () => {
                     </button>
                   </label>
                   <select
-                    className='w-full p-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all bg-white text-sm appearance-none'
+                    className={`w-full p-3 border rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all text-sm appearance-none ${inputBg}`}
                     name='ability'
                     value={adminData.ability}
                     onChange={handleInputChange}
@@ -340,7 +353,7 @@ export const UserManagement = () => {
 
               {/* Password */}
               <div className='space-y-2'>
-                <label className='block text-sm font-medium text-gray-700 flex items-center gap-1'>
+                <label className={`block text-sm font-medium flex items-center gap-1 ${textColor}`}>
                   <Key className='h-4 w-4 text-purple-500' />
                   {isEditing ? (
                     'Янги пароль'
@@ -358,7 +371,7 @@ export const UserManagement = () => {
                   )}
                 </label>
                 <input
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all bg-white text-sm'
+                  className={`w-full p-3 border rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all text-sm ${inputBg}`}
                   type='password'
                   name='password'
                   value={adminData.password}
@@ -372,11 +385,11 @@ export const UserManagement = () => {
 
             {/* Ability ma'nolari */}
             {!isEditing && adminData.role === 'worker' && (
-              <div className='bg-purple-50 rounded-lg p-3 border border-purple-100'>
+              <div className={`rounded-lg p-3 border ${purpleBg}`}>
                 <div className='flex items-start gap-2'>
                   <Info className='h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0' />
-                  <div className='text-xs text-gray-600'>
-                    <p className='font-medium text-purple-700 mb-1'>Кўриш ҳуқуқи изоҳи:</p>
+                  <div className={`text-xs ${textMuted}`}>
+                    <p className={`font-medium mb-1 ${dark ? 'text-purple-300' : 'text-purple-700'}`}>Кўриш ҳуқуқи изоҳи:</p>
                     <ul className='space-y-1'>
                       <li className='flex items-center gap-2'>
                         <div className='w-2 h-2 bg-green-500 rounded-full'></div>
@@ -398,11 +411,11 @@ export const UserManagement = () => {
 
             {/* Admin ability info */}
             {adminData.role === 'admin' && (
-              <div className='bg-green-50 rounded-lg p-3 border border-green-100'>
+              <div className={`rounded-lg p-3 border ${successBg}`}>
                 <div className='flex items-start gap-2'>
                   <CheckCircle className='h-4 w-4 text-green-500 mt-0.5 flex-shrink-0' />
-                  <div className='text-xs text-gray-600'>
-                    <p className='font-medium text-green-700 mb-1'>Админ ҳуқуқлари:</p>
+                  <div className={`text-xs ${textMuted}`}>
+                    <p className={`font-medium mb-1 ${dark ? 'text-green-300' : 'text-green-700'}`}>Админ ҳуқуқлари:</p>
                     <p>Админ роли учун барча маҳсулот ва хом ашёларни кўриш ҳуқуқи автомат равишда берилади.</p>
                   </div>
                 </div>
@@ -410,11 +423,11 @@ export const UserManagement = () => {
             )}
 
             {/* Help Info */}
-            <div className='bg-blue-50 rounded-lg p-3 border border-blue-100'>
+            <div className={`rounded-lg p-3 border ${infoBg}`}>
               <div className='flex items-start gap-2'>
                 <Info className='h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0' />
-                <div className='text-xs text-gray-600'>
-                  <p className='font-medium text-blue-700 mb-1'>Ёрдам:</p>
+                <div className={`text-xs ${textMuted}`}>
+                  <p className={`font-medium mb-1 ${dark ? 'text-blue-300' : 'text-blue-700'}`}>Ёрдам:</p>
                   <ul className='space-y-1'>
                     <li>• Мажбурий майдонлар * белгиси билан</li>
                     <li>• Пароль камида 8 та белги</li>
@@ -427,7 +440,8 @@ export const UserManagement = () => {
             </div>
 
             {error && (
-              <div className='p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center'>
+              <div className={`p-3 border rounded-lg text-sm flex items-center ${dark ? 'bg-red-900 border-red-700 text-red-200' : 'bg-red-50 border-red-200 text-red-600'
+                }`}>
                 <X className='h-4 w-4 mr-2 flex-shrink-0' />
                 {error}
               </div>
@@ -437,7 +451,10 @@ export const UserManagement = () => {
               <button
                 type='button'
                 onClick={() => navigate(-1)}
-                className='rounded-lg border border-gray-300 bg-white hover:bg-gray-50 cursor-pointer flex justify-center items-center gap-2 text-gray-700 py-3 font-medium transition-colors text-sm'
+                className={`rounded-lg border cursor-pointer flex justify-center items-center gap-2 py-3 font-medium transition-colors text-sm ${dark
+                    ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-white'
+                    : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+                  }`}
               >
                 <X className='h-4 w-4' />
                 Бекор қилиш

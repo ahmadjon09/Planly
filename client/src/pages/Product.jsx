@@ -15,7 +15,10 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  Circle
+  Circle,
+  Trash2,
+  Moon,
+  Sun
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import AddProductModal from '../components/AddProductModal'
@@ -24,7 +27,7 @@ import { LoadingState } from '../components/loading-state'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export const ProductsPage = () => {
-  const { user } = useContext(ContextData)
+  const { user, dark, setDark } = useContext(ContextData)
   const { type } = useParams()
 
   const apiEndpoint = type === 'ready' ? '/products/ready' : '/products/raw'
@@ -40,6 +43,7 @@ export const ProductsPage = () => {
   const [editing, setEditing] = useState({})
   const [loading, setLoading] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   const [searchID, setSearchID] = useState('')
   const [searchTitle, setSearchTitle] = useState('')
@@ -111,6 +115,21 @@ export const ProductsPage = () => {
     }
   }
 
+  const handleDelete = async (id) => {
+    try {
+      setDeleting(id)
+      await Fetch.delete(`/products/${id}`)
+      mutate()
+      setDeleteConfirm(null)
+      alert('✅ Маҳсулот муваффақиятли ўчирилди')
+    } catch (err) {
+      console.error('Delete error:', err)
+      alert('❌ Ўчиришда хатолик юз берди')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   const filteredProducts =
     data?.data.data.filter(p => {
       let match = true
@@ -146,14 +165,29 @@ export const ProductsPage = () => {
     }
   }
 
+  // Dark mode styles
+  const bgGradient = dark
+    ? 'from-gray-900 to-gray-800'
+    : 'from-blue-50 to-indigo-100'
+
+  const cardBg = dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+  const textColor = dark ? 'text-white' : 'text-gray-800'
+  const textMuted = dark ? 'text-gray-300' : 'text-gray-600'
+  const inputBg = dark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'
+  const headerBg = dark ? 'from-gray-700 to-gray-600' : 'from-blue-50 to-indigo-50'
+  const tableHeaderBg = dark ? 'from-gray-700 to-gray-600' : 'from-gray-50 to-gray-100'
+  const tableHeaderText = dark ? 'text-gray-200' : 'text-gray-700'
+  const tableRowHover = dark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+  const borderColor = dark ? 'border-gray-700' : 'border-gray-200'
+
   return (
-    <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6'>
+    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-6 transition-colors duration-300`}>
       <div className='mx-auto space-y-6'>
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className='bg-white rounded-2xl shadow-xl p-8 border border-gray-200'
+          className={`rounded-2xl shadow-xl p-8 border ${cardBg} ${borderColor}`}
         >
           <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6'>
             <div className='flex items-center gap-4'>
@@ -161,16 +195,16 @@ export const ProductsPage = () => {
                 <Boxes className='h-8 w-8 text-white' />
               </div>
               <div>
-                <h1 className='text-3xl font-bold text-gray-800'>
+                <h1 className={`text-3xl font-bold ${textColor}`}>
                   {getPageTitle()}
                 </h1>
-                <p className='text-gray-600 mt-2'>
+                <p className={`${textMuted} mt-2`}>
                   {getPageDescription()}
                 </p>
               </div>
             </div>
 
-            <div className='flex flex-col sm:flex-row gap-4 w-full lg:w-auto'>
+            <div className='flex items-center gap-4'>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -189,39 +223,39 @@ export const ProductsPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className='bg-white rounded-2xl shadow-xl p-6 border border-gray-200'
+          className={`rounded-2xl shadow-xl p-6 border ${cardBg} ${borderColor}`}
         >
           <div className='flex flex-col md:flex-row gap-6'>
             <div className='flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
               <div className='relative'>
-                <Hash className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5' />
+                <Hash className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'} h-5 w-5`} />
                 <input
                   type='text'
                   placeholder='ID бўйича'
                   value={searchID}
                   onChange={e => setSearchID(e.target.value)}
-                  className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                 />
               </div>
 
               <div className='relative'>
-                <Tag className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5' />
+                <Tag className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'} h-5 w-5`} />
                 <input
                   type='text'
                   placeholder='Номи бўйича'
                   value={searchTitle}
                   onChange={e => setSearchTitle(e.target.value)}
-                  className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                 />
               </div>
 
               <div className='relative'>
-                <Calendar className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5' />
+                <Calendar className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'} h-5 w-5`} />
                 <input
                   type='date'
                   value={searchDate}
                   onChange={e => setSearchDate(e.target.value)}
-                  className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                 />
               </div>
             </div>
@@ -230,11 +264,11 @@ export const ProductsPage = () => {
 
         {/* Main Content */}
         {isLoading ? (
-          <div className='bg-white rounded-2xl shadow-xl p-12'>
+          <div className={`rounded-2xl shadow-xl p-12 ${cardBg}`}>
             <LoadingState />
           </div>
         ) : error ? (
-          <div className='bg-white rounded-2xl shadow-xl p-8'>
+          <div className={`rounded-2xl shadow-xl p-8 ${cardBg}`}>
             <div className='text-center text-red-500'>
               <XCircle className='h-12 w-12 mx-auto mb-4 text-red-400' />
               <h3 className='text-lg font-semibold mb-2'>Хатолик юз берди</h3>
@@ -246,12 +280,12 @@ export const ProductsPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className='bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200'
+            className={`rounded-2xl shadow-xl overflow-hidden border ${cardBg} ${borderColor}`}
           >
             {/* Table Header */}
-            <div className='px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50'>
+            <div className={`px-8 py-6 border-b ${borderColor} bg-gradient-to-r ${headerBg}`}>
               <div className='flex items-center justify-between'>
-                <h3 className='text-xl font-semibold text-gray-800 flex gap-1 items-center'>
+                <h3 className={`text-xl font-semibold ${textColor} flex gap-1 items-center`}>
                   <Circle size={18} color='green' /> {getPageTitle()} ({filteredProducts.length})
                 </h3>
                 {(searchID || searchTitle || searchDate) && (
@@ -272,29 +306,29 @@ export const ProductsPage = () => {
             {/* Table */}
             <div className='overflow-x-auto'>
               <table className='w-full'>
-                <thead className='bg-gradient-to-r from-gray-50 to-gray-100'>
+                <thead className={`bg-gradient-to-r ${tableHeaderBg}`}>
                   <tr>
-                    <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                    <th className={`px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider ${tableHeaderText}`}>
                       Маҳсулот
                     </th>
-                    <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                    <th className={`px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider ${tableHeaderText}`}>
                       Нарх
                     </th>
-                    <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                    <th className={`px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider ${tableHeaderText}`}>
                       Миқдор
                     </th>
-                    <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                    <th className={`px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider ${tableHeaderText}`}>
                       Бирлик
                     </th>
-                    <th className='px-8 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                    <th className={`px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider ${tableHeaderText}`}>
                       Сана
                     </th>
-                    <th className='px-8 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider'>
+                    <th className={`px-8 py-4 text-center text-sm font-semibold uppercase tracking-wider ${tableHeaderText}`}>
                       Амаллар
                     </th>
                   </tr>
                 </thead>
-                <tbody className='divide-y divide-gray-200'>
+                <tbody className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
                   {filteredProducts.map((product, index) => {
                     const isEdited = Boolean(editing[product._id])
                     return (
@@ -303,19 +337,19 @@ export const ProductsPage = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className={`${product.stock == 0 ? "bg-red-300" : "bg-green-300"} transition-all duration-200 group`}
+                        className={`${product.stock == 0 ? (dark ? "bg-red-900" : "bg-red-300") : (dark ? "bg-green-900" : "bg-green-300")} transition-all duration-200 group ${tableRowHover}`}
                       >
                         {/* Product Info */}
                         <td className='px-8 py-4'>
                           <div className='flex items-center gap-4'>
-                            <div className={`bg-${product.ready ? "blue" : "red"}-100 p-3 rounded-xl`}>
-                              <Circle className={`h-6 w-6 text-${product.ready ? "blue" : "red"}-600`} />
+                            <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-3 rounded-xl`}>
+                              <Circle className={`h-6 w-6 ${product.ready ? 'text-blue-400' : 'text-red-400'}`} />
                             </div>
                             <div>
-                              <p className='font-bold text-gray-800 text-lg'>
+                              <p className={`font-bold text-lg ${textColor}`}>
                                 {product.title}
                               </p>
-                              <p className='text-gray-600 text-sm'>
+                              <p className={`text-sm ${textMuted}`}>
                                 ID: {product.ID}
                               </p>
                             </div>
@@ -330,7 +364,7 @@ export const ProductsPage = () => {
                                 <select
                                   value={editing[product._id]?.priceType || product.priceType}
                                   onChange={e => handleChange(product._id, 'priceType', e.target.value)}
-                                  className='border border-gray-800 text-gray-800 rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
+                                  className={`border ${dark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-800 text-gray-800'} rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                                 >
                                   <option value="uz">сўм</option>
                                   <option value="usd">$</option>
@@ -342,7 +376,7 @@ export const ProductsPage = () => {
                                     : formatNumber(product.price)
                                   }
                                   onChange={e => handleNumberChange(product._id, 'price', e.target.value)}
-                                  className='border border-gray-800 rounded-lg px-3 py-2 w-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
+                                  className={`border ${dark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-800'} rounded-lg px-3 py-2 w-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                                   placeholder='0'
                                 />
                               </div>
@@ -359,16 +393,16 @@ export const ProductsPage = () => {
 
                         {/* Stock */}
                         <td className='px-8 py-4'>
-                          <p className='text-xl'>{formatNumber(product.stock)}</p>
+                          <p className={`text-xl ${textColor}`}>{formatNumber(product.stock)}</p>
                         </td>
 
                         {/* Unit */}
                         <td className='px-8 py-4'>
-                          <p className='text-xl'>{product.unit}</p>
+                          <p className={`text-xl ${textColor}`}>{product.unit}</p>
                         </td>
 
                         {/* Date */}
-                        <td className='px-8 py-4 text-gray-600'>
+                        <td className={`px-8 py-4 ${textMuted}`}>
                           {new Date(product.createdAt).toLocaleDateString()}
                         </td>
 
@@ -385,21 +419,34 @@ export const ProductsPage = () => {
                               Кўриш
                             </motion.button>
 
-                            {user.role === 'admin' && isEdited && (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleSave(product._id)}
-                                disabled={loading === product._id}
-                                className='flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors'
-                              >
-                                {loading === product._id ? (
-                                  <Loader2 className='animate-spin' size={16} />
-                                ) : (
-                                  <Save size={16} />
+                            {user.role === 'admin' && (
+                              <>
+                                {isEdited && (
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleSave(product._id)}
+                                    disabled={loading === product._id}
+                                    className='flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors'
+                                  >
+                                    {loading === product._id ? (
+                                      <Loader2 className='animate-spin' size={16} />
+                                    ) : (
+                                      <Save size={16} />
+                                    )}
+                                    Сақлаш
+                                  </motion.button>
                                 )}
-                                Сақлаш
-                              </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => setDeleteConfirm(product)}
+                                  className='flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors'
+                                >
+                                  <Trash2 size={16} />
+                                  Ўчириш
+                                </motion.button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -412,11 +459,11 @@ export const ProductsPage = () => {
 
             {filteredProducts.length === 0 && (
               <div className='text-center py-16'>
-                <Boxes size={64} className='mx-auto mb-4 text-gray-300' />
-                <h3 className='text-xl font-semibold text-gray-600 mb-2'>
+                <Boxes size={64} className={`mx-auto mb-4 ${dark ? 'text-gray-600' : 'text-gray-300'}`} />
+                <h3 className={`text-xl font-semibold mb-2 ${textMuted}`}>
                   Маҳсулотлар топилмади
                 </h3>
-                <p className='text-gray-500 mb-6'>
+                <p className={`${textMuted} mb-6`}>
                   {searchID || searchTitle || searchDate
                     ? 'Қидирув шартларингизга мос келувчи маҳсулотлар топилмади'
                     : 'Ҳали бирор маҳсулот қўшилмаган'}
@@ -455,16 +502,16 @@ export const ProductsPage = () => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 onClick={e => e.stopPropagation()}
-                className='bg-white w-full max-w-md rounded-3xl shadow-2xl relative'
+                className={`w-full max-w-md rounded-3xl shadow-2xl relative ${dark ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}
               >
-                <div className='sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex justify-between items-center'>
-                  <h2 className='text-xl font-bold flex items-center gap-2 text-gray-800'>
+                <div className={`sticky top-0 border-b ${borderColor} px-6 py-4 rounded-t-2xl flex justify-between items-center ${dark ? 'bg-gray-800' : 'bg-white'}`}>
+                  <h2 className={`text-xl font-bold flex items-center gap-2 ${textColor}`}>
                     <Tag size={22} className='text-blue-600' />
                     Маҳсулот маълумотлари
                   </h2>
                   <button
                     onClick={() => setViewData(null)}
-                    className='text-gray-500 hover:text-black transition p-1 rounded-full hover:bg-gray-100'
+                    className={`${dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'} transition p-1 rounded-full hover:bg-gray-100' : 'hover:bg-gray-100'} transition p-1 rounded-full ${dark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                   >
                     ✖
                   </button>
@@ -474,37 +521,37 @@ export const ProductsPage = () => {
                   {/* Basic Information */}
                   <div className='space-y-4'>
                     <div className='flex items-center gap-3'>
-                      <div className='bg-blue-100 p-2 rounded-lg'>
+                      <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-2 rounded-lg`}>
                         <Hash size={18} className='text-blue-600' />
                       </div>
                       <div>
-                        <p className='text-sm text-gray-500'>ID</p>
-                        <p className='font-medium'>{viewData.ID}</p>
+                        <p className={`text-sm ${textMuted}`}>ID</p>
+                        <p className={`font-medium ${textColor}`}>{viewData.ID}</p>
                       </div>
                     </div>
 
                     <div className='flex items-center gap-3'>
-                      <div className='bg-blue-100 p-2 rounded-lg'>
+                      <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-2 rounded-lg`}>
                         <Boxes size={18} className='text-blue-600' />
                       </div>
                       <div>
-                        <p className='text-sm text-gray-500'>Номи</p>
-                        <p className='font-medium'>{viewData.title}</p>
+                        <p className={`text-sm ${textMuted}`}>Номи</p>
+                        <p className={`font-medium ${textColor}`}>{viewData.title}</p>
                       </div>
                     </div>
 
                     <div className='flex items-center gap-3'>
-                      <div className='bg-blue-100 p-2 rounded-lg'>
+                      <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-2 rounded-lg`}>
                         <DollarSign size={18} className='text-blue-600' />
                       </div>
                       <div className='flex-1'>
-                        <p className='text-sm text-gray-500'>Нархи</p>
+                        <p className={`text-sm ${textMuted}`}>Нархи</p>
                         {user.role === 'admin' ? (
                           <div className='flex items-center gap-2'>
                             <select
                               value={editing[viewData._id]?.priceType || viewData.priceType}
                               onChange={e => handleChange(viewData._id, 'priceType', e.target.value)}
-                              className='border border-gray-300 rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
+                              className={`border ${dark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all`}
                             >
                               <option value="uz">сўм</option>
                               <option value="usd">$</option>
@@ -516,12 +563,12 @@ export const ProductsPage = () => {
                                 : formatNumber(viewData.price)
                               }
                               onChange={e => handleNumberChange(viewData._id, 'price', e.target.value)}
-                              className='border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all'
+                              className={`border ${dark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all`}
                               placeholder='0'
                             />
                           </div>
                         ) : (
-                          <p className='font-medium'>
+                          <p className={`font-medium ${textColor}`}>
                             {formatNumber(viewData.price)} {viewData.priceType == "uz" ? "сўм" : "$"}
                           </p>
                         )}
@@ -529,27 +576,27 @@ export const ProductsPage = () => {
                     </div>
 
                     <div className='flex items-center gap-3'>
-                      <div className='bg-blue-100 p-2 rounded-lg'>
+                      <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-2 rounded-lg`}>
                         <Package size={18} className='text-blue-600' />
                       </div>
                       <div>
-                        <p className='text-sm text-gray-500'>Миқдори</p>
-                        <p className='font-medium'>{formatNumber(viewData.stock)}</p>
+                        <p className={`text-sm ${textMuted}`}>Миқдори</p>
+                        <p className={`font-medium ${textColor}`}>{formatNumber(viewData.stock)}</p>
                       </div>
                     </div>
 
                     <div className='flex items-center gap-3'>
-                      <div className='bg-blue-100 p-2 rounded-lg'>
+                      <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-2 rounded-lg`}>
                         <Ruler size={18} className='text-blue-600' />
                       </div>
                       <div>
-                        <p className='text-sm text-gray-500'>Бирлик</p>
-                        <p className='font-medium'>{viewData.unit || 'дона'}</p>
+                        <p className={`text-sm ${textMuted}`}>Бирлик</p>
+                        <p className={`font-medium ${textColor}`}>{viewData.unit || 'дона'}</p>
                       </div>
                     </div>
 
                     <div className='flex items-center gap-3'>
-                      <div className='bg-blue-100 p-2 rounded-lg'>
+                      <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-2 rounded-lg`}>
                         {viewData.ready ? (
                           <CheckCircle size={18} className='text-green-600' />
                         ) : (
@@ -557,7 +604,7 @@ export const ProductsPage = () => {
                         )}
                       </div>
                       <div>
-                        <p className='text-sm text-gray-500'>Ҳолати</p>
+                        <p className={`text-sm ${textMuted}`}>Ҳолати</p>
                         <p className={`font-medium ${viewData.ready ? 'text-green-600' : 'text-red-600'}`}>
                           {viewData.ready ? 'Тайёр' : 'Хом ашё'}
                         </p>
@@ -566,12 +613,12 @@ export const ProductsPage = () => {
                   </div>
 
                   {/* Time Information */}
-                  <div className='pt-4 border-t border-gray-200'>
+                  <div className={`pt-4 border-t ${borderColor}`}>
                     <div className='flex items-center gap-3'>
-                      <Calendar size={16} className='text-gray-500 flex-shrink-0' />
+                      <Calendar size={16} className={`${textMuted} flex-shrink-0`} />
                       <div>
-                        <p className='text-sm text-gray-500'>Қўшилган</p>
-                        <p className='font-medium'>
+                        <p className={`text-sm ${textMuted}`}>Қўшилган</p>
+                        <p className={`font-medium ${textColor}`}>
                           {new Date(viewData.createdAt).toLocaleString()}
                         </p>
                       </div>
@@ -580,7 +627,7 @@ export const ProductsPage = () => {
                 </div>
 
                 {user.role === 'admin' && editing[viewData._id] && (
-                  <div className='sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl flex justify-end'>
+                  <div className={`sticky bottom-0 border-t ${borderColor} px-6 py-4 rounded-b-2xl flex justify-end ${dark ? 'bg-gray-800' : 'bg-white'}`}>
                     <button
                       onClick={() => handleSave(viewData._id)}
                       disabled={loading === viewData._id}
@@ -595,6 +642,63 @@ export const ProductsPage = () => {
                     </button>
                   </div>
                 )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Delete Confirmation Modal */}
+        <AnimatePresence>
+          {deleteConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirm(null)}
+              className='fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                onClick={e => e.stopPropagation()}
+                className={`w-full max-w-md rounded-2xl shadow-2xl p-6 ${dark ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}
+              >
+                <div className='text-center'>
+                  <Trash2 className='h-12 w-12 mx-auto mb-4 text-red-500' />
+                  <h3 className={`text-xl font-bold mb-2 ${textColor}`}>
+                    Маҳсулотни ўчириш
+                  </h3>
+                  <p className={`mb-6 ${textMuted}`}>
+                    <strong>"{deleteConfirm.title}"</strong> маҳсулотини ўчирмоқчимисиз?
+                    <br />
+                    <span className='text-red-500'>Бу амални бекор қилиб бўлмайди!</span>
+                  </p>
+
+                  <div className='flex gap-3 justify-center'>
+                    <button
+                      onClick={() => setDeleteConfirm(null)}
+                      className={`px-6 py-2 rounded-lg font-medium transition-colors ${dark
+                        ? 'bg-gray-700 text-white hover:bg-gray-600'
+                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                        }`}
+                    >
+                      Бекор қилиш
+                    </button>
+                    <button
+                      onClick={() => handleDelete(deleteConfirm._id)}
+                      disabled={deleting === deleteConfirm._id}
+                      className='flex items-center gap-2 bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors'
+                    >
+                      {deleting === deleteConfirm._id ? (
+                        <Loader2 className='animate-spin' size={18} />
+                      ) : (
+                        <Trash2 size={18} />
+                      )}
+                      Ўчириш
+                    </button>
+                  </div>
+                </div>
               </motion.div>
             </motion.div>
           )}

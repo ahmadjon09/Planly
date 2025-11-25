@@ -18,7 +18,7 @@ import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
 
 export default function AddProductModal({ open, setOpen, mutate }) {
-  const { user } = useContext(ContextData)
+  const { user, dark } = useContext(ContextData)
   const [products, setProducts] = useState([
     {
       title: '',
@@ -235,22 +235,35 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     client.phoneNumber?.includes(searchTerm)
   )
 
+  // Dark mode styles
+  const modalBg = dark ? 'bg-gray-900' : 'bg-white'
+  const textColor = dark ? 'text-white' : 'text-gray-800'
+  const textMuted = dark ? 'text-gray-300' : 'text-gray-600'
+  const borderColor = dark ? 'border-gray-700' : 'border-gray-200'
+  const inputBg = dark ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300'
+  const cardBg = dark ? 'bg-gray-800 border-gray-700' : 'bg-gradient-to-br from-gray-50 to-white'
+  const clientCardBg = dark ? 'bg-gray-800 border-gray-600' : 'bg-gradient-to-br from-gray-50 to-blue-50 border-blue-200'
+  const dropdownBg = dark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'
+  const dropdownItemHover = dark ? 'hover:bg-gray-700' : 'hover:bg-blue-50'
+  const buttonSecondary = dark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+  const checkboxBg = dark ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-200'
+
   if (!open) return null
 
   return (
     <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-[99] px-3 sm:px-6 py-6'>
-      <div className='bg-white w-full max-w-6xl rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 relative max-h-[95vh] overflow-y-auto'>
+      <div className={`${modalBg} w-full max-w-6xl rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 relative max-h-[95vh] overflow-y-auto ${borderColor}`}>
         {/* Header */}
-        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-200'>
+        <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b ${borderColor}`}>
           <div className='flex items-center gap-3'>
-            <div className='bg-blue-100 p-2 rounded-xl'>
+            <div className={dark ? 'bg-blue-900 p-2 rounded-xl' : 'bg-blue-100 p-2 rounded-xl'}>
               <Plus size={24} className='text-blue-600' />
             </div>
             <div>
-              <h2 className='text-xl sm:text-2xl font-bold text-gray-800'>
+              <h2 className={`text-xl sm:text-2xl font-bold ${textColor}`}>
                 Янги маҳсулот(лар) қўшиш
               </h2>
-              <p className='text-sm text-gray-600 mt-1'>
+              <p className={`text-sm ${textMuted} mt-1`}>
                 Бир нечта маҳсулотни бир вақтниң ўзида қўшиш имкони
               </p>
             </div>
@@ -259,23 +272,24 @@ export default function AddProductModal({ open, setOpen, mutate }) {
           {/* ❌ Close button */}
           <button
             onClick={() => setOpen(false)}
-            className='p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-500 hover:text-gray-700'
+            className={`p-2 rounded-xl transition-colors ${dark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              }`}
           >
             <X size={24} />
           </button>
         </div>
 
         {/* 📋 CLIENT маълумотлари */}
-        <div className='bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-blue-200 p-6'>
+        <div className={`rounded-2xl border p-6 ${clientCardBg}`}>
           <div className='flex items-center gap-3 mb-6'>
-            <div className='bg-indigo-100 p-2 rounded-lg'>
+            <div className={dark ? 'bg-indigo-900 p-2 rounded-lg' : 'bg-indigo-100 p-2 rounded-lg'}>
               <User size={20} className='text-indigo-600' />
             </div>
             <div>
-              <h3 className='font-semibold text-gray-800 text-lg'>
+              <h3 className={`font-semibold text-lg ${textColor}`}>
                 Таминотчи ҳақида маълумот
               </h3>
-              <p className='text-sm text-gray-600'>
+              <p className={`text-sm ${textMuted}`}>
                 Барча маҳсулотлар учун бир Таминотчи
               </p>
             </div>
@@ -286,20 +300,23 @@ export default function AddProductModal({ open, setOpen, mutate }) {
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-3'>
-                  <div className='bg-green-100 p-2 rounded-lg'>
+                  <div className={dark ? 'bg-green-900 p-2 rounded-lg' : 'bg-green-100 p-2 rounded-lg'}>
                     <User size={20} className='text-green-600' />
                   </div>
                   <div>
-                    <h4 className='font-semibold text-gray-800'>{selectedClient.name}</h4>
-                    <p className='text-sm text-gray-600'>{selectedClient.phoneNumber}</p>
+                    <h4 className={`font-semibold ${textColor}`}>{selectedClient.name}</h4>
+                    <p className={`text-sm ${textMuted}`}>{selectedClient.phoneNumber}</p>
                     {selectedClient.address && (
-                      <p className='text-xs text-gray-500'>{selectedClient.address}</p>
+                      <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{selectedClient.address}</p>
                     )}
                   </div>
                 </div>
                 <button
                   onClick={handleClearClient}
-                  className='flex items-center gap-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-all duration-200'
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${dark
+                      ? 'text-red-400 hover:text-red-300 bg-red-900 hover:bg-red-800'
+                      : 'text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100'
+                    }`}
                 >
                   <X size={16} />
                   Ўзгартириш
@@ -307,12 +324,15 @@ export default function AddProductModal({ open, setOpen, mutate }) {
               </div>
 
               {selectedClient.products && selectedClient.products.length > 0 && (
-                <div className='bg-yellow-50 border border-yellow-200 rounded-xl p-4'>
-                  <h5 className='font-medium text-yellow-800 mb-2 flex items-center gap-2'>
+                <div className={`border rounded-xl p-4 ${dark ? 'bg-yellow-900 border-yellow-700' : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                  <h5 className={`font-medium mb-2 flex items-center gap-2 ${dark ? 'text-yellow-200' : 'text-yellow-800'
+                    }`}>
                     <Package size={16} />
                     Мавжуд маҳсулотлар: {selectedClient.products.length} та
                   </h5>
-                  <div className='text-sm text-yellow-700'>
+                  <div className={`text-sm ${dark ? 'text-yellow-300' : 'text-yellow-700'
+                    }`}>
                     Ушбу Таминотчида {selectedClient.products.length} та маҳсулот мавжуд
                   </div>
                 </div>
@@ -323,7 +343,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
               {/* 🔍 Mavjud clientlarni qidirish */}
               <div className='space-y-2'>
-                <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
                   <Search size={16} className='text-blue-500' />
                   Таминотчи танлаш
                 </label>
@@ -341,33 +361,38 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                         setShowClientDropdown(false)
                       }, 100)
                     }}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white"
+                    className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                     placeholder="Клиент исми ёки телефони бўйича излаш..."
                   />
 
-                  <Search size={18} className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
+                  <Search size={18} className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'
+                    }`} />
 
                   {showClientDropdown && filteredClients.length > 0 && (
                     <div
-                      className='absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto'
-                      onMouseDown={(e) => e.preventDefault()} // 👈 dropdown bosilganda blur bo‘lmasin
+                      className={`absolute z-10 w-full mt-1 border rounded-xl shadow-lg max-h-60 overflow-y-auto ${dropdownBg}`}
+                      onMouseDown={(e) => e.preventDefault()} // 👈 dropdown bosilganda blur bo'lmasin
                     >
                       {filteredClients.map(client => (
                         <div
                           key={client._id}
                           onClick={() => handleClientSelect(client)}
-                          className='p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0'
+                          className={`p-3 cursor-pointer border-b ${dark
+                              ? `${dropdownItemHover} border-gray-700`
+                              : `${dropdownItemHover} border-gray-100`
+                            } last:border-b-0`}
                         >
                           <div className='flex justify-between items-start'>
                             <div>
-                              <div className='font-medium text-gray-800'>{client.name}</div>
-                              <div className='text-sm text-gray-600'>{client.phoneNumber}</div>
+                              <div className={`font-medium ${dark ? 'text-white' : 'text-gray-800'}`}>{client.name}</div>
+                              <div className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-600'}`}>{client.phoneNumber}</div>
                               {client.address && (
-                                <div className='text-xs text-gray-500'>{client.address}</div>
+                                <div className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{client.address}</div>
                               )}
                             </div>
                             {client.products && (
-                              <div className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
+                              <div className={`text-xs px-2 py-1 rounded-full ${dark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'
+                                }`}>
                                 {client.products.length} маҳсулот
                               </div>
                             )}
@@ -377,11 +402,11 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     </div>
                   )}
                 </div>
-
               </div>
 
               <div className='space-y-4'>
-                <div className='text-center text-gray-500 py-4 border-2 border-dashed border-gray-300 rounded-xl'>
+                <div className={`text-center py-4 border-2 border-dashed rounded-xl ${dark ? 'text-gray-400 border-gray-600' : 'text-gray-500 border-gray-300'
+                  }`}>
                   <User size={32} className='mx-auto mb-2 text-gray-400' />
                   <p className='text-sm'>Ёки янги клиент қўшинг</p>
                 </div>
@@ -390,30 +415,30 @@ export default function AddProductModal({ open, setOpen, mutate }) {
               {/* Yangi client ma'lumotlari */}
               <div className='lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200'>
                 <div className='space-y-2'>
-                  <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
-                    <User size={16} className='text-gray-500' />
+                  <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
+                    <User size={16} className={dark ? 'text-gray-400' : 'text-gray-500'} />
                     Исм / Номи <span className='text-red-500'>*</span>
                   </label>
                   <input
                     type='text'
                     value={clientData.name}
                     onChange={e => handleClientChange('name', e.target.value)}
-                    className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
+                    className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                     placeholder='Аҳмаджон'
                     required
                   />
                 </div>
 
                 <div className='space-y-2'>
-                  <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
-                    <Phone size={16} className='text-gray-500' />
+                  <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
+                    <Phone size={16} className={dark ? 'text-gray-400' : 'text-gray-500'} />
                     Телефон рақам <span className='text-red-500'>*</span>
                   </label>
                   <input
                     type='text'
                     value={clientData.phoneNumber}
                     onChange={e => handleClientChange('phoneNumber', e.target.value)}
-                    className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
+                    className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                     placeholder='+998 90 123 45 67'
                     required
                   />
@@ -428,15 +453,15 @@ export default function AddProductModal({ open, setOpen, mutate }) {
           {products.map((p, i) => (
             <div
               key={i}
-              className='bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200 p-6 space-y-6 relative'
+              className={`rounded-2xl border p-6 space-y-6 relative ${cardBg} ${borderColor}`}
             >
               {/* Row header */}
-              <div className='flex justify-between items-center pb-4 border-b border-gray-200'>
+              <div className={`flex justify-between items-center pb-4 border-b ${borderColor}`}>
                 <div className='flex items-center gap-3'>
                   <div className='bg-blue-500 text-white p-2 rounded-lg'>
                     <Package size={18} />
                   </div>
-                  <h3 className='font-semibold text-gray-800'>
+                  <h3 className={`font-semibold ${textColor}`}>
                     Маҳсулот #{i + 1}
                   </h3>
                 </div>
@@ -444,7 +469,10 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                 {products.length > 1 && (
                   <button
                     onClick={() => removeRow(i)}
-                    className='flex items-center gap-2 text-red-600 hover:bg-red-50 transition-all px-3 py-2 rounded-lg text-sm font-medium'
+                    className={`flex items-center gap-2 transition-all px-3 py-2 rounded-lg text-sm font-medium ${dark
+                        ? 'text-red-400 hover:bg-red-900'
+                        : 'text-red-600 hover:bg-red-50'
+                      }`}
                   >
                     <Trash2 size={16} /> Ўчириш
                   </button>
@@ -455,7 +483,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
               <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4'>
                 {/* 🔹 Номи */}
                 <div className='space-y-2'>
-                  <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                  <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
                     <Package size={16} className='text-blue-500' />
                     Номи <span className='text-red-500'>*</span>
                   </label>
@@ -463,7 +491,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     type='text'
                     value={p.title}
                     onChange={e => handleChange(i, 'title', e.target.value)}
-                    className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
+                    className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                     placeholder='Маҳсулот номини киритинг...'
                     required
                   />
@@ -472,7 +500,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                 {/* 💰 Нархи */}
                 {user.role === 'admin' && (
                   <div className='space-y-2'>
-                    <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                    <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
                       <DollarSign size={16} className='text-green-500' />
                       Нархи <span className='text-red-500'>*</span>
                     </label>
@@ -483,11 +511,12 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                         onChange={e =>
                           handleChange(i, 'price', e.target.value)
                         }
-                        className='w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
+                        className={`w-full border rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                         placeholder='0'
                         required
                       />
-                      <span className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm'>
+                      <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-sm ${dark ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
                         {p.priceType == "uz" ? "сўм" : "$"}
                       </span>
                     </div>
@@ -496,7 +525,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
 
                 {/* 📦 Миқдор */}
                 <div className='space-y-2'>
-                  <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                  <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
                     <Package size={16} className='text-purple-500' />
                     Миқдор
                   </label>
@@ -504,21 +533,21 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     type='text'
                     value={p.stock}
                     onChange={e => handleChange(i, 'stock', e.target.value)}
-                    className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white'
+                    className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                     placeholder='1'
                   />
                 </div>
 
                 {/* ⚖️ Бирлик */}
                 <div className='space-y-2'>
-                  <label className='text-sm font-semibold text-gray-700 flex items-center gap-2'>
+                  <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
                     <Ruler size={16} className='text-orange-500' />
                     Бирлик
                   </label>
                   <select
                     value={p.unit}
                     onChange={e => handleChange(i, 'unit', e.target.value)}
-                    className='w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white appearance-none'
+                    className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all appearance-none ${inputBg}`}
                   >
                     {availableUnits.map(u => (
                       <option key={u} value={u}>
@@ -533,7 +562,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {/* 💵 Narx turi */}
                 <div className='space-y-2'>
-                  <label className='text-sm font-semibold text-gray-700'>
+                  <label className={`text-sm font-semibold ${textColor}`}>
                     Нарх тури
                   </label>
                   <div className='flex gap-4'>
@@ -545,7 +574,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                         onChange={e => handleChange(i, 'priceType', e.target.value)}
                         className='w-4 h-4 text-blue-600'
                       />
-                      <span className='text-sm'>Сўм (UZS)</span>
+                      <span className={`text-sm ${textColor}`}>Сўм (UZS)</span>
                     </label>
                     <label className='flex items-center gap-2 cursor-pointer'>
                       <input
@@ -555,13 +584,14 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                         onChange={e => handleChange(i, 'priceType', e.target.value)}
                         className='w-4 h-4 text-blue-600'
                       />
-                      <span className='text-sm'>Доллар ($)</span>
+                      <span className={`text-sm ${textColor}`}>Доллар ($)</span>
                     </label>
                   </div>
                 </div>
 
                 {/* ✅ Тайёрлиги (ready) */}
-                <div className='flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200'>
+                <div className={`flex items-center gap-3 p-3 rounded-xl border ${dark ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'
+                  }`}>
                   <div
                     className={`p-1 rounded-lg ${p.ready ? 'bg-green-500' : 'bg-gray-400'
                       }`}
@@ -569,10 +599,10 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     <CheckCircle size={16} className='text-white' />
                   </div>
                   <div className='flex-1'>
-                    <label className='text-sm font-semibold text-gray-700 cursor-pointer'>
+                    <label className={`text-sm font-semibold cursor-pointer ${textColor}`}>
                       Маҳсулот тайёр
                     </label>
-                    <p className='text-xs text-gray-600'>
+                    <p className={`text-xs ${textMuted}`}>
                       Белгиланса, маҳсулот тайёр деб ҳисобланади
                     </p>
                   </div>
@@ -580,7 +610,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     type='checkbox'
                     checked={p.ready}
                     onChange={e => handleChange(i, 'ready', e.target.checked)}
-                    className='w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer'
+                    className={`w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer ${dark ? 'bg-gray-700 border-gray-600' : 'border-gray-300'
+                      }`}
                   />
                 </div>
               </div>
@@ -589,10 +620,13 @@ export default function AddProductModal({ open, setOpen, mutate }) {
         </div>
 
         {/* 🚀 Submit section */}
-        <div className='flex flex-col sm:flex-row justify-between gap-4 pt-4 border-t border-gray-200'>
+        <div className={`flex flex-col sm:flex-row justify-between gap-4 pt-4 border-t ${borderColor}`}>
           <button
             onClick={addRow}
-            className='flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-all text-gray-700 font-medium w-full sm:w-auto'
+            className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl transition-all font-medium w-full sm:w-auto ${dark
+                ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
           >
             <Plus size={18} />
             Яна маҳсулот қўшиш
@@ -601,7 +635,10 @@ export default function AddProductModal({ open, setOpen, mutate }) {
           <div className='flex flex-col sm:flex-row gap-3 w-full sm:w-auto'>
             <button
               onClick={() => setOpen(false)}
-              className='px-6 py-3 rounded-xl border border-gray-300 hover:bg-gray-50 transition-all text-gray-700 font-medium w-full sm:w-auto'
+              className={`px-6 py-3 rounded-xl border transition-all font-medium w-full sm:w-auto ${dark
+                  ? 'border-gray-600 hover:bg-gray-700 text-white'
+                  : 'border-gray-300 hover:bg-gray-50 text-gray-700'
+                }`}
             >
               Бекор қилиш
             </button>
@@ -627,7 +664,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
         </div>
 
         {/* Footer info */}
-        <div className='text-center text-sm text-gray-500 pt-2'>
+        <div className={`text-center text-sm pt-2 ${textMuted}`}>
           <p>
             Ҳар бир маҳсулот учун номи мажбурий.{' '}
             {user.role === 'admin' && 'Нархи ҳам мажбурий.'}

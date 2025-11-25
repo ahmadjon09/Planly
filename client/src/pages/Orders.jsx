@@ -41,7 +41,7 @@ export const ViewOrders = () => {
     revalidateOnReconnect: true
   })
 
-  const { user, kurs } = useContext(ContextData)
+  const { user, kurs, dark } = useContext(ContextData)
 
   // State lar
   const [isOpen, setIsOpen] = useState(false)
@@ -137,10 +137,10 @@ export const ViewOrders = () => {
   // Status ranglari
   const getStatusColor = status => {
     switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200'
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'completed': return dark ? 'bg-green-900 text-green-200 border-green-700' : 'bg-green-100 text-green-800 border-green-200'
+      case 'pending': return dark ? 'bg-yellow-900 text-yellow-200 border-yellow-700' : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'cancelled': return dark ? 'bg-red-900 text-red-200 border-red-700' : 'bg-red-100 text-red-800 border-red-200'
+      default: return dark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
@@ -275,10 +275,22 @@ export const ViewOrders = () => {
     return { debtUZ, debtEN }
   }
 
+  // Dark mode styles
+  const bgGradient = dark ? 'from-gray-900 to-gray-800' : 'from-blue-50 to-indigo-100'
+  const cardBg = dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+  const textColor = dark ? 'text-white' : 'text-gray-800'
+  const textMuted = dark ? 'text-gray-300' : 'text-gray-600'
+  const inputBg = dark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'
+  const headerBg = dark ? 'from-gray-700 to-gray-600' : 'from-gray-50 to-gray-100'
+  const tableHeaderBg = dark ? 'from-gray-700 to-gray-600' : 'from-gray-50 to-gray-100'
+  const tableHeaderText = dark ? 'text-gray-200' : 'text-gray-700'
+  const tableRowHover = dark ? 'hover:bg-gray-700' : 'hover:bg-blue-50'
+  const infoCardBg = dark ? 'bg-gray-700' : 'bg-gray-50'
+
   // Loading holati
   if (isLoading) {
     return (
-      <div className='min-h-screen flex justify-center items-center'>
+      <div className={`min-h-screen flex justify-center items-center ${dark ? 'bg-gray-900' : ''}`}>
         <LoadingState />
       </div>
     )
@@ -287,17 +299,19 @@ export const ViewOrders = () => {
   // Xato holati
   if (error) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
+      <div className={`min-h-screen flex items-center justify-center ${dark ? 'bg-gray-900' : ''}`}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className='text-center p-8 bg-red-50 rounded-2xl border border-red-200 max-w-md'
+          className={`text-center p-8 rounded-2xl border max-w-md ${dark ? 'bg-gray-800 border-gray-700' : 'bg-red-50 border-red-200'
+            }`}
         >
           <AlertCircle className='mx-auto text-red-500 mb-4' size={48} />
-          <h3 className='text-lg font-semibold text-red-800 mb-2'>
+          <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-red-300' : 'text-red-800'
+            }`}>
             Юклашда хатолик
           </h3>
-          <p className='text-red-600'>
+          <p className={dark ? 'text-red-200' : 'text-red-600'}>
             Мижозлар маълумотларини юклашда хатолик юз берди. Илтимос, қайта уриниб кўринг.
           </p>
         </motion.div>
@@ -306,13 +320,13 @@ export const ViewOrders = () => {
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6'>
+    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-4 md:p-6 transition-colors duration-300`}>
       <div className='mx-auto space-y-6'>
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'
+          className={`rounded-2xl shadow-lg p-6 border ${cardBg}`}
         >
           <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4'>
             <div className='flex items-center gap-4'>
@@ -324,7 +338,10 @@ export const ViewOrders = () => {
                     setSelectedClient(null)
                     setCurrentHistoryPage(1)
                   }}
-                  className='flex items-center gap-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-all duration-300'
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${dark
+                    ? 'text-blue-400 hover:text-blue-300 bg-blue-900 hover:bg-blue-800'
+                    : 'text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100'
+                    }`}
                 >
                   <ChevronLeft size={20} />
                   Орқага
@@ -335,10 +352,10 @@ export const ViewOrders = () => {
                 </div>
               )}
               <div>
-                <h1 className='text-2xl md:text-3xl font-bold text-gray-800'>
+                <h1 className={`text-2xl md:text-3xl font-bold ${textColor}`}>
                   {updatedSelectedClient ? `${updatedSelectedClient.name} буюртмалари` : 'Буюртмалар'}
                 </h1>
-                <p className='text-gray-600 mt-1'>
+                <p className={`${textMuted} mt-1`}>
                   {updatedSelectedClient
                     ? `${filteredClientOrders.length} та буюртма топилди`
                     : `${filteredClients.length} та мижоз топилди`}
@@ -365,49 +382,49 @@ export const ViewOrders = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'
+          className={`rounded-2xl shadow-lg p-6 border ${cardBg}`}
         >
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
             <div className='relative'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'}`} size={20} />
               <input
                 type='text'
                 placeholder='Телефон рақам...'
                 value={searchPhone}
                 onChange={e => setSearchPhone(e.target.value)}
-                className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
               />
             </div>
 
             <div className='relative'>
-              <User className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
+              <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'}`} size={20} />
               <input
                 type='text'
                 placeholder='Мижоз Ф.И.Ш...'
                 value={searchName}
                 onChange={e => setSearchName(e.target.value)}
-                className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
               />
             </div>
 
             {updatedSelectedClient && (
               <>
                 <div className='relative'>
-                  <Calendar className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
+                  <Calendar className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'}`} size={20} />
                   <input
                     type='date'
                     value={searchDate}
                     onChange={e => setSearchDate(e.target.value)}
-                    className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                   />
                 </div>
 
                 <div className='relative'>
-                  <Filter className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
+                  <Filter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'}`} size={20} />
                   <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50 appearance-none'
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 appearance-none ${inputBg}`}
                   >
                     <option value='all'>Барча ҳолатлар</option>
                     <option value='pending'>Кутилмоқда</option>
@@ -422,8 +439,8 @@ export const ViewOrders = () => {
 
         {/* Qarz to'lash section */}
         {updatedSelectedClient && (
-          <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
-            <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+          <div className={`rounded-2xl shadow-lg p-6 border ${cardBg}`}>
+            <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${textColor}`}>
               <BadgeDollarSign size={20} className='text-purple-500' />
               Қарзни ёпиш
             </h3>
@@ -439,13 +456,14 @@ export const ViewOrders = () => {
                       setDebt(value);
                     }
                   }}
-                  className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                  className={`w-full pl-2 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                 />
                 {debt > 0 && (
                   <button
                     onClick={handlePayDebt}
                     disabled={debtL}
-                    className='absolute right-4 top-2.5 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
+                    className={`absolute right-4 top-2.5 z-10 cursor-pointer rounded p-1 transition-colors duration-200 ${dark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'
+                      }`}
                   >
                     {debtL ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
                   </button>
@@ -457,7 +475,7 @@ export const ViewOrders = () => {
                   onClick={() => setDebtType('uz')}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all duration-300 ${debtType === 'uz'
                     ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                    : `${dark ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'}`
                     }`}
                 >
                   <span>UZS</span>
@@ -466,7 +484,7 @@ export const ViewOrders = () => {
                   onClick={() => setDebtType('en')}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all duration-300 ${debtType === 'en'
                     ? 'bg-green-500 text-white border-green-500'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                    : `${dark ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'}`
                     }`}
                 >
                   <DollarSign size={16} />
@@ -485,12 +503,12 @@ export const ViewOrders = () => {
             transition={{ delay: 0.2 }}
           >
             {filteredClients.length === 0 ? (
-              <div className='bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-200'>
-                <User className='mx-auto text-gray-400 mb-4' size={64} />
-                <h3 className='text-xl font-semibold text-gray-600 mb-2'>
+              <div className={`rounded-2xl shadow-lg p-12 text-center border ${cardBg}`}>
+                <User className={`mx-auto mb-4 ${dark ? 'text-gray-600' : 'text-gray-400'}`} size={64} />
+                <h3 className={`text-xl font-semibold mb-2 ${textMuted}`}>
                   Мижозлар топилмади
                 </h3>
-                <p className='text-gray-500 mb-6'>
+                <p className={`${textMuted} mb-6`}>
                   Қидирув шартларингизга мос келувчи мижозлар мавжуд эмас
                 </p>
                 <button
@@ -516,7 +534,10 @@ export const ViewOrders = () => {
                         setSelectedClient(client)
                         setCurrentHistoryPage(1)
                       }}
-                      className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200 hover:shadow-xl hover:border-blue-300 transition-all duration-300 cursor-pointer group'
+                      className={`rounded-2xl shadow-lg p-6 border hover:shadow-xl transition-all duration-300 cursor-pointer group ${dark
+                        ? 'bg-gray-800 border-gray-700 hover:border-blue-600'
+                        : 'bg-white border-gray-200 hover:border-blue-300'
+                        }`}
                     >
                       <div className='flex items-start justify-between mb-4'>
                         <div className='flex items-center gap-3'>
@@ -524,8 +545,8 @@ export const ViewOrders = () => {
                             <User className='text-white' size={24} />
                           </div>
                           <div>
-                            <h3 className='font-bold text-lg text-gray-800'>{client.name || 'Номаълум'}</h3>
-                            <p className='text-gray-600 text-sm'>{client.phoneNumber}</p>
+                            <h3 className={`font-bold text-lg ${textColor}`}>{client.name || 'Номаълум'}</h3>
+                            <p className={`text-sm ${textMuted}`}>{client.phoneNumber}</p>
                           </div>
                         </div>
                         <div className='text-right'>
@@ -533,29 +554,29 @@ export const ViewOrders = () => {
                             <Package size={18} />
                             <span>{stats.totalOrders}</span>
                           </div>
-                          <div className='text-xs text-gray-500'>буюртма</div>
+                          <div className={`text-xs ${textMuted}`}>буюртма</div>
                         </div>
                       </div>
 
-                      <div className='flex items-center gap-2 text-sm text-gray-600 mb-3'>
-                        <MapPin size={16} />
-                        <span className='truncate'>{client.address || 'Манзил кўрсатилмаган'}</span>
+                      <div className='flex items-center gap-2 text-sm mb-3'>
+                        <MapPin size={16} className={textMuted} />
+                        <span className={`truncate ${textMuted}`}>{client.address || 'Манзил кўрсатилмаган'}</span>
                       </div>
 
                       <div className='space-y-2 mb-4'>
                         <div className='flex justify-between items-center'>
-                          <span className='text-sm text-gray-600'>Жами сумма (UZS):</span>
+                          <span className={`text-sm ${textMuted}`}>Жами сумма (UZS):</span>
                           <span className='font-bold text-green-600'>{stats.totalAmountUZ.toLocaleString()} сўм</span>
                         </div>
                         {stats.totalAmountEN > 0 && (
                           <div className='flex justify-between items-center'>
-                            <span className='text-sm text-gray-600'>Жами сумма (USD):</span>
+                            <span className={`text-sm ${textMuted}`}>Жами сумма (USD):</span>
                             <span className='font-bold text-blue-600'>{stats.totalAmountEN.toLocaleString()} $</span>
                           </div>
                         )}
                         {stats.unpaidOrders > 0 && (
                           <div className='flex justify-between items-center'>
-                            <span className='text-sm text-gray-600'>Тўланмаган:</span>
+                            <span className={`text-sm ${textMuted}`}>Тўланмаган:</span>
                             <span className='font-bold text-red-600'>{stats.unpaidOrders} та</span>
                           </div>
                         )}
@@ -563,14 +584,14 @@ export const ViewOrders = () => {
 
                       <div className='space-y-2 pt-4 border-t border-gray-100'>
                         <div className='flex justify-between items-center'>
-                          <span className='text-sm text-gray-500'>Қарз (UZS):</span>
+                          <span className={`text-sm ${textMuted}`}>Қарз (UZS):</span>
                           <span className={`font-bold text-red-500 ${debtInfo.debtUZ > 0 ? 'text-lg' : ''}`}>
                             {(client.debtUZ || 0).toLocaleString()} сўм
                           </span>
                         </div>
                         {debtInfo.debtEN > 0 && (
                           <div className='flex justify-between items-center'>
-                            <span className='text-sm text-gray-500'>Қарз (USD):</span>
+                            <span className={`text-sm ${textMuted}`}>Қарз (USD):</span>
                             <span className='font-bold text-red-500 text-lg'>
                               {(client.debtEN || 0).toLocaleString()} $
                             </span>
@@ -599,19 +620,19 @@ export const ViewOrders = () => {
               {/* Client Overview Section */}
               <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6'>
                 {/* Client Info Card */}
-                <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
+                <div className={`rounded-2xl shadow-lg p-6 border ${cardBg}`}>
                   <div className='flex items-center gap-3 mb-4'>
                     <div className='bg-gradient-to-r from-blue-500 to-indigo-500 p-3 rounded-xl'>
                       <User className='text-white' size={24} />
                     </div>
                     <div>
-                      <h2 className='text-xl font-bold text-gray-800'>{updatedSelectedClient.name}</h2>
-                      <p className='text-gray-600'>{updatedSelectedClient.phoneNumber}</p>
+                      <h2 className={`text-xl font-bold ${textColor}`}>{updatedSelectedClient.name}</h2>
+                      <p className={textMuted}>{updatedSelectedClient.phoneNumber}</p>
                     </div>
                   </div>
 
                   <div className='space-y-3'>
-                    <div className='flex items-center gap-2 text-sm text-gray-600'>
+                    <div className={`flex items-center gap-2 text-sm ${textMuted}`}>
                       <MapPin size={16} />
                       <span>{updatedSelectedClient.address || 'Манзил кўрсатилмаган'}</span>
                     </div>
@@ -631,50 +652,50 @@ export const ViewOrders = () => {
                 </div>
 
                 {/* Statistics Card */}
-                <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
-                  <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+                <div className={`rounded-2xl shadow-lg p-6 border ${cardBg}`}>
+                  <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${textColor}`}>
                     <ScrollText size={20} className='text-blue-500' />
                     Статистика
                   </h3>
                   <div className='space-y-3'>
                     <div className='flex justify-between items-center'>
-                      <span className='text-gray-600'>Жами буюртма:</span>
+                      <span className={textMuted}>Жами буюртма:</span>
                       <span className='font-bold text-blue-600'>{clientStats.totalOrders} та</span>
                     </div>
                     <div className='flex justify-between items-center'>
-                      <span className='text-gray-600'>Жами сумма (UZS):</span>
+                      <span className={textMuted}>Жами сумма (UZS):</span>
                       <span className='font-bold text-green-600'>{clientStats.totalAmountUZ.toLocaleString()} сўм</span>
                     </div>
                     {clientStats.totalAmountEN > 0 && (
                       <div className='flex justify-between items-center'>
-                        <span className='text-gray-600'>Жами сумма (USD):</span>
+                        <span className={textMuted}>Жами сумма (USD):</span>
                         <span className='font-bold text-blue-600'>{clientStats.totalAmountEN.toLocaleString()} $</span>
                       </div>
                     )}
                     <div className='flex justify-between items-center'>
-                      <span className='text-gray-600'>Тўланмаган:</span>
+                      <span className={textMuted}>Тўланмаган:</span>
                       <span className='font-bold text-red-600'>{clientStats.unpaidOrders} та</span>
                     </div>
                   </div>
                 </div>
 
                 {/* History Stats Card */}
-                <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
-                  <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+                <div className={`rounded-2xl shadow-lg p-6 border ${cardBg}`}>
+                  <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${textColor}`}>
                     <Clock size={20} className='text-purple-500' />
                     Тўлов тарихи
                   </h3>
                   <div className='space-y-3'>
                     <div className='flex justify-between items-center'>
-                      <span className='text-gray-600'>Жами тўловлар:</span>
+                      <span className={textMuted}>Жами тўловлар:</span>
                       <span className='font-bold text-purple-600'>{clientHistory.length} та</span>
                     </div>
                     <div className='flex justify-between items-center'>
-                      <span className='text-gray-600'>Жорий саҳифа:</span>
+                      <span className={textMuted}>Жорий саҳифа:</span>
                       <span className='font-bold text-gray-800'>{currentHistoryPage} / {totalHistoryPages}</span>
                     </div>
                     <div className='flex justify-between items-center'>
-                      <span className='text-gray-600'>Кўрсатилмоқда:</span>
+                      <span className={textMuted}>Кўрсатилмоқда:</span>
                       <span className='font-bold text-green-600'>{paginatedHistory.length} та</span>
                     </div>
                   </div>
@@ -683,8 +704,8 @@ export const ViewOrders = () => {
 
               {/* History Section */}
               {clientHistory.length > 0 && (
-                <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200 mb-6'>
-                  <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+                <div className={`rounded-2xl shadow-lg p-6 border mb-6 ${cardBg}`}>
+                  <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${textColor}`}>
                     <Clock className='text-purple-500' size={20} />
                     Тўловлар тарихи ({clientHistory.length} та)
                   </h3>
@@ -696,17 +717,21 @@ export const ViewOrders = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className='flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200'
+                        className={`flex justify-between items-center p-3 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                          }`}
                       >
                         <div className='flex items-center gap-3'>
-                          <div className={`p-2 rounded-lg ${historyItem.type === 'uz' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                          <div className={`p-2 rounded-lg ${historyItem.type === 'uz'
+                            ? (dark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-600')
+                            : (dark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600')
+                            }`}>
                             {historyItem.type === 'uz' ? <BadgeDollarSign size={16} /> : <DollarSign size={16} />}
                           </div>
                           <div>
-                            <p className='font-medium text-gray-800'>
+                            <p className={`font-medium ${textColor}`}>
                               {historyItem.type === 'uz' ? 'Сўм' : 'Доллар'} тўлови
                             </p>
-                            <p className='text-sm text-gray-600'>
+                            <p className={`text-sm ${textMuted}`}>
                               {new Date(historyItem.createdAt).toLocaleDateString()} - {new Date(historyItem.createdAt).toLocaleTimeString()}
                             </p>
                           </div>
@@ -726,20 +751,26 @@ export const ViewOrders = () => {
                       <button
                         onClick={() => setCurrentHistoryPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentHistoryPage === 1}
-                        className='flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 ${dark
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50'
+                          } disabled:cursor-not-allowed`}
                       >
                         <ChevronLeftIcon size={16} />
                         Олдинги
                       </button>
 
-                      <span className='text-sm text-gray-600'>
+                      <span className={`text-sm ${textMuted}`}>
                         Саҳифа {currentHistoryPage} / {totalHistoryPages}
                       </span>
 
                       <button
                         onClick={() => setCurrentHistoryPage(prev => Math.min(prev + 1, totalHistoryPages))}
                         disabled={currentHistoryPage === totalHistoryPages}
-                        className='flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 ${dark
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50'
+                          } disabled:cursor-not-allowed`}
                       >
                         Кейинги
                         <ChevronRight size={16} />
@@ -751,30 +782,30 @@ export const ViewOrders = () => {
 
               {/* Orders Table - YANGILANGAN */}
               {filteredClientOrders.length === 0 ? (
-                <div className='bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-200'>
-                  <ScrollText className='mx-auto text-gray-400 mb-4' size={64} />
-                  <h3 className='text-xl font-semibold text-gray-600 mb-2'>
+                <div className={`rounded-2xl shadow-lg p-12 text-center border ${cardBg}`}>
+                  <ScrollText className={`mx-auto mb-4 ${dark ? 'text-gray-600' : 'text-gray-400'}`} size={64} />
+                  <h3 className={`text-xl font-semibold mb-2 ${textMuted}`}>
                     Буюртмалар топилмади
                   </h3>
-                  <p className='text-gray-500'>
+                  <p className={textMuted}>
                     Ушбу мижоз учун ҳеч қандай буюртма топилмади.
                   </p>
                 </div>
               ) : (
-                <div className='bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden'>
+                <div className={`rounded-2xl shadow-lg border overflow-hidden ${cardBg}`}>
                   <div className='overflow-x-auto'>
                     <table className='w-full'>
-                      <thead className='bg-gradient-to-r from-gray-50 to-gray-100'>
+                      <thead className={`bg-gradient-to-r ${tableHeaderBg}`}>
                         <tr>
-                          <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>Маҳсулотлар</th>
-                          <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>Ҳолат</th>
-                          <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>Умумий нарх</th>
-                          <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>Тўлов</th>
-                          <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>Сана</th>
-                          <th className='px-6 py-4 text-center text-sm font-semibold text-gray-700'>Амалиёт</th>
+                          <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>Маҳсулотлар</th>
+                          <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>Ҳолат</th>
+                          <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>Умумий нарх</th>
+                          <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>Тўлов</th>
+                          <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>Сана</th>
+                          <th className={`px-6 py-4 text-center text-sm font-semibold ${tableHeaderText}`}>Амалиёт</th>
                         </tr>
                       </thead>
-                      <tbody className='divide-y divide-gray-200'>
+                      <tbody className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
                         {filteredClientOrders.map((order, index) => {
                           const isEdited = Boolean(editing[order._id])
                           const totalUZ = order.totalUZ || 0
@@ -786,14 +817,14 @@ export const ViewOrders = () => {
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.05 }}
-                              className={`${totalUZ === 0 && totalEN === 0 ? "bg-red-300 text-white" : ""} transition-colors duration-200`}
+                              className={`${totalUZ === 0 && totalEN === 0 ? (dark ? "bg-red-900 text-white" : "bg-red-300 text-white") : tableRowHover} transition-colors duration-200`}
                             >
                               <td className='px-6 py-4'>
                                 <div className='space-y-1'>
                                   {(order.products || []).slice(0, 3).map((item, i) => (
-                                    <div key={i} className='text-sm text-gray-700'>
+                                    <div key={i} className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
                                       <span className='font-medium'>{item.product?.title || 'Мавжуд эмас'}</span>
-                                      <span className='text-gray-500 ml-2'>
+                                      <span className={`ml-2 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
                                         {item.amount} {item.unit} × {item.price?.toLocaleString() || 0} {item.priceType === 'en' ? '$' : 'сўм'}
                                       </span>
                                     </div>
@@ -811,7 +842,8 @@ export const ViewOrders = () => {
                                   <select
                                     value={editing[order._id]?.status || order.status}
                                     onChange={(e) => handleChange(order._id, 'status', e.target.value)}
-                                    className='border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                    className={`border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
+                                      }`}
                                   >
                                     <option value='pending'>Кутилмоқда</option>
                                     <option value='completed'>Бажарилган</option>
@@ -846,13 +878,15 @@ export const ViewOrders = () => {
                               </td>
 
                               <td className='px-6 py-4'>
-                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${order.paid ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'
+                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${order.paid
+                                  ? (dark ? 'bg-green-900 text-green-200 border-green-700' : 'bg-green-100 text-green-800 border-green-200')
+                                  : (dark ? 'bg-red-900 text-red-200 border-red-700' : 'bg-red-100 text-red-800 border-red-200')
                                   }`}>
                                   {order.paid ? 'Тўланган' : 'Тўланмаган'}
                                 </div>
                               </td>
 
-                              <td className='px-6 py-4 text-sm text-gray-600'>
+                              <td className={`px-6 py-4 text-sm ${textMuted}`}>
                                 {new Date(order.createdAt || order.orderDate).toLocaleDateString()}
                               </td>
 
@@ -908,13 +942,15 @@ export const ViewOrders = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className='bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto'
+              className={`w-full max-w-2xl rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto ${dark ? 'bg-gray-800' : 'bg-white'
+                }`}
             >
               <button
                 onClick={() => setSelectedOrder(null)}
-                className='absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors duration-200'
+                className={`absolute top-4 right-4 z-10 rounded-full p-2 shadow-lg transition-colors duration-200 ${dark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-100'
+                  }`}
               >
-                <X size={20} />
+                <X size={20} className={textColor} />
               </button>
 
               <div className='p-8'>
@@ -922,38 +958,42 @@ export const ViewOrders = () => {
                   <div className='bg-gradient-to-r from-blue-500 to-indigo-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg'>
                     <ShoppingCart className='text-white' size={28} />
                   </div>
-                  <h2 className='text-2xl font-bold text-gray-800'>Буюртма маълумотлари</h2>
+                  <h2 className={`text-2xl font-bold ${textColor}`}>Буюртма маълумотлари</h2>
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
                   <div className='space-y-4'>
-                    <div className='flex items-center gap-3 p-3 bg-blue-50 rounded-xl'>
+                    <div className={`flex items-center gap-3 p-3 rounded-xl ${dark ? 'bg-blue-900' : 'bg-blue-50'
+                      }`}>
                       <User className='text-blue-600' size={20} />
                       <div>
-                        <p className='text-sm text-gray-600'>Мижоз</p>
+                        <p className={`text-sm ${textMuted}`}>Мижоз</p>
                         <p className='font-semibold'>{updatedSelectedClient?.name || '—'}</p>
                       </div>
                     </div>
-                    <div className='flex items-center gap-3 p-3 bg-green-50 rounded-xl'>
+                    <div className={`flex items-center gap-3 p-3 rounded-xl ${dark ? 'bg-green-900' : 'bg-green-50'
+                      }`}>
                       <Phone className='text-green-600' size={20} />
                       <div>
-                        <p className='text-sm text-gray-600'>Телефон</p>
+                        <p className={`text-sm ${textMuted}`}>Телефон</p>
                         <p className='font-semibold'>{updatedSelectedClient?.phoneNumber || '—'}</p>
                       </div>
                     </div>
                   </div>
                   <div className='space-y-4'>
-                    <div className='flex items-center gap-3 p-3 bg-red-50 rounded-xl'>
+                    <div className={`flex items-center gap-3 p-3 rounded-xl ${dark ? 'bg-red-900' : 'bg-red-50'
+                      }`}>
                       <MapPin className='text-red-600' size={20} />
                       <div>
-                        <p className='text-sm text-gray-600'>Манзил</p>
+                        <p className={`text-sm ${textMuted}`}>Манзил</p>
                         <p className='font-semibold'>{selectedOrder.client?.address || '—'}</p>
                       </div>
                     </div>
-                    <div className='flex items-center gap-3 p-3 bg-purple-50 rounded-xl'>
+                    <div className={`flex items-center gap-3 p-3 rounded-xl ${dark ? 'bg-purple-900' : 'bg-purple-50'
+                      }`}>
                       <CreditCard className='text-purple-600' size={20} />
                       <div>
-                        <p className='text-sm text-gray-600'>Тўлов ҳолати</p>
+                        <p className={`text-sm ${textMuted}`}>Тўлов ҳолати</p>
                         <p className='font-semibold'>{selectedOrder.paid ? 'Тўланган' : 'Тўланмаган'}</p>
                       </div>
                     </div>
@@ -962,7 +1002,7 @@ export const ViewOrders = () => {
 
                 <div className='mb-8'>
                   <div className='flex justify-between items-center mb-4'>
-                    <h3 className='text-lg font-semibold text-gray-800 flex items-center gap-2'>
+                    <h3 className={`text-lg font-semibold flex items-center gap-2 ${textColor}`}>
                       <Package className='text-indigo-600' size={20} />
                       Маҳсулотлар ({selectedOrder.products?.length || 0})
                     </h3>
@@ -987,10 +1027,11 @@ export const ViewOrders = () => {
 
                   <div className='space-y-3'>
                     {selectedOrder.products?.map((product, index) => (
-                      <div key={index} className='flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200'>
+                      <div key={index} className={`flex justify-between items-center p-3 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
                         <div className='flex-1'>
-                          <p className='font-medium text-gray-800'>{product.product?.title || ""}</p>
-                          <p className='text-sm text-gray-600'>{product.amount} {product.unit}</p>
+                          <p className={`font-medium ${textColor}`}>{product.product?.title || ""}</p>
+                          <p className={`text-sm ${textMuted}`}>{product.amount} {product.unit}</p>
                         </div>
 
                         {user.role === 'admin' && product.editing ? (
@@ -1010,7 +1051,8 @@ export const ViewOrders = () => {
                                 }
                                 setSelectedOrder(prev => ({ ...prev, products: updatedProducts }))
                               }}
-                              className='w-24 border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-right'
+                              className={`w-24 border rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-right ${dark ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'
+                                }`}
                               placeholder='0'
                             />
 
@@ -1024,7 +1066,8 @@ export const ViewOrders = () => {
                                 }
                                 setSelectedOrder(prev => ({ ...prev, products: updatedProducts }))
                               }}
-                              className='border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                              className={`border rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'
+                                }`}
                             >
                               <option value='uz'>сўм</option>
                               <option value='en'>$</option>
@@ -1035,7 +1078,7 @@ export const ViewOrders = () => {
                             <p className='font-semibold text-green-600'>
                               {(product.price * product.amount).toLocaleString()} {product.priceType === 'en' ? '$' : 'сўм'}
                             </p>
-                            <p className='text-xs text-gray-500'>
+                            <p className={`text-xs ${textMuted}`}>
                               {product.price?.toLocaleString()} {product.priceType === 'en' ? '$' : 'сўм'} дан
                             </p>
                           </div>
@@ -1046,20 +1089,21 @@ export const ViewOrders = () => {
                 </div>
 
                 {/* Total Price Section - YANGILANGAN */}
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200'>
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl border ${dark ? 'bg-blue-900 border-blue-700' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+                  }`}>
                   <div className='text-center'>
-                    <p className='text-sm text-gray-600'>Сўмда</p>
+                    <p className={`text-sm ${textMuted}`}>Сўмда</p>
                     <p className='text-lg font-semibold text-blue-600'>{(selectedOrder.totalUZ || 0).toLocaleString()} сўм</p>
                   </div>
                   <div className='text-center'>
-                    <p className='text-sm text-gray-600'>Долларда</p>
+                    <p className={`text-sm ${textMuted}`}>Долларда</p>
                     <p className='text-lg font-semibold text-purple-600'>{(selectedOrder.totalEN || 0).toLocaleString()} $</p>
                   </div>
                 </div>
 
                 <div className='text-center mt-4'>
-                  <p className='text-sm text-gray-600'>Сана</p>
-                  <p className='text-lg font-semibold text-gray-800'>
+                  <p className={`text-sm ${textMuted}`}>Сана</p>
+                  <p className={`text-lg font-semibold ${textColor}`}>
                     {new Date(selectedOrder.createdAt || selectedOrder.orderDate).toLocaleDateString()}
                   </p>
                 </div>

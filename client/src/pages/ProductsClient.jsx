@@ -26,7 +26,9 @@ import {
     ChevronRight,
     ChevronLeft as ChevronLeftIcon,
     Filter,
-    RefreshCw
+    RefreshCw,
+    Moon,
+    Sun
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
@@ -38,7 +40,7 @@ export const ClientProductsView = () => {
         revalidateOnFocus: true,
         revalidateOnReconnect: true
     })
-    const { user } = useContext(ContextData)
+    const { user, dark, setDark } = useContext(ContextData)
 
     const [searchPhone, setSearchPhone] = useState('')
     const [searchName, setSearchName] = useState('')
@@ -433,9 +435,27 @@ export const ClientProductsView = () => {
         await mutate()
     }
 
+    // Dark mode styles
+    const bgGradient = dark
+        ? 'from-gray-900 to-gray-800'
+        : 'from-blue-50 to-indigo-100'
+
+    const cardBg = dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+    const textColor = dark ? 'text-white' : 'text-gray-800'
+    const textMuted = dark ? 'text-gray-300' : 'text-gray-600'
+    const inputBg = dark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'
+    const headerBg = dark ? 'from-gray-700 to-gray-600' : 'from-gray-50 to-gray-100'
+    const tableHeaderBg = dark ? 'from-gray-700 to-gray-600' : 'from-gray-50 to-gray-100'
+    const tableHeaderText = dark ? 'text-gray-200' : 'text-gray-700'
+    const tableRowHover = dark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+    const borderColor = dark ? 'border-gray-700' : 'border-gray-200'
+    const modalBg = dark ? 'bg-gray-800' : 'bg-white'
+    const debtCardBg = dark ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'
+    const debtText = dark ? 'text-red-200' : 'text-red-700'
+
     if (isLoading) {
         return (
-            <div className='min-h-screen flex justify-center items-center'>
+            <div className={`min-h-screen flex justify-center items-center ${dark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
                 <LoadingState />
             </div>
         )
@@ -443,17 +463,19 @@ export const ClientProductsView = () => {
 
     if (error)
         return (
-            <div className='min-h-screen flex items-center justify-center'>
+            <div className={`min-h-screen flex items-center justify-center ${dark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className='text-center p-8 bg-red-50 rounded-2xl border border-red-200 max-w-md'
+                    className={`text-center p-8 rounded-2xl border max-w-md ${dark ? 'bg-gray-800 border-gray-700' : 'bg-red-50 border-red-200'
+                        }`}
                 >
                     <AlertCircle className='mx-auto text-red-500 mb-4' size={48} />
-                    <h3 className='text-lg font-semibold text-red-800 mb-2'>
+                    <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-red-300' : 'text-red-800'
+                        }`}>
                         Юклашда хатолик
                     </h3>
-                    <p className='text-red-600'>
+                    <p className={dark ? 'text-red-200' : 'text-red-600'}>
                         Таминотчилар маълумотларини юклашда хатолик юз берди. Илтимос, қайта уриниб кўринг.
                     </p>
                     <button
@@ -467,13 +489,13 @@ export const ClientProductsView = () => {
         )
 
     return (
-        <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6'>
+        <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-4 md:p-6 transition-colors duration-300`}>
             <div className='mx-auto space-y-6'>
                 {/* Header Section */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'
+                    className={`rounded-2xl shadow-lg p-6 border ${cardBg} ${borderColor}`}
                 >
                     <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4'>
                         <div className='flex items-center gap-4'>
@@ -486,7 +508,9 @@ export const ClientProductsView = () => {
                                         setCurrentHistoryPage(1)
                                         setCurrentClientPage(1)
                                     }}
-                                    className='flex items-center gap-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-all duration-300'
+                                    className={`flex items-center gap-2 ${dark ? 'text-blue-400 hover:text-blue-300 bg-blue-900 hover:bg-blue-800'
+                                        : 'text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100'
+                                        } px-4 py-2 rounded-xl transition-all duration-300`}
                                 >
                                     <ChevronLeft size={20} />
                                     Орқага
@@ -497,12 +521,12 @@ export const ClientProductsView = () => {
                                 </div>
                             )}
                             <div>
-                                <h1 className='text-2xl md:text-3xl font-bold text-gray-800'>
+                                <h1 className={`text-2xl md:text-3xl font-bold ${textColor}`}>
                                     {selectedClient
                                         ? `${selectedClient.name} маҳсулотлари`
                                         : 'Таминотчилар ва маҳсулотлар'}
                                 </h1>
-                                <p className='text-gray-600 mt-1'>
+                                <p className={`${textMuted} mt-1`}>
                                     {selectedClient
                                         ? `${selectedClient.products?.length || 0} та маҳсулот топилди`
                                         : `${filteredClients.length} та мижоз топилди`}
@@ -527,12 +551,13 @@ export const ClientProductsView = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'
+                    className={`rounded-2xl shadow-lg p-6 border ${cardBg} ${borderColor}`}
                 >
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                         <div className='relative'>
                             <Search
-                                className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+                                className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'
+                                    }`}
                                 size={20}
                             />
                             <input
@@ -540,13 +565,14 @@ export const ClientProductsView = () => {
                                 placeholder='Телефон рақам...'
                                 value={searchPhone}
                                 onChange={e => setSearchPhone(e.target.value)}
-                                className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                             />
                         </div>
 
                         <div className='relative'>
                             <User
-                                className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+                                className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${dark ? 'text-gray-400' : 'text-gray-400'
+                                    }`}
                                 size={20}
                             />
                             <input
@@ -554,7 +580,7 @@ export const ClientProductsView = () => {
                                 placeholder='Мижоз номи...'
                                 value={searchName}
                                 onChange={e => setSearchName(e.target.value)}
-                                className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                             />
                         </div>
                     </div>
@@ -562,8 +588,8 @@ export const ClientProductsView = () => {
 
                 {/* Qarz to'lash section */}
                 {selectedClient && (
-                    <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
-                        <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+                    <div className={`rounded-2xl shadow-lg p-6 border ${cardBg} ${borderColor}`}>
+                        <h3 className={`text-lg font-semibold ${textColor} mb-4 flex items-center gap-2`}>
                             <Plus size={20} className='text-purple-500' />
                             Қарзни ёпиш
                         </h3>
@@ -571,7 +597,7 @@ export const ClientProductsView = () => {
                             {/* So'mda to'lash */}
                             {selectedClient.debtUZ > 0 && (
                                 <div className='space-y-3 relative'>
-                                    <label className='text-sm font-medium text-gray-700'>
+                                    <label className={`text-sm font-medium ${textMuted}`}>
                                         Сўмда тўлаш (Қарз: {formatCurrency(selectedClient.debtUZ)}):
                                     </label>
                                     <input
@@ -579,13 +605,14 @@ export const ClientProductsView = () => {
                                         placeholder="Тўлов суммаси"
                                         value={debtUZ}
                                         onChange={e => handleDebtUZChange(e.target.value)}
-                                        className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                        className={`w-full pl-2 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                                     />
                                     {debtUZ && (
                                         <button
                                             onClick={handlePayDebtUZ}
                                             disabled={debtLUZ}
-                                            className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
+                                            className={`absolute right-4 top-9 z-10 cursor-pointer ${dark ? 'hover:bg-blue-600 text-white' : 'hover:bg-blue-500 hover:text-white'
+                                                } rounded p-1 transition-colors duration-200`}
                                         >
                                             {debtLUZ ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
                                         </button>
@@ -595,7 +622,7 @@ export const ClientProductsView = () => {
                             {/* Dollarda to'lash */}
                             {selectedClient.debtEN > 0 && (
                                 <div className='space-y-3 relative'>
-                                    <label className='text-sm font-medium text-gray-700'>
+                                    <label className={`text-sm font-medium ${textMuted}`}>
                                         Долларда тўлаш (Қарз: ${formatNumber(selectedClient.debtEN)}):
                                     </label>
                                     <input
@@ -603,13 +630,14 @@ export const ClientProductsView = () => {
                                         placeholder="Тўлов суммаси"
                                         value={debtEN}
                                         onChange={e => handleDebtENChange(e.target.value)}
-                                        className='w-full pl-2 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 bg-gray-50'
+                                        className={`w-full pl-2 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
                                     />
                                     {debtEN && (
                                         <button
                                             onClick={handlePayDebtEN}
                                             disabled={debtLEN}
-                                            className='absolute right-4 top-9 z-10 cursor-pointer hover:bg-blue-500 hover:text-white rounded p-1 transition-colors duration-200'
+                                            className={`absolute right-4 top-9 z-10 cursor-pointer ${dark ? 'hover:bg-blue-600 text-white' : 'hover:bg-blue-500 hover:text-white'
+                                                } rounded p-1 transition-colors duration-200`}
                                         >
                                             {debtLEN ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
                                         </button>
@@ -627,12 +655,12 @@ export const ClientProductsView = () => {
                         transition={{ delay: 0.2 }}
                     >
                         {filteredClients.length === 0 ? (
-                            <div className='bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-200'>
-                                <User className='mx-auto text-gray-400 mb-4' size={64} />
-                                <h3 className='text-xl font-semibold text-gray-600 mb-2'>
+                            <div className={`rounded-2xl shadow-lg p-12 text-center border ${cardBg} ${borderColor}`}>
+                                <User className={`mx-auto mb-4 ${dark ? 'text-gray-600' : 'text-gray-400'}`} size={64} />
+                                <h3 className={`text-xl font-semibold mb-2 ${textMuted}`}>
                                     Таминотчилар топилмади
                                 </h3>
-                                <p className='text-gray-500 mb-6'>
+                                <p className={`${textMuted} mb-6`}>
                                     Қидирув шартларингизга мос келувчи Таминотчилар мавжуд эмас
                                 </p>
                                 <button
@@ -661,7 +689,12 @@ export const ClientProductsView = () => {
                                                     setSelectedClient(client)
                                                     setCurrentHistoryPage(1)
                                                 }}
-                                                className={`${(client.debtEN && client.debtEN > 0) || (client.debtUZ && client.debtUZ > 0) ? "bg-red-200" : "bg-white"} rounded-2xl shadow-lg p-6 border border-gray-200 hover:shadow-xl hover:border-green-300 transition-all duration-300 cursor-pointer group`}
+                                                className={`${(client.debtEN && client.debtEN > 0) || (client.debtUZ && client.debtUZ > 0)
+                                                    ? (dark ? "bg-red-900" : "bg-red-200")
+                                                    : cardBg
+                                                    } rounded-2xl shadow-lg p-6 border ${dark ? 'border-gray-700' : 'border-gray-200'
+                                                    } hover:shadow-xl ${dark ? 'hover:border-green-600' : 'hover:border-green-300'
+                                                    } transition-all duration-300 cursor-pointer group`}
                                             >
                                                 <div className='flex items-start justify-between mb-4'>
                                                     <div className='flex items-center gap-3'>
@@ -669,10 +702,10 @@ export const ClientProductsView = () => {
                                                             <User className='text-white' size={24} />
                                                         </div>
                                                         <div>
-                                                            <h3 className='font-bold text-lg text-gray-800'>
+                                                            <h3 className={`font-bold text-lg ${textColor}`}>
                                                                 {client.name || 'Номаълум'}
                                                             </h3>
-                                                            <p className='text-gray-600 text-sm'>
+                                                            <p className={`${textMuted} text-sm`}>
                                                                 {client.phoneNumber}
                                                             </p>
                                                         </div>
@@ -682,30 +715,32 @@ export const ClientProductsView = () => {
                                                             <Package size={18} />
                                                             <span>{client.productCount || 0}</span>
                                                         </div>
-                                                        <div className='text-xs text-gray-500'>маҳсулот</div>
+                                                        <div className={`text-xs ${textMuted}`}>маҳсулот</div>
                                                     </div>
                                                 </div>
 
                                                 <div className='flex items-center gap-2 text-sm text-gray-600 mb-3'>
                                                     <MapPin size={16} />
-                                                    <span className='truncate'>
+                                                    <span className={`truncate ${textMuted}`}>
                                                         {client.address || 'Манзил кўрсатилмаган'}
                                                     </span>
                                                 </div>
 
                                                 {/* Qarz ma'lumotlari */}
                                                 {(client.debtUZ || client.debtEN) && (
-                                                    <div className='mb-3 p-3 bg-red-50 rounded-lg border border-red-200'>
-                                                        <h4 className='text-sm font-semibold text-red-700 mb-1'>
+                                                    <div className={`mb-3 p-3 rounded-lg border ${dark ? 'bg-red-800 border-red-700' : 'bg-red-50 border-red-200'
+                                                        }`}>
+                                                        <h4 className={`text-sm font-semibold mb-1 ${dark ? 'text-red-200' : 'text-red-700'
+                                                            }`}>
                                                             Қарзларим:
                                                         </h4>
                                                         {client.debtUZ && (
-                                                            <div className='text-sm text-red-600'>
+                                                            <div className={dark ? 'text-red-200' : 'text-red-600'}>
                                                                 Сўм: {formatCurrency(client.debtUZ)}
                                                             </div>
                                                         )}
                                                         {client.debtEN && (
-                                                            <div className='text-sm text-red-600'>
+                                                            <div className={dark ? 'text-red-200' : 'text-red-600'}>
                                                                 Доллар: ${formatNumber(client.debtEN)}
                                                             </div>
                                                         )}
@@ -714,15 +749,15 @@ export const ClientProductsView = () => {
 
                                                 {/* Product Balances Summary */}
                                                 <div className='mb-4'>
-                                                    <h4 className='text-sm font-semibold text-gray-700 mb-2'>
+                                                    <h4 className={`text-sm font-semibold mb-2 ${textMuted}`}>
                                                         Маҳсулот қолдиқлари:
                                                     </h4>
                                                     <div className='space-y-1 max-h-20 overflow-y-auto'>
                                                         {Object.entries(productBalances.balances).slice(0, 3).map(([productName, units]) => (
                                                             <div key={productName} className='flex items-center gap-2 text-xs'>
                                                                 <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                                                <span className='font-medium text-gray-800 truncate'>{productName}</span>
-                                                                <span className='text-gray-600'>
+                                                                <span className={`font-medium ${textColor} truncate`}>{productName}</span>
+                                                                <span className={textMuted}>
                                                                     {Object.entries(units).map(([unit, qty]) =>
                                                                         `${formatNumber(qty)} ${unit}`
                                                                     ).join(', ')}
@@ -738,7 +773,7 @@ export const ClientProductsView = () => {
                                                 </div>
 
                                                 <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
-                                                    <span className='text-sm text-gray-500'>Умумий маҳсулот:</span>
+                                                    <span className={`text-sm ${textMuted}`}>Умумий маҳсулот:</span>
                                                     <span className='font-bold text-blue-600'>
                                                         {formatNumber(client.products?.length || 0)} та
                                                     </span>
@@ -751,7 +786,7 @@ export const ClientProductsView = () => {
                                 {/* Client Pagination */}
                                 {totalClientPages > 1 && (
                                     <div className='mt-6 flex justify-center'>
-                                        <div className='bg-white rounded-xl shadow-lg p-4 flex items-center gap-4'>
+                                        <div className={`rounded-xl shadow-lg p-4 flex items-center gap-4 ${cardBg}`}>
                                             <button
                                                 onClick={goToPrevClientPage}
                                                 disabled={currentClientPage === 1}
@@ -761,7 +796,7 @@ export const ClientProductsView = () => {
                                                 Олдинги
                                             </button>
 
-                                            <span className='text-gray-700 font-medium'>
+                                            <span className={`font-medium ${textColor}`}>
                                                 Саҳифа {currentClientPage} / {totalClientPages}
                                             </span>
 
@@ -795,35 +830,43 @@ export const ClientProductsView = () => {
                             {/* Client Overview Section */}
                             <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6'>
                                 {/* Client Info Card */}
-                                <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
+                                <div className={`rounded-2xl shadow-lg p-6 border ${cardBg} ${borderColor}`}>
                                     <div className='flex items-center gap-3 mb-4'>
                                         <div className='bg-gradient-to-r from-green-500 to-emerald-500 p-3 rounded-xl'>
                                             <User className='text-white' size={24} />
                                         </div>
                                         <div>
-                                            <h2 className='text-xl font-bold text-gray-800'>{selectedClient.name}</h2>
-                                            <p className='text-gray-600'>{selectedClient.phoneNumber}</p>
+                                            <h2 className={`text-xl font-bold ${textColor}`}>{selectedClient.name}</h2>
+                                            <p className={textMuted}>{selectedClient.phoneNumber}</p>
                                         </div>
                                     </div>
 
                                     <div className='space-y-3'>
-                                        <div className='flex items-center gap-2 text-sm text-gray-600'>
+                                        <div className={`flex items-center gap-2 text-sm ${textMuted}`}>
                                             <MapPin size={16} />
                                             <span>{selectedClient.address || 'Манзил кўрсатилмаган'}</span>
                                         </div>
 
                                         {/* Qarz ma'lumotlari */}
                                         {(selectedClient.debtUZ || selectedClient.debtEN) && (
-                                            <div className='p-3 bg-red-50 rounded-lg border border-red-200'>
-                                                <p className='text-sm font-semibold text-red-700 mb-1'>Қарзлари:</p>
+                                            <div className={`p-3 rounded-lg border ${dark ? 'bg-red-800 border-red-700' : 'bg-red-50 border-red-200'
+                                                }`}>
+                                                <p className={`text-sm font-semibold mb-1 ${dark ? 'text-red-200' : 'text-red-700'
+                                                    }`}>Қарзлари:</p>
                                                 {selectedClient.debtUZ && (
-                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtUZ < 0 ? "text-green-600" : "text-red-600"}`}>
+                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtUZ < 0
+                                                        ? (dark ? "text-green-400" : "text-green-600")
+                                                        : (dark ? "text-red-300" : "text-red-600")
+                                                        }`}>
                                                         <TrendingUp size={16} />
                                                         <span>Қарз: {formatCurrency(selectedClient.debtUZ)}</span>
                                                     </div>
                                                 )}
                                                 {selectedClient.debtEN && (
-                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtEN < 0 ? "text-green-600" : "text-red-600"}`}>
+                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtEN < 0
+                                                        ? (dark ? "text-green-400" : "text-green-600")
+                                                        : (dark ? "text-red-300" : "text-red-600")
+                                                        }`}>
                                                         <DollarSign size={16} />
                                                         <span>Қарз ($): ${formatNumber(selectedClient.debtEN)}</span>
                                                     </div>
@@ -834,34 +877,34 @@ export const ClientProductsView = () => {
                                 </div>
 
                                 {/* Statistics Card */}
-                                <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
-                                    <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+                                <div className={`rounded-2xl shadow-lg p-6 border ${cardBg} ${borderColor}`}>
+                                    <h3 className={`text-lg font-semibold ${textColor} mb-4 flex items-center gap-2`}>
                                         <BarChart3 size={20} className='text-blue-500' />
                                         Статистика
                                     </h3>
                                     <div className='space-y-3'>
                                         <div className='flex justify-between items-center'>
-                                            <span className='text-gray-600'>Жами маҳсулот:</span>
+                                            <span className={textMuted}>Жами маҳсулот:</span>
                                             <span className='font-bold text-blue-600'>{formatNumber(clientStats.totalProducts)} та</span>
                                         </div>
                                         <div className='flex justify-between items-center'>
-                                            <span className='text-gray-600'>Тайёр маҳсулот:</span>
+                                            <span className={textMuted}>Тайёр маҳсулот:</span>
                                             <span className='font-bold text-green-600'>{formatNumber(clientStats.totalReadyProducts)} та</span>
                                         </div>
                                         <div className='flex justify-between items-center'>
-                                            <span className='text-gray-600'>Хом ашё:</span>
+                                            <span className={textMuted}>Хом ашё:</span>
                                             <span className='font-bold text-yellow-600'>{formatNumber(clientStats.totalRawProducts)} та</span>
                                         </div>
                                         <div className='flex justify-between items-center'>
-                                            <span className='text-gray-600'>Тарих санавлари:</span>
+                                            <span className={textMuted}>Тарих санавлари:</span>
                                             <span className='font-bold text-purple-600'>{formatNumber(selectedClient.history?.length || 0)} та</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Overall Balances Card */}
-                                <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-200'>
-                                    <h3 className='text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+                                <div className={`rounded-2xl shadow-lg p-6 border ${cardBg} ${borderColor}`}>
+                                    <h3 className={`text-lg font-semibold ${textColor} mb-4 flex items-center gap-2`}>
                                         <Package size={20} className='text-purple-500' />
                                         Умумий қолдиқ
                                     </h3>
@@ -870,9 +913,9 @@ export const ClientProductsView = () => {
                                             <div key={unit} className='flex justify-between items-center'>
                                                 <div className='flex items-center gap-2'>
                                                     {getUnitIcon(unit)}
-                                                    <span className='text-gray-600 capitalize'>{unit}:</span>
+                                                    <span className={textMuted}>{unit}:</span>
                                                 </div>
-                                                <span className='font-bold text-gray-800'>{formatNumber(quantity)}</span>
+                                                <span className={`font-bold ${textColor}`}>{formatNumber(quantity)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -881,53 +924,53 @@ export const ClientProductsView = () => {
 
                             {/* Products Table */}
                             {selectedClient.products?.length === 0 ? (
-                                <div className='bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-200'>
-                                    <Package className='mx-auto text-gray-400 mb-4' size={64} />
-                                    <h3 className='text-xl font-semibold text-gray-600 mb-2'>
+                                <div className={`rounded-2xl shadow-lg p-12 text-center border ${cardBg} ${borderColor}`}>
+                                    <Package className={`mx-auto mb-4 ${dark ? 'text-gray-600' : 'text-gray-400'}`} size={64} />
+                                    <h3 className={`text-xl font-semibold mb-2 ${textMuted}`}>
                                         Маҳсулотлар топилмади
                                     </h3>
-                                    <p className='text-gray-500'>
+                                    <p className={textMuted}>
                                         Ушбу мижоз учун ҳеч қандай маҳсулот топилмади.
                                     </p>
                                 </div>
                             ) : (
                                 <>
-                                    <div className='bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-6'>
+                                    <div className={`rounded-2xl shadow-lg border ${cardBg} ${borderColor} overflow-hidden mb-6`}>
                                         <div className='overflow-x-auto'>
                                             <table className='w-full'>
-                                                <thead className='bg-gradient-to-r from-gray-50 to-gray-100'>
+                                                <thead className={`bg-gradient-to-r ${tableHeaderBg}`}>
                                                     <tr>
-                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             Маҳсулот номи
                                                         </th>
-                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             ID
                                                         </th>
-                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             Миқдор
                                                         </th>
-                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             Нарх
                                                         </th>
-                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             Ҳолати
                                                         </th>
-                                                        <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                        <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             Сана
                                                         </th>
-                                                        <th className='px-6 py-4 text-center text-sm font-semibold text-gray-700'>
+                                                        <th className={`px-6 py-4 text-center text-sm font-semibold ${tableHeaderText}`}>
                                                             Амалиёт
                                                         </th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className='divide-y divide-gray-200'>
+                                                <tbody className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
                                                     {currentProducts.map((product, index) => (
                                                         <motion.tr
                                                             key={product._id}
                                                             initial={{ opacity: 0, y: 10 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ delay: index * 0.05 }}
-                                                            className='hover:bg-blue-50 transition-colors duration-200'
+                                                            className={tableRowHover}
                                                         >
                                                             <td className='px-6 py-4'>
                                                                 <div className='flex items-center gap-3'>
@@ -935,14 +978,14 @@ export const ClientProductsView = () => {
                                                                         {getUnitIcon(product.unit)}
                                                                     </div>
                                                                     <div>
-                                                                        <div className='font-medium text-gray-800'>
+                                                                        <div className={`font-medium ${textColor}`}>
                                                                             {product.title}
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                             </td>
 
-                                                            <td className='px-6 py-4 text-sm text-gray-600'>
+                                                            <td className={`px-6 py-4 text-sm ${textMuted}`}>
                                                                 {product.ID}
                                                             </td>
 
@@ -952,7 +995,8 @@ export const ClientProductsView = () => {
                                                                         type='text'
                                                                         value={editingProduct.stock}
                                                                         onChange={(e) => handleInputChange('stock', e.target.value)}
-                                                                        className='w-24 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                        className={`w-24 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
+                                                                            }`}
                                                                         placeholder='0'
                                                                     />
                                                                 ) : (
@@ -970,13 +1014,15 @@ export const ClientProductsView = () => {
                                                                                 type='text'
                                                                                 value={editingProduct.price}
                                                                                 onChange={(e) => handleInputChange('price', e.target.value)}
-                                                                                className='w-32 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                                className={`w-32 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
+                                                                                    }`}
                                                                                 placeholder='0'
                                                                             />
                                                                             <select
                                                                                 value={editingProduct.priceType}
                                                                                 onChange={(e) => handleInputChange('priceType', e.target.value)}
-                                                                                className='border border-gray-300 rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                                className={`border rounded-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
+                                                                                    }`}
                                                                             >
                                                                                 <option value='uz'>сўм</option>
                                                                                 <option value='en'>$</option>
@@ -988,7 +1034,7 @@ export const ClientProductsView = () => {
                                                                         </div>
                                                                     )
                                                                 ) : (
-                                                                    <div className='text-gray-400'>---</div>
+                                                                    <div className={textMuted}>---</div>
                                                                 )}
                                                             </td>
 
@@ -997,22 +1043,23 @@ export const ClientProductsView = () => {
                                                                     <select
                                                                         value={editingProduct.ready}
                                                                         onChange={(e) => handleInputChange('ready', e.target.value === 'true')}
-                                                                        className='border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+                                                                        className={`border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
+                                                                            }`}
                                                                     >
                                                                         <option value={true}>Тайёр</option>
                                                                         <option value={false}>Хом ашё</option>
                                                                     </select>
                                                                 ) : (
                                                                     <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${product.ready
-                                                                        ? 'bg-green-100 text-green-800 border-green-200'
-                                                                        : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                                                        ? (dark ? 'bg-green-900 text-green-200 border-green-700' : 'bg-green-100 text-green-800 border-green-200')
+                                                                        : (dark ? 'bg-yellow-900 text-yellow-200 border-yellow-700' : 'bg-yellow-100 text-yellow-800 border-yellow-200')
                                                                         }`}>
                                                                         {product.ready ? 'Тайёр' : 'Хом ашё'}
                                                                     </div>
                                                                 )}
                                                             </td>
 
-                                                            <td className='px-6 py-4 text-sm text-gray-600'>
+                                                            <td className={`px-6 py-4 text-sm ${textMuted}`}>
                                                                 {new Date(product.createdAt).toLocaleDateString()}
                                                             </td>
 
@@ -1056,7 +1103,7 @@ export const ClientProductsView = () => {
                                     {/* Product Pagination */}
                                     {totalProductPages > 1 && (
                                         <div className='mb-6 flex justify-center'>
-                                            <div className='bg-white rounded-xl shadow-lg p-4 flex items-center gap-4'>
+                                            <div className={`rounded-xl shadow-lg p-4 flex items-center gap-4 ${cardBg}`}>
                                                 <button
                                                     onClick={goToPrevProductPage}
                                                     disabled={currentProductPage === 1}
@@ -1066,7 +1113,7 @@ export const ClientProductsView = () => {
                                                     Олдинги
                                                 </button>
 
-                                                <span className='text-gray-700 font-medium'>
+                                                <span className={`font-medium ${textColor}`}>
                                                     Саҳифа {currentProductPage} / {totalProductPages}
                                                 </span>
 
@@ -1086,9 +1133,9 @@ export const ClientProductsView = () => {
 
                             {/* History Section */}
                             {selectedClient.history && selectedClient.history.length > 0 && (
-                                <div className='bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden'>
-                                    <div className='p-6 border-b border-gray-200'>
-                                        <h3 className='text-lg font-semibold text-gray-800 flex items-center gap-2'>
+                                <div className={`rounded-2xl shadow-lg border ${cardBg} ${borderColor} overflow-hidden`}>
+                                    <div className={`p-6 border-b ${borderColor}`}>
+                                        <h3 className={`text-lg font-semibold ${textColor} flex items-center gap-2`}>
                                             <History size={20} className='text-orange-500' />
                                             Тарих ({formatNumber(selectedClient.history.length)} та)
                                         </h3>
@@ -1096,40 +1143,40 @@ export const ClientProductsView = () => {
 
                                     <div className='overflow-x-auto'>
                                         <table className='w-full'>
-                                            <thead className='bg-gradient-to-r from-orange-50 to-amber-50'>
+                                            <thead className={`bg-gradient-to-r ${dark ? 'from-orange-900 to-amber-900' : 'from-orange-50 to-amber-50'
+                                                }`}>
                                                 <tr>
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                    <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                         Сана
                                                     </th>
-
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                    <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                         Тафсилот
                                                     </th>
-                                                    <th className='px-6 py-4 text-left text-sm font-semibold text-gray-700'>
+                                                    <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                         Сумма
                                                     </th>
                                                 </tr>
                                             </thead>
-                                            <tbody className='divide-y divide-gray-200'>
+                                            <tbody className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
                                                 {currentHistory.map((historyItem, index) => (
                                                     <motion.tr
                                                         key={historyItem._id}
                                                         initial={{ opacity: 0, x: -10 }}
                                                         animate={{ opacity: 1, x: 0 }}
                                                         transition={{ delay: index * 0.05 }}
-                                                        className='hover:bg-orange-50 transition-colors duration-200'
+                                                        className={dark ? 'hover:bg-orange-900' : 'hover:bg-orange-50'}
                                                     >
-                                                        <td className='px-6 py-4 text-sm text-gray-600'>
+                                                        <td className={`px-6 py-4 text-sm ${textMuted}`}>
                                                             {new Date(historyItem.createdAt).toLocaleDateString()}
                                                             <br />
-                                                            <span className='text-xs text-gray-400'>
+                                                            <span className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-400'}`}>
                                                                 {new Date(historyItem.createdAt).toLocaleTimeString()}
                                                             </span>
                                                         </td>
                                                         <td className='px-6 py-4'>
                                                             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${historyItem.type === 'payment'
-                                                                ? 'bg-green-100 text-green-800 border-green-200'
-                                                                : 'bg-blue-100 text-blue-800 border-blue-200'
+                                                                ? (dark ? 'bg-green-900 text-green-200 border-green-700' : 'bg-green-100 text-green-800 border-green-200')
+                                                                : (dark ? 'bg-blue-900 text-blue-200 border-blue-700' : 'bg-blue-100 text-blue-800 border-blue-200')
                                                                 }`}>
                                                                 {historyItem.type === 'payment' ? 'Тўлов' : 'Тўлов'}
                                                             </div>
@@ -1145,7 +1192,7 @@ export const ClientProductsView = () => {
                                                                     {formatNumber(historyItem.price)} $
                                                                 </div>
                                                             ) : (
-                                                                <div className='text-gray-400'>---</div>
+                                                                <div className={textMuted}>---</div>
                                                             )}
                                                         </td>
                                                     </motion.tr>
@@ -1156,16 +1203,20 @@ export const ClientProductsView = () => {
 
                                     {/* Pagination Controls */}
                                     {totalHistoryPages > 1 && (
-                                        <div className='p-4 border-t border-gray-200 bg-gray-50'>
+                                        <div className={`p-4 border-t ${borderColor} ${dark ? 'bg-gray-700' : 'bg-gray-50'
+                                            }`}>
                                             <div className='flex items-center justify-between'>
-                                                <div className='text-sm text-gray-600'>
+                                                <div className={`text-sm ${textMuted}`}>
                                                     Саҳифа {currentHistoryPage} / {totalHistoryPages}
                                                 </div>
                                                 <div className='flex items-center gap-2'>
                                                     <button
                                                         onClick={goToPrevHistoryPage}
                                                         disabled={currentHistoryPage === 1}
-                                                        className='flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
+                                                        className={`flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ${dark
+                                                            ? 'bg-gray-600 border-gray-500 text-white hover:bg-gray-500'
+                                                            : 'bg-white border-gray-300 hover:bg-gray-50'
+                                                            }`}
                                                     >
                                                         <ChevronLeftIcon size={16} />
                                                         Олдинги
@@ -1173,7 +1224,10 @@ export const ClientProductsView = () => {
                                                     <button
                                                         onClick={goToNextHistoryPage}
                                                         disabled={currentHistoryPage === totalHistoryPages}
-                                                        className='flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
+                                                        className={`flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ${dark
+                                                            ? 'bg-gray-600 border-gray-500 text-white hover:bg-gray-500'
+                                                            : 'bg-white border-gray-300 hover:bg-gray-50'
+                                                            }`}
                                                     >
                                                         Кейинги
                                                         <ChevronRight size={16} />
@@ -1204,13 +1258,14 @@ export const ClientProductsView = () => {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             onClick={e => e.stopPropagation()}
-                            className='bg-white w-full max-w-md rounded-3xl shadow-2xl relative'
+                            className={`w-full max-w-md rounded-3xl shadow-2xl relative ${modalBg}`}
                         >
                             <button
                                 onClick={() => setSelectedProduct(null)}
-                                className='absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors duration-200'
+                                className={`absolute top-4 right-4 z-10 rounded-full p-2 shadow-lg transition-colors duration-200 ${dark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-100'
+                                    }`}
                             >
-                                <X size={20} />
+                                <X size={20} className={textColor} />
                             </button>
 
                             <div className='p-6'>
@@ -1218,47 +1273,52 @@ export const ClientProductsView = () => {
                                     <div className='bg-gradient-to-r from-blue-500 to-indigo-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg'>
                                         {getUnitIcon(selectedProduct.unit)}
                                     </div>
-                                    <h2 className='text-xl font-bold text-gray-800'>
+                                    <h2 className={`text-xl font-bold ${textColor}`}>
                                         {selectedProduct.title}
                                     </h2>
-                                    <p className='text-gray-600'>ID: {selectedProduct.ID}</p>
+                                    <p className={textMuted}>ID: {selectedProduct.ID}</p>
                                 </div>
 
                                 <div className='space-y-4'>
-                                    <div className='flex justify-between items-center p-3 bg-blue-50 rounded-xl'>
-                                        <span className='text-gray-600'>Миқдор:</span>
+                                    <div className={`flex justify-between items-center p-3 rounded-xl ${dark ? 'bg-blue-900' : 'bg-blue-50'
+                                        }`}>
+                                        <span className={textMuted}>Миқдор:</span>
                                         <span className='font-bold text-lg text-blue-600'>
                                             {formatNumber(selectedProduct.stock)} {selectedProduct.unit}
                                         </span>
                                     </div>
 
                                     {user.role === 'admin' && selectedProduct.price > 0 && (
-                                        <div className='flex justify-between items-center p-3 bg-green-50 rounded-xl'>
-                                            <span className='text-gray-600'>Нархи:</span>
+                                        <div className={`flex justify-between items-center p-3 rounded-xl ${dark ? 'bg-green-900' : 'bg-green-50'
+                                            }`}>
+                                            <span className={textMuted}>Нархи:</span>
                                             <span className='font-bold text-lg text-green-600'>
                                                 {formatNumber(selectedProduct.price)} {selectedProduct.priceType === 'uz' ? 'сўм' : '$'}
                                             </span>
                                         </div>
                                     )}
 
-                                    <div className='flex justify-between items-center p-3 bg-purple-50 rounded-xl'>
-                                        <span className='text-gray-600'>Нарх тури:</span>
+                                    <div className={`flex justify-between items-center p-3 rounded-xl ${dark ? 'bg-purple-900' : 'bg-purple-50'
+                                        }`}>
+                                        <span className={textMuted}>Нарх тури:</span>
                                         <span className='font-semibold text-purple-600'>
                                             {selectedProduct.priceType === 'uz' ? 'Сўм' : 'Доллар'}
                                         </span>
                                     </div>
 
-                                    <div className='flex justify-between items-center p-3 bg-yellow-50 rounded-xl'>
-                                        <span className='text-gray-600'>Ҳолати:</span>
+                                    <div className={`flex justify-between items-center p-3 rounded-xl ${dark ? 'bg-yellow-900' : 'bg-yellow-50'
+                                        }`}>
+                                        <span className={textMuted}>Ҳолати:</span>
                                         <span className={`font-semibold ${selectedProduct.ready ? 'text-green-600' : 'text-yellow-600'
                                             }`}>
                                             {selectedProduct.ready ? 'Тайёр' : 'Хом ашё'}
                                         </span>
                                     </div>
 
-                                    <div className='flex justify-between items-center p-3 bg-gray-50 rounded-xl'>
-                                        <span className='text-gray-600'>Қўшилган:</span>
-                                        <span className='text-sm text-gray-600'>
+                                    <div className={`flex justify-between items-center p-3 rounded-xl ${dark ? 'bg-gray-700' : 'bg-gray-50'
+                                        }`}>
+                                        <span className={textMuted}>Қўшилган:</span>
+                                        <span className={`text-sm ${textMuted}`}>
                                             {new Date(selectedProduct.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>

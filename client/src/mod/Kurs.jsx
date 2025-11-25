@@ -1,17 +1,15 @@
-import { useState, useEffect, useRef } from 'react'
-import useSWR from 'swr'
-import { DollarSign, RefreshCw } from 'lucide-react'
+import { useContext, useEffect, useRef, useState } from 'react'
+import { ContextData } from '../contextData/Context'
+import useSWR from "swr"
+import { DollarSign, RefreshCw } from 'lucide-react';
 
-const fetcher = (url) =>
-    fetch(url).then(res => {
-        if (!res.ok) throw new Error('API хатоси')
-        return res.json()
-    })
-
+const fetcher = (url) => fetch(url).then(res => { if (!res.ok) throw new Error('API хатоси'); return res.json() })
 export const USDToUZSWidget = ({ position = 'bottom-right', refreshInterval = 60000 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [kurs, setKurs] = useState()
     const modalRef = useRef(null)
+
+    const { dark } = useContext(ContextData) // contextdan dark olamiz
 
     const { data, mutate } = useSWR(
         'https://cbu.uz/uz/arkhiv-kursov-valyut/json/',
@@ -29,7 +27,6 @@ export const USDToUZSWidget = ({ position = 'bottom-right', refreshInterval = 60
         if (apiRate) setKurs(apiRate)
     }, [apiRate])
 
-    // Ekranning boshqa joyiga bosilganda modalni yopish
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (modalRef.current && !modalRef.current.contains(event.target)) {
@@ -57,15 +54,16 @@ export const USDToUZSWidget = ({ position = 'bottom-right', refreshInterval = 60
         <div className={`${positionClasses[position]} z-50`}>
             {/* Widget */}
             <div
-                className="bg-white shadow-lg rounded-xl p-1 cursor-pointer flex items-center space-x-1"
+                className={`shadow-lg rounded-xl p-1 cursor-pointer flex items-center space-x-1
+                    ${dark ? 'bg-gray-800 text-white' : 'bg-white text-green-700'}`}
                 onClick={() => setIsModalOpen(!isModalOpen)}
             >
-                <DollarSign size={16} className="text-green-700" />
-                <span className="text-green-700 font-semibold">
-                    {kurs ? Number(kurs).toLocaleString("ru-RU") : '—'} <span className="text-sm">cўм</span>
+                <DollarSign size={16} className={dark ? "text-green-400" : "text-green-700"} />
+                <span className="font-semibold">
+                    {kurs ? Number(kurs).toLocaleString("ru-RU") : '—'} <span className="text-sm">{dark ? 'сўм' : 'cўм'}</span>
                 </span>
                 <RefreshCw
-                    className="w-4 h-4 text-gray-400 ml-2"
+                    className={`w-4 h-4 ml-2 ${dark ? 'text-gray-400' : 'text-gray-400'}`}
                     onClick={(e) => {
                         e.stopPropagation()
                         mutate()
@@ -77,19 +75,21 @@ export const USDToUZSWidget = ({ position = 'bottom-right', refreshInterval = 60
             {isModalOpen && data && (
                 <div
                     ref={modalRef}
-                    className="mt-2 w-72 max-h-80 overflow-y-auto bg-white border rounded-xl shadow-lg p-3"
+                    className={`mt-2 w-90 max-h-80 overflow-y-auto border rounded-xl shadow-lg p-3
+                        ${dark ? 'bg-gray-900 text-white border-gray-700' : 'bg-white text-black border-gray-200'}`}
                 >
-                    <h3 className="text-sm font-bold mb-2">Валюта курслари</h3>
+                    <h3 className="text-sm font-bold mb-2 ">Валюта курслари :</h3>
                     {data.map(item => (
                         <div
                             key={item.Ccy}
-                            className="flex justify-between mb-1 p-1 rounded hover:bg-gray-100 transition-colors"
+                            className={`flex justify-between mb-1 p-1 rounded transition-colors
+                                ${dark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                         >
-                            <span className="font-medium">{item.Ccy} ({item.CcyNm_UZ})</span>
+                            <span className="font-medium text-xs">{item.Ccy} ({item.CcyNm_UZ})</span>
                             <div className="text-right">
-                                <span>{Number(item.Rate).toLocaleString("ru-RU")} cўм</span>
+                                <span className='text-sm'>{Number(item.Rate).toLocaleString("ru-RU")} cўм</span>
                                 {item.Diff && (
-                                    <span className={`ml-2 text-xs ${item.Diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span className={`ml-2 text-xs ${item.Diff > 0 ? 'text-green-500' : 'text-red-500'}`}>
                                         {item.Diff > 0 ? `+${item.Diff}` : item.Diff}
                                     </span>
                                 )}
