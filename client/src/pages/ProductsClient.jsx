@@ -25,10 +25,7 @@ import {
     History,
     ChevronRight,
     ChevronLeft as ChevronLeftIcon,
-    Filter,
     RefreshCw,
-    Moon,
-    Sun
 } from 'lucide-react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
@@ -36,7 +33,7 @@ import { LoadingState } from '../components/loading-state'
 
 export const ClientProductsView = () => {
     const { data, error, isLoading, mutate } = useSWR('/products/clients', Fetch, {
-        refreshInterval: 3000,
+        refreshInterval: 50000,
         revalidateOnFocus: true,
         revalidateOnReconnect: true
     })
@@ -237,27 +234,6 @@ export const ClientProductsView = () => {
         }
     }
 
-    // Handle product edit
-    const handleEdit = (product) => {
-        setEditingProduct({ ...product })
-    }
-
-    // Handle product update
-    const handleUpdate = async () => {
-        if (!editingProduct) return
-
-        try {
-            setLoading(editingProduct._id)
-            await Fetch.put(`/products/${editingProduct._id}`, editingProduct)
-            setEditingProduct(null)
-            await mutate()
-        } catch (err) {
-            console.error('Update error:', err)
-            alert('❌ Сақлашда хатолик юз берди')
-        } finally {
-            setLoading(null)
-        }
-    }
 
     // Handle product delete
     const handleDelete = async (productId) => {
@@ -266,7 +242,7 @@ export const ClientProductsView = () => {
 
         try {
             setLoading(productId)
-            await Fetch.delete(`/products/${productId}`)
+            await Fetch.delete(`/products/in/${productId}`)
             await mutate()
         } catch (err) {
             console.error('Delete error:', err)

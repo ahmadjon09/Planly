@@ -2,6 +2,7 @@ import Clients from "../models/client.js"
 import { sendErrorResponse } from "../middlewares/sendErrorResponse.js"
 import Order from "../models/order.js"
 import History from "../models/history.js"
+import Input from "../models/input.js"
 
 export const GetNonClients = async (_, res) => {
     try {
@@ -67,7 +68,28 @@ export const GetClientsWithOrders = async (_, res) => {
     }
 };
 
-
+export const DeleteInProduct = async (req, res) => {
+    const { id } = req.params
+    try {
+        const deletedProduct = await Input.findByIdAndDelete(id)
+        if (!deletedProduct) {
+            return sendErrorResponse(res, 404, 'Product not found.')
+        }
+        return res
+            .status(200)
+            .json({ message: 'Product has been deleted successfully.' })
+    } catch (error) {
+        if (error.title === 'CastError') {
+            return sendErrorResponse(res, 400, 'Invalid product ID.', error)
+        }
+        return sendErrorResponse(
+            res,
+            500,
+            'Server Error. Please Try Again Later!',
+            error
+        )
+    }
+}
 
 
 
