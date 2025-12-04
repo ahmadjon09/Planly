@@ -7,6 +7,7 @@ const User = new mongoose.Schema({
   role: { type: String, required: true },
   ability: { type: String, enum: ["both", "ready", "!ready"], default: "both" },
   owner: { type: Boolean, default: false },
+  telegramId: { type: String, default: "---" },
   password: { type: String, required: true }
 })
 

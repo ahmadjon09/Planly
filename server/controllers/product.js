@@ -131,10 +131,6 @@ export const CreateNewProduct = async (req, res) => {
   }
 };
 
-
-
-
-
 export const GetAllProducts = async (_, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -158,7 +154,7 @@ export const GetAllProducts = async (_, res) => {
         return {
           ...product.toObject(),
           client: client || null,
-          deleted: !client   // client bo'lmasa deleted = true
+          deleted: !client
         };
       })
     );

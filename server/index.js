@@ -9,6 +9,7 @@ import UserRoutes from './routes/user.js'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import { getSystemHealth } from './controllers/health.js'
+import { fixPriceTypes } from './middlewares/Checker.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -55,11 +56,16 @@ const keepServerAlive = () => {
 }
 
 keepServerAlive()
+const checker = () => {
+  setInterval(() => fixPriceTypes(), 10 * 60 * 1000)
+}
+
 const startApp = async () => {
   const PORT = process.env.PORT || 3000
   try {
     await mongoose.connect(process.env.MONGODB_URL)
     console.log('✔️  MongoDB connected')
+    checker()
     app.listen(PORT, () =>
       console.log(`✔️  Server is running on port: ${PORT}
 👍 Server is running on http://localhost:${PORT}

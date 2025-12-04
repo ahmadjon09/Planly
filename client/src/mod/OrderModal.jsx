@@ -92,6 +92,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
     fetchData()
   }, [productType])
 
+
   // Product type o'zgarganda mahsulotlarni qayta yuklash
   useEffect(() => {
     if (isOpen) {
@@ -783,8 +784,9 @@ const ProductItem = ({ item, onQuantityChange, onInputQuantityChange, onRemove, 
           </button>
           <input
             type='number'
-            min='1'
+            min='0'
             max={item.stock}
+            step='any'
             value={item.quantity}
             onChange={e => onInputQuantityChange(item._id, e.target.value)}
             className={`w-12 text-center border-0 bg-transparent outline-none ${textClass}`}

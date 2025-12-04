@@ -1,4 +1,4 @@
-import { useState, useContext, useMemo, useEffect, useRef } from 'react'
+import { useState, useContext, useMemo, useEffect } from 'react'
 import useSWR from 'swr'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -33,13 +33,13 @@ import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
 import { LoadingState } from '../components/loading-state'
 
-export const ClientProductsView = () => {
+export const Boxes = () => {
     const { data, error, isLoading, mutate } = useSWR('/products/clients', Fetch, {
         refreshInterval: 50000,
         revalidateOnFocus: true,
         revalidateOnReconnect: true
     })
-    const { user, dark, setDark } = useContext(ContextData)
+    const { user, dark } = useContext(ContextData)
 
     const [searchPhone, setSearchPhone] = useState('')
     const [searchName, setSearchName] = useState('')
@@ -49,11 +49,11 @@ export const ClientProductsView = () => {
     const [loading, setLoading] = useState(null)
     const [showEditModal, setShowEditModal] = useState(false)
 
-    // Qarz to'lash state lari
-    const [debtUZ, setDebtUZ] = useState('')
-    const [debtEN, setDebtEN] = useState('')
-    const [debtLUZ, setDebtLUZ] = useState(false)
-    const [debtLEN, setDebtLEN] = useState(false)
+    // Qarz to'lash state lari - Yaxshilangan
+    const [debtPayment, setDebtPayment] = useState({
+        uz: { amount: '', loading: false },
+        en: { amount: '', loading: false }
+    })
 
     // Pagination state lari - localStorage bilan saqlash
     const [currentClientPage, setCurrentClientPage] = useState(() => {
@@ -123,17 +123,6 @@ export const ClientProductsView = () => {
             setSelectedClientId(null)
         }
     }, [selectedClient])
-
-    // Component unmount bo'lganda cleanup
-    useEffect(() => {
-        return () => {
-            // Faqat kerakli ma'lumotlarni saqlash
-            localStorage.setItem('clientProductsView_clientPage', currentClientPage)
-            if (selectedClient) {
-                localStorage.setItem('clientProductsView_selectedClientId', selectedClient._id)
-            }
-        }
-    }, [])
 
     const clients = (data?.data.data || []).filter(u => u.clietn === false)
 
@@ -295,6 +284,7 @@ export const ClientProductsView = () => {
             setLoading(productId)
             await Fetch.delete(`/products/in/${productId}`)
             await mutate()
+            alert('✅ Маҳсулот муваффақиятли ўчирилди')
         } catch (err) {
             console.error('Delete error:', err)
             alert('❌ Маҳсулотни ўчиришда хатолик юз берди')
@@ -389,92 +379,84 @@ export const ClientProductsView = () => {
         }
     }
 
-    const handleDeleteClient = async id => {
-        const confirmMessage = `⚠️Сиз ростан ҳам бу клиентни ўчирмоқчимисиз?\n\nБу амални кейин тиклаб бўлмайди!`
-        const confirmed = window.confirm(confirmMessage)
-        if (!confirmed) return
-
-        try {
-            const { data } = await Fetch.delete(`/products/client/${id}`)
-            mutate()
-            alert(`${data.message} ✅`)
-        } catch (err) {
-            console.error('Cancel error:', err)
-            alert('❌ Клиентни бекор ўчиришда хатолик юз берди.')
-        } finally {
-            setDeleting(null)
-        }
-    }
-
-    // Qarz to'lash funksiyasi (so'm)
-    const handlePayDebtUZ = async () => {
+    // Qarz to'lash funksiyasi (umumiy)
+    const handlePayDebt = async (currency) => {
         if (!selectedClient) {
             alert('❌ Мижоз танланмаган')
             return
         }
 
-        const amount = parseFloat(debtUZ.replace(/[^\d.]/g, ''))
+        const amountStr = debtPayment[currency].amount
+        const amount = parseFloat(amountStr.replace(/[^\d.]/g, ''))
+
         if (!amount || amount <= 0) {
             alert('❌ Тўлов суммасини киритинг')
             return
         }
 
+        // Check if payment amount exceeds debt
+        const clientDebt = selectedClient[`debt${currency.toUpperCase()}`] || 0
+        if (amount > clientDebt) {
+            const confirmOverpay = window.confirm(
+                `⚠️ Тўлов суммаси (${formatCurrency(amount, currency === 'uz' ? 'UZS' : 'USD')}) қарз суммасидан (${formatCurrency(clientDebt, currency === 'uz' ? 'UZS' : 'USD')}) ошса, ортиқча сумма берилган ҳисобланади. Давом этасизми?`
+            )
+            if (!confirmOverpay) return
+        }
+
         try {
-            setDebtLUZ(true)
-            await Fetch.post("/products/pay", {
+            setDebtPayment(prev => ({
+                ...prev,
+                [currency]: { ...prev[currency], loading: true }
+            }))
+
+            const response = await Fetch.post("/products/pay", {
                 clientId: selectedClient._id,
-                uz: amount
+                [currency]: amount
             })
 
-            setDebtUZ('')
+            // Reset input
+            setDebtPayment(prev => ({
+                ...prev,
+                [currency]: { ...prev[currency], amount: '', loading: false }
+            }))
+
             await mutate()
             alert("✅ Қарз муваффақиятли тўланди")
         } catch (error) {
             console.error('Pay debt error:', error)
-            alert("❌ Тўловда хатолик юз берди: " + (error.response?.data?.message || error.message))
+            const errorMessage = error.response?.data?.message || error.message || 'Тўловда номаълум хатолик'
+
+            // Handle specific errors
+            if (error.response?.status === 400) {
+                alert(`❌ Қарз тўлашда хатолик: ${errorMessage}`)
+            } else if (error.response?.status === 404) {
+                alert('❌ Мижоз топилмади')
+            } else {
+                alert(`❌ Тўловда хатолик юз берди: ${errorMessage}`)
+            }
         } finally {
-            setDebtLUZ(false)
+            setDebtPayment(prev => ({
+                ...prev,
+                [currency]: { ...prev[currency], loading: false }
+            }))
         }
     }
 
-    // Qarz to'lash funksiyasi (dollar)
-    const handlePayDebtEN = async () => {
-        if (!selectedClient) {
-            alert('❌ Мижоз танланмаган')
-            return
-        }
+    // Handle debt input changes
+    const handleDebtAmountChange = (currency, value) => {
+        // Allow only numbers and dots
+        const cleanedValue = value.replace(/[^\d.]/g, '')
 
-        const amount = parseFloat(debtEN.replace(/[^\d.]/g, ''))
-        if (!amount || amount <= 0) {
-            alert('❌ Тўлов суммасини киритинг')
-            return
-        }
+        // Ensure only one dot
+        const parts = cleanedValue.split('.')
+        const formattedValue = parts.length > 2
+            ? parts[0] + '.' + parts.slice(1).join('')
+            : cleanedValue
 
-        try {
-            setDebtLEN(true)
-            await Fetch.post("/products/pay", {
-                clientId: selectedClient._id,
-                en: amount
-            })
-
-            setDebtEN('')
-            await mutate()
-            alert("✅ Қарз муваффақиятли тўланди")
-        } catch (error) {
-            console.error('Pay debt error:', error)
-            alert("❌ Тўловда хатолик юз берди: " + (error.response?.data?.message || error.message))
-        } finally {
-            setDebtLEN(false)
-        }
-    }
-
-    // Handle debt input changes - allow only numbers and dots
-    const handleDebtUZChange = (value) => {
-        handleDecimalInput(value, setDebtUZ)
-    }
-
-    const handleDebtENChange = (value) => {
-        handleDecimalInput(value, setDebtEN)
+        setDebtPayment(prev => ({
+            ...prev,
+            [currency]: { ...prev[currency], amount: formattedValue }
+        }))
     }
 
     // History pagination hisoblash
@@ -530,6 +512,11 @@ export const ClientProductsView = () => {
         setSelectedClient(client)
         setCurrentProductPage(1)
         setCurrentHistoryPage(1)
+        // Reset debt payment inputs
+        setDebtPayment({
+            uz: { amount: '', loading: false },
+            en: { amount: '', loading: false }
+        })
     }
 
     const handleBackToClients = () => {
@@ -588,7 +575,7 @@ export const ClientProductsView = () => {
                         Юклашда хатолик
                     </h3>
                     <p className={dark ? 'text-red-200' : 'text-red-600'}>
-                        Таминотчилар маълумотларини юклашда хатолик юз берди. Илтимос, қайта уриниб кўринг.
+                        Қолдиқ товарлар маълумотларини юклашда хатолик юз берди. Илтимос, қайта уриниб кўринг.
                     </p>
                     <button
                         onClick={handleRefresh}
@@ -632,7 +619,7 @@ export const ClientProductsView = () => {
                                 <h1 className={`text-2xl md:text-3xl font-bold ${textColor}`}>
                                     {selectedClient
                                         ? `${selectedClient.name} маҳсулотлари`
-                                        : 'Таминотчилар ва маҳсулотлар'}
+                                        : 'Қолдиқ товарлар'}
                                 </h1>
                                 <p className={`${textMuted} mt-1`}>
                                     {selectedClient
@@ -694,68 +681,6 @@ export const ClientProductsView = () => {
                     </div>
                 </motion.div>
 
-                {/* Qarz to'lash section */}
-                {selectedClient && (
-                    <div className={`rounded-2xl shadow-lg p-6 border ${cardBg} ${borderColor}`}>
-                        <h3 className={`text-lg font-semibold ${textColor} mb-4 flex items-center gap-2`}>
-                            <Plus size={20} className='text-purple-500' />
-                            Қарзни ёпиш
-                        </h3>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                            {/* So'mda to'lash */}
-                            {selectedClient.debtUZ > 0 && (
-                                <div className='space-y-3 relative'>
-                                    <label className={`text-sm font-medium ${textMuted}`}>
-                                        Сўмда тўлаш (Қарз: {formatCurrency(selectedClient.debtUZ)}):
-                                    </label>
-                                    <input
-                                        type='text'
-                                        placeholder="Тўлов суммаси"
-                                        value={debtUZ}
-                                        onChange={e => handleDebtUZChange(e.target.value)}
-                                        className={`w-full pl-2 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
-                                    />
-                                    {debtUZ && (
-                                        <button
-                                            onClick={handlePayDebtUZ}
-                                            disabled={debtLUZ}
-                                            className={`absolute right-4 top-9 z-10 cursor-pointer ${dark ? 'hover:bg-blue-600 text-white' : 'hover:bg-blue-500 hover:text-white'
-                                                } rounded p-1 transition-colors duration-200`}
-                                        >
-                                            {debtLUZ ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                            {/* Dollarda to'lash */}
-                            {selectedClient.debtEN > 0 && (
-                                <div className='space-y-3 relative'>
-                                    <label className={`text-sm font-medium ${textMuted}`}>
-                                        Долларда тўлаш (Қарз: ${formatNumber(selectedClient.debtEN)}):
-                                    </label>
-                                    <input
-                                        type='text'
-                                        placeholder="Тўлов суммаси"
-                                        value={debtEN}
-                                        onChange={e => handleDebtENChange(e.target.value)}
-                                        className={`w-full pl-2 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300 ${inputBg}`}
-                                    />
-                                    {debtEN && (
-                                        <button
-                                            onClick={handlePayDebtEN}
-                                            disabled={debtLEN}
-                                            className={`absolute right-4 top-9 z-10 cursor-pointer ${dark ? 'hover:bg-blue-600 text-white' : 'hover:bg-blue-500 hover:text-white'
-                                                } rounded p-1 transition-colors duration-200`}
-                                        >
-                                            {debtLEN ? <Loader2 className='animate-spin' size={20} /> : <Send size={20} />}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
                 {!selectedClient && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -766,7 +691,7 @@ export const ClientProductsView = () => {
                             <div className={`rounded-2xl shadow-lg p-12 text-center border ${cardBg} ${borderColor}`}>
                                 <User className={`mx-auto mb-4 ${dark ? 'text-gray-600' : 'text-gray-400'}`} size={64} />
                                 <h3 className={`text-xl font-semibold mb-2 ${textMuted}`}>
-                                    Таминотчилар топилмади
+                                    Қолдиқ товарлар топилмади
                                 </h3>
                                 <p className={`${textMuted} mb-6`}>
                                     Қидирув шартларингизга мос келувчи Таминотчилар мавжуд эмас
@@ -786,6 +711,7 @@ export const ClientProductsView = () => {
                                 <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
                                     {currentClients.map((client, index) => {
                                         const productBalances = calculateClientProductBalances(client.products || [])
+                                        const overallBalances = calculateOverallBalances(client.products || [])
 
                                         return (
                                             <motion.div
@@ -794,10 +720,7 @@ export const ClientProductsView = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: index * 0.1 }}
                                                 onClick={() => handleClientSelect(client)}
-                                                className={`${(client.debtEN && client.debtEN > 0) || (client.debtUZ && client.debtUZ > 0)
-                                                    ? (dark ? "bg-red-900" : "bg-red-200")
-                                                    : cardBg
-                                                    } rounded-2xl shadow-lg p-6 border ${dark ? 'border-gray-700' : 'border-gray-200'
+                                                className={`rounded-2xl shadow-lg p-6 border ${dark ? 'border-gray-700' : 'border-gray-200'
                                                     } hover:shadow-xl ${dark ? 'hover:border-green-600' : 'hover:border-green-300'
                                                     } transition-all duration-300 cursor-pointer group`}
                                             >
@@ -814,20 +737,11 @@ export const ClientProductsView = () => {
                                                                 {client.phoneNumber}
                                                             </p>
                                                         </div>
-                                                        {user.role == "admin" &&
-                                                            <div
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="flex">
-                                                                <button
-                                                                    onClick={() => handleDeleteClient(client._id)}
-                                                                    className='p-2 bg-red-500 text-white rounded cursor-pointer hover:bg-red-600'
-                                                                ><Trash2 /></button>
-                                                            </div>}
                                                     </div>
                                                     <div className='text-right'>
                                                         <div className='flex items-center gap-1 text-blue-600 font-semibold text-lg'>
                                                             <Package size={18} />
-                                                            <span>{client.productCount || 0}</span>
+                                                            <span>{client.products?.length || 0}</span>
                                                         </div>
                                                         <div className={`text-xs ${textMuted}`}>маҳсулот</div>
                                                     </div>
@@ -840,24 +754,22 @@ export const ClientProductsView = () => {
                                                     </span>
                                                 </div>
 
-                                                {/* Qarz ma'lumotlari */}
-                                                {(client.debtUZ || client.debtEN) && (
-                                                    <div className={`mb-3 p-3 rounded-lg border ${dark ? 'bg-red-800 border-red-700' : 'bg-red-50 border-red-200'
+
+                                                {/* Overall Balances */}
+                                                {Object.keys(overallBalances).length > 0 && (
+                                                    <div className={`mb-3 p-3 rounded-lg border ${dark ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'
                                                         }`}>
-                                                        <h4 className={`text-sm font-semibold mb-1 ${dark ? 'text-red-200' : 'text-red-700'
-                                                            }`}>
-                                                            Қарзларим:
-                                                        </h4>
-                                                        {client.debtUZ && (
-                                                            <div className={dark ? 'text-red-200' : 'text-red-600'}>
-                                                                Сўм: {formatCurrency(client.debtUZ)}
-                                                            </div>
-                                                        )}
-                                                        {client.debtEN && (
-                                                            <div className={dark ? 'text-red-200' : 'text-red-600'}>
-                                                                Доллар: ${formatNumber(client.debtEN)}
-                                                            </div>
-                                                        )}
+                                                        <div className='space-y-2'>
+                                                            {Object.entries(overallBalances).map(([unit, quantity]) => (
+                                                                <div key={unit} className='flex justify-between items-center'>
+                                                                    <div className='flex items-center gap-2'>
+                                                                        {getUnitIcon(unit)}
+                                                                        <span className={textMuted}>{unit}:</span>
+                                                                    </div>
+                                                                    <span className={`font-bold ${textColor}`}>{formatNumber(quantity)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -961,32 +873,7 @@ export const ClientProductsView = () => {
                                             <span>{selectedClient.address || 'Манзил кўрсатилмаган'}</span>
                                         </div>
 
-                                        {/* Qarz ma'lumotlari */}
-                                        {(selectedClient.debtUZ || selectedClient.debtEN) && (
-                                            <div className={`p-3 rounded-lg border ${dark ? 'bg-red-800 border-red-700' : 'bg-red-50 border-red-200'
-                                                }`}>
-                                                <p className={`text-sm font-semibold mb-1 ${dark ? 'text-red-200' : 'text-red-700'
-                                                    }`}>Қарзлари:</p>
-                                                {selectedClient.debtUZ && (
-                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtUZ < 0
-                                                        ? (dark ? "text-green-400" : "text-green-600")
-                                                        : (dark ? "text-red-300" : "text-red-600")
-                                                        }`}>
-                                                        <TrendingUp size={16} />
-                                                        <span>Қарз: {formatCurrency(selectedClient.debtUZ)}</span>
-                                                    </div>
-                                                )}
-                                                {selectedClient.debtEN && (
-                                                    <div className={`flex items-center gap-2 text-sm ${selectedClient.debtEN < 0
-                                                        ? (dark ? "text-green-400" : "text-green-600")
-                                                        : (dark ? "text-red-300" : "text-red-600")
-                                                        }`}>
-                                                        <DollarSign size={16} />
-                                                        <span>Қарз ($): ${formatNumber(selectedClient.debtEN)}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+
                                     </div>
                                 </div>
 
@@ -1063,9 +950,7 @@ export const ClientProductsView = () => {
                                                         <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             Миқдор
                                                         </th>
-                                                        <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
-                                                            Нарх
-                                                        </th>
+
                                                         <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
                                                             Ҳолати
                                                         </th>
@@ -1109,15 +994,7 @@ export const ClientProductsView = () => {
                                                                 </div>
                                                             </td>
 
-                                                            <td className='px-6 py-4'>
-                                                                {user.role === 'admin' ? (
-                                                                    <div className='font-bold text-green-600'>
-                                                                        {formatNumber(product.price)} {product.priceType === 'uz' ? 'сўм' : '$'}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className={textMuted}>---</div>
-                                                                )}
-                                                            </td>
+
 
                                                             <td className='px-6 py-4'>
                                                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${product.ready
@@ -1141,34 +1018,9 @@ export const ClientProductsView = () => {
                                                                         className='flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200'
                                                                     >
                                                                         <Eye size={16} />
+                                                                        Кўриш
                                                                     </motion.button>
 
-                                                                    {user.role === 'admin' && (
-                                                                        <>
-                                                                            {product.price == 0 && <motion.button
-                                                                                whileHover={{ scale: 1.05 }}
-                                                                                whileTap={{ scale: 0.95 }}
-                                                                                onClick={() => handleEditClick(product)}
-                                                                                className='flex items-center gap-2 bg-yellow-500 text-white px-3 py-2 rounded-lg hover:bg-yellow-600 transition-colors duration-200'
-                                                                            >
-                                                                                <Edit size={16} />
-                                                                            </motion.button>}
-
-                                                                            <motion.button
-                                                                                whileHover={{ scale: 1.05 }}
-                                                                                whileTap={{ scale: 0.95 }}
-                                                                                onClick={() => handleDelete(product._id)}
-                                                                                disabled={loading === product._id}
-                                                                                className='flex items-center gap-2 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors duration-200'
-                                                                            >
-                                                                                {loading === product._id ? (
-                                                                                    <Loader2 className='animate-spin' size={16} />
-                                                                                ) : (
-                                                                                    <Trash2 size={16} />
-                                                                                )}
-                                                                            </motion.button>
-                                                                        </>
-                                                                    )}
                                                                 </div>
                                                             </td>
                                                         </motion.tr>
@@ -1209,113 +1061,7 @@ export const ClientProductsView = () => {
                                 </>
                             )}
 
-                            {/* History Section */}
-                            {selectedClient.history && selectedClient.history.length > 0 && (
-                                <div className={`rounded-2xl shadow-lg border ${cardBg} ${borderColor} overflow-hidden`}>
-                                    <div className={`p-6 border-b ${borderColor}`}>
-                                        <h3 className={`text-lg font-semibold ${textColor} flex items-center gap-2`}>
-                                            <History size={20} className='text-orange-500' />
-                                            Тарих ({formatNumber(selectedClient.history.length)} та)
-                                        </h3>
-                                    </div>
 
-                                    <div className='overflow-x-auto'>
-                                        <table className='w-full'>
-                                            <thead className={`bg-gradient-to-r ${dark ? 'from-orange-900 to-amber-900' : 'from-orange-50 to-amber-50'
-                                                }`}>
-                                                <tr>
-                                                    <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
-                                                        Сана
-                                                    </th>
-                                                    <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
-                                                        Тафсилот
-                                                    </th>
-                                                    <th className={`px-6 py-4 text-left text-sm font-semibold ${tableHeaderText}`}>
-                                                        Сумма
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                                                {currentHistory.map((historyItem, index) => (
-                                                    <motion.tr
-                                                        key={historyItem._id}
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: index * 0.05 }}
-                                                        className={dark ? 'hover:bg-orange-900' : 'hover:bg-orange-50'}
-                                                    >
-                                                        <td className={`px-6 py-4 text-sm ${textMuted}`}>
-                                                            {new Date(historyItem.createdAt).toLocaleDateString()}
-                                                            <br />
-                                                            <span className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-400'}`}>
-                                                                {new Date(historyItem.createdAt).toLocaleTimeString()}
-                                                            </span>
-                                                        </td>
-                                                        <td className='px-6 py-4'>
-                                                            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${historyItem.type === 'payment'
-                                                                ? (dark ? 'bg-green-900 text-green-200 border-green-700' : 'bg-green-100 text-green-800 border-green-200')
-                                                                : (dark ? 'bg-blue-900 text-blue-200 border-blue-700' : 'bg-blue-100 text-blue-800 border-blue-200')
-                                                                }`}>
-                                                                {historyItem.type === 'payment' ? 'Тўлов' : 'Тўлов'}
-                                                            </div>
-                                                        </td>
-
-                                                        <td className='px-6 py-4'>
-                                                            {historyItem.type == "uz" ? (
-                                                                <div className='font-bold text-green-600'>
-                                                                    {formatNumber(historyItem.price)} сўм
-                                                                </div>
-                                                            ) : historyItem.type == "en" ? (
-                                                                <div className='font-bold text-blue-600'>
-                                                                    {formatNumber(historyItem.price)} $
-                                                                </div>
-                                                            ) : (
-                                                                <div className={textMuted}>---</div>
-                                                            )}
-                                                        </td>
-                                                    </motion.tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Pagination Controls */}
-                                    {totalHistoryPages > 1 && (
-                                        <div className={`p-4 border-t ${borderColor} ${dark ? 'bg-gray-700' : 'bg-gray-50'
-                                            }`}>
-                                            <div className='flex items-center justify-between'>
-                                                <div className={`text-sm ${textMuted}`}>
-                                                    Саҳифа {currentHistoryPage} / {totalHistoryPages}
-                                                </div>
-                                                <div className='flex items-center gap-2'>
-                                                    <button
-                                                        onClick={goToPrevHistoryPage}
-                                                        disabled={currentHistoryPage === 1}
-                                                        className={`flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ${dark
-                                                            ? 'bg-gray-600 border-gray-500 text-white hover:bg-gray-500'
-                                                            : 'bg-white border-gray-300 hover:bg-gray-50'
-                                                            }`}
-                                                    >
-                                                        <ChevronLeftIcon size={16} />
-                                                        Олдинги
-                                                    </button>
-                                                    <button
-                                                        onClick={goToNextHistoryPage}
-                                                        disabled={currentHistoryPage === totalHistoryPages}
-                                                        className={`flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ${dark
-                                                            ? 'bg-gray-600 border-gray-500 text-white hover:bg-gray-500'
-                                                            : 'bg-white border-gray-300 hover:bg-gray-50'
-                                                            }`}
-                                                    >
-                                                        Кейинги
-                                                        <ChevronRight size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </motion.div>
                     )
                 })()}
@@ -1407,147 +1153,7 @@ export const ClientProductsView = () => {
                 )}
             </AnimatePresence>
 
-            {/* Edit Product Modal */}
-            <AnimatePresence>
-                {showEditModal && editingProduct && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className={`w-full max-w-md rounded-3xl shadow-2xl relative ${modalBg}`}
-                        >
-                            <button
-                                onClick={() => {
-                                    setShowEditModal(false)
-                                    setEditingProduct(null)
-                                }}
-                                className={`absolute top-4 right-4 z-10 rounded-full p-2 shadow-lg transition-colors duration-200 ${dark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-100'
-                                    }`}
-                            >
-                                <X size={20} className={textColor} />
-                            </button>
 
-                            <div className='p-6'>
-                                <div className='text-center mb-6'>
-                                    <div className='bg-gradient-to-r from-yellow-500 to-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg'>
-                                        <AlertTriangle className='text-white' size={24} />
-                                    </div>
-                                    <h2 className={`text-xl font-bold ${textColor}`}>
-                                        Маҳсулотни янгилаш
-                                    </h2>
-                                    <p className={`text-sm ${textMuted} mt-2`}>
-                                        {editingProduct.title}
-                                    </p>
-                                    <div className={`mt-3 p-3 rounded-lg ${dark ? 'bg-yellow-900' : 'bg-yellow-50'}`}>
-                                        <p className={`text-sm font-medium ${dark ? 'text-yellow-200' : 'text-yellow-700'}`}>
-                                            ⚠️ Эслатма: Маҳсулот номини ўзгартириб бўлмайди!
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className='space-y-4'>
-                                    <div>
-                                        <label className={`block text-sm font-medium mb-2 ${textMuted}`}>
-                                            Нарх
-                                        </label>
-                                        <div className='flex gap-2'>
-                                            <input
-                                                type='text'
-                                                value={editingProduct.price}
-                                                onChange={(e) => handleInputChange('price', e.target.value)}
-                                                className={`flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
-                                                    }`}
-                                                placeholder='0'
-                                            />
-                                            <select
-                                                value={editingProduct.priceType}
-                                                onChange={(e) => handleInputChange('priceType', e.target.value)}
-                                                className={`border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
-                                                    }`}
-                                            >
-                                                <option value='uz'>сўм</option>
-                                                <option value='en'>$</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* <div>
-                                        <label className={`block text-sm font-medium mb-2 ${textMuted}`}>
-                                            Миқдор
-                                        </label>
-                                        <div className='flex gap-2 items-center'>
-                                            <input
-                                                type='text'
-                                                value={editingProduct.stock}
-                                                onChange={(e) => handleInputChange('stock', e.target.value)}
-                                                className={`flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
-                                                    }`}
-                                                placeholder='0'
-                                            />
-                                            <span className={textMuted}>{editingProduct.unit}</span>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-sm font-medium mb-2 ${textMuted}`}>
-                                            Ҳолати
-                                        </label>
-                                        <select
-                                            value={editingProduct.ready}
-                                            onChange={(e) => handleInputChange('ready', e.target.value)}
-                                            className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
-                                                }`}
-                                        >
-                                            <option value={true}>Тайёр маҳсулот</option>
-                                            <option value={false}>Хом ашё</option>
-                                        </select>
-                                    </div> */}
-
-                                    <div className='pt-4'>
-                                        <div className='grid grid-cols-2 gap-3'>
-                                            <button
-                                                onClick={() => {
-                                                    setShowEditModal(false)
-                                                    setEditingProduct(null)
-                                                }}
-                                                className={`py-3 rounded-lg font-medium transition-colors duration-200 ${dark
-                                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                    }`}
-                                            >
-                                                Бекор қилиш
-                                            </button>
-                                            <button
-                                                onClick={handleUpdateProduct}
-                                                disabled={loading === editingProduct._id}
-                                                className='py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 transition-colors duration-200 flex items-center justify-center gap-2'
-                                            >
-                                                {loading === editingProduct._id ? (
-                                                    <>
-                                                        <Loader2 className='animate-spin' size={18} />
-                                                        Янгиланишда...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Save size={18} />
-                                                        Янгилаш
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     )
 }

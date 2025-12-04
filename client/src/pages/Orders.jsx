@@ -170,6 +170,23 @@ export const ViewOrders = () => {
     }
   }
 
+  const handleDeleteClient = async id => {
+    const confirmMessage = `⚠️Сиз ростан ҳам бу клиентни ўчирмоқчимисиз?\n\nБу амални кейин тиклаб бўлмайди!`
+    const confirmed = window.confirm(confirmMessage)
+    if (!confirmed) return
+
+    try {
+      const { data } = await Fetch.delete(`/products/client/${id}`)
+      mutate()
+      alert(`${data.message} ✅`)
+    } catch (err) {
+      console.error('Cancel error:', err)
+      alert('❌ Клиентни бекор ўчиришда хатолик юз берди.')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   // Barcha mahsulot narxlarini yangilash - YANGILANGAN
   const handleBulkPriceUpdate = async () => {
     setHideButton(true)
@@ -318,6 +335,7 @@ export const ViewOrders = () => {
       </div>
     )
   }
+  console.log(selectedOrder); // uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-4 md:p-6 transition-colors duration-300`}>
@@ -548,6 +566,15 @@ export const ViewOrders = () => {
                             <h3 className={`font-bold text-lg ${textColor}`}>{client.name || 'Номаълум'}</h3>
                             <p className={`text-sm ${textMuted}`}>{client.phoneNumber}</p>
                           </div>
+                          {user.role == "admin" &&
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex">
+                              <button
+                                onClick={() => handleDeleteClient(client._id)}
+                                className='p-2 bg-red-500 text-white rounded cursor-pointer hover:bg-red-600'
+                              ><Trash2 /></button>
+                            </div>}
                         </div>
                         <div className='text-right'>
                           <div className='flex items-center gap-1 text-green-600 font-semibold text-lg'>
@@ -1032,6 +1059,7 @@ export const ViewOrders = () => {
                         <div className='flex-1'>
                           <p className={`font-medium ${textColor}`}>{product.product?.title || ""}</p>
                           <p className={`text-sm ${textMuted}`}>{product.amount} {product.unit}</p>
+                          <p className='text-green-600'>{product.product.price} {product.product.priceType == "en" ? "$" : "сўм"}</p>
                         </div>
 
                         {user.role === 'admin' && product.editing ? (

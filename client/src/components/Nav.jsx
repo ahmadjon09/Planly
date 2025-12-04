@@ -37,6 +37,7 @@ export const Nav = () => {
     const allDropdowns = [
       { name: 'Тайёр маҳсулотлар', path: '/products/ready', icon: <Circle color='blue' size={18} /> },
       { name: 'Хом ашё', path: '/products/raw', icon: <Circle color='red' size={18} /> },
+      { name: "Қолдиқ товарлар", path: "/box", icon: <Boxes size={18} /> }
     ];
 
     if (ability === "both") {
@@ -53,6 +54,7 @@ export const Nav = () => {
 
     return allDropdowns;
   };
+
 
   const getWorkersMenu = (role) => {
     const baseItems = [
@@ -78,28 +80,17 @@ export const Nav = () => {
       dropdownItems: getSkladMenu(user.ability)
     },
     {
-      name: 'Ходимлар',
-      path: '/workers',
-      icon: <UserRoundPen size={20} />,
-      hasDropdown: true,
-      dropdownItems: getWorkersMenu(user.role)
-    },
-    {
       name: 'Буюртмалар',
       path: '/orders',
       icon: <ReceiptText size={20} />,
       hasDropdown: false
     },
     {
-      name: 'Статистика',
-      path: '/static',
-      icon: <BarChart3 size={20} />,
+      name: 'Ходимлар',
+      path: '/workers',
+      icon: <UserRoundPen size={20} />,
       hasDropdown: true,
-      dropdownItems: [
-        { name: 'Умумий қарзлар', path: '/static', icon: <PieChart size={18} /> },
-        { name: 'Таминотчилар', path: '/static/products', icon: <Users size={18} /> },
-        // { name: 'Ойлик таҳлил', path: '/static/monthly', icon: <TrendingUp size={18} /> }
-      ]
+      dropdownItems: getWorkersMenu(user.role)
     },
     ...(user.role === 'admin' ? [
       {
@@ -110,6 +101,17 @@ export const Nav = () => {
         dropdownItems: [
           { name: 'Барча aдминлар', path: '/admin', icon: <Users size={18} /> },
           { name: 'Админ қўшиш', path: '/user/add-admin', icon: <UserPlus size={18} /> }
+        ]
+      },
+      {
+        name: 'Статистика',
+        path: '/static',
+        icon: <BarChart3 size={20} />,
+        hasDropdown: true,
+        dropdownItems: [
+          { name: 'Умумий қарзлар', path: '/static', icon: <PieChart size={18} /> },
+          { name: 'Таминотчилар', path: '/static/products', icon: <Users size={18} /> },
+          { name: 'Клиентлар', path: '/static/clients', icon: <Users size={18} /> }
         ]
       },
     ] : [])

@@ -20,7 +20,7 @@ export const Ping = () => {
       const end = performance.now()
       const latency = Number((end - start).toFixed())
 
-      setIsOffline(latency > 5000)
+      setIsOffline(latency > 10000)
     } catch {
       setIsOffline(true)
     }

@@ -262,10 +262,10 @@ export const Admins = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                       className={`transition-all duration-200 group ${admin._id === isCurrentUser
-                          ? currentUserRowBg
-                          : admin.owner
-                            ? ownerRowBg
-                            : tableRowHover
+                        ? currentUserRowBg
+                        : admin.owner
+                          ? ownerRowBg
+                          : tableRowHover
                         }`}
                     >
                       {/* Admin Info */}
@@ -307,16 +307,16 @@ export const Admins = () => {
                               {admin.phoneNumber}
                             </span>
                           </a>
-                          {admin.email && (
+                          {admin.telegramId && (
                             <a
-                              href={`mailto:${admin.email}`}
+                              href={`mailto:${admin.telegramId}`}
                               className='flex items-center gap-3 transition-colors text-sm group'
                             >
                               <div className={`p-2 rounded-lg transition-colors ${dark ? 'bg-gray-700 group-hover:bg-gray-600 text-gray-300' : 'bg-gray-100 group-hover:bg-gray-200 text-gray-600 hover:text-gray-700'}`}>
                                 <Mail className='h-4 w-4' />
                               </div>
                               <span className={`group-hover:underline ${textMuted}`}>
-                                {admin.email}
+                                {admin.telegramId}
                               </span>
                             </a>
                           )}
@@ -383,8 +383,8 @@ export const Admins = () => {
                   <button
                     onClick={() => setSearchTerm('')}
                     className={`px-6 py-3 border rounded-xl transition-colors font-semibold ${dark
-                        ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     Филтрни тозалаш

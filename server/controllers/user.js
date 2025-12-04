@@ -11,7 +11,7 @@ export const RegisterUser = async (req, res) => {
 
     const existingUser = await User.findOne({ phoneNumber })
     if (existingUser) {
-      return sendErrorResponse(res, 400, 'User already exists.')
+      return sendErrorResponse(res, 400, 'Бундай фойдаланувчи аллақачон мавжуд.')
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -28,7 +28,7 @@ export const RegisterUser = async (req, res) => {
     await newUser.save()
 
     return res.status(201).json({
-      message: 'User registered successfully',
+      message: 'Фойдаланувчи муваффақиятли рўйхатдан ўтди',
       user: {
         id: newUser._id,
         phoneNumber: newUser.phoneNumber,
@@ -41,7 +41,7 @@ export const RegisterUser = async (req, res) => {
     return sendErrorResponse(
       res,
       500,
-      'Server Error. Please Try Again Later!',
+      'Сервер хатолиги. Илтимос, кейинроқ уриниб кўринг!',
       error
     )
   }
@@ -53,12 +53,12 @@ export const LoginUser = async (req, res) => {
 
     const user = await User.findOne({ phoneNumber })
     if (!user) {
-      return sendErrorResponse(res, 404, 'User not found.')
+      return sendErrorResponse(res, 404, 'Фойдаланувчи топилмади.')
     }
 
     const isMatch = await bcrypt.compare(password, user.password)
     if (!isMatch) {
-      return sendErrorResponse(res, 400, 'Invalid credentials.')
+      return sendErrorResponse(res, 400, 'Нотўғри логин ёки пароль.')
     }
 
     const token = jwt.sign({ id: user._id, role: user.role }, KEY, {
@@ -66,7 +66,7 @@ export const LoginUser = async (req, res) => {
     })
 
     return res.status(200).json({
-      message: 'Login successful',
+      message: 'Кириш муваффақиятли амалга оширилди',
       token,
       user: {
         id: user._id,
@@ -80,7 +80,7 @@ export const LoginUser = async (req, res) => {
     return sendErrorResponse(
       res,
       500,
-      'Server Error. Please Try Again Later!',
+      'Сервер хатолиги. Илтимос, кейинроқ уриниб кўринг!',
       error
     )
   }
@@ -90,14 +90,14 @@ export const GetAllUsers = async (_, res) => {
   try {
     const users = await User.find().select('-password')
     if (users.length === 0) {
-      return res.status(404).json({ message: 'No users found.' })
+      return res.status(404).json({ message: 'Ҳозирча ҳеч қандай фойдаланувчи йўқ.' })
     }
     return res.status(200).json({ data: users })
   } catch (error) {
     return sendErrorResponse(
       res,
       500,
-      'Server Error. Please Try Again Later!',
+      'Сервер хатолиги. Илтимос, кейинроқ уриниб кўринг!',
       error
     )
   }
@@ -108,14 +108,14 @@ export const GetOneUser = async (req, res) => {
   try {
     const user = await User.findById(id).select('-password')
     if (!user) {
-      return sendErrorResponse(res, 404, 'User not found.')
+      return sendErrorResponse(res, 404, 'Фойдаланувчи топилмади.')
     }
     return res.status(200).json({ data: user })
   } catch (error) {
     return sendErrorResponse(
       res,
       500,
-      'Server Error. Please Try Again Later!',
+      'Сервер хатолиги. Илтимос, кейинроқ уриниб кўринг!',
       error
     )
   }
@@ -124,12 +124,12 @@ export const GetOneUser = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const token = (req.headers.authorization || '').replace(/Bearer\s?/, '')
-    if (!token) return sendErrorResponse(res, 401, 'Access not allowed! 📛')
+    if (!token) return sendErrorResponse(res, 401, 'Кириш рухсат этилмаган!')
 
     const decoded = jwt.verify(token, KEY)
     let user = await User.findById(decoded.id)
     if (!user) {
-      return res.status(404).json({ message: 'User not found!' })
+      return res.status(404).json({ message: 'Фойдаланувчи топилмади!' })
     }
 
     return res.status(200).json({ data: user })
@@ -152,18 +152,18 @@ export const UpdateUser = async (req, res) => {
     }).select('-password')
 
     if (!updatedUser) {
-      return sendErrorResponse(res, 404, 'User not found.')
+      return sendErrorResponse(res, 404, 'Фойдаланувчи топилмади.')
     }
 
     return res.status(200).json({
-      message: 'User updated successfully',
+      message: 'Фойдаланувчи маълумотлари муваффақиятли янланди',
       data: updatedUser
     })
   } catch (error) {
     return sendErrorResponse(
       res,
       500,
-      'Server Error. Please Try Again Later!',
+      'Сервер хатолиги. Илтимос, кейинроқ уриниб кўринг!',
       error
     )
   }
@@ -174,16 +174,16 @@ export const DeleteUser = async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(id)
     if (!deletedUser) {
-      return sendErrorResponse(res, 404, 'User not found.')
+      return sendErrorResponse(res, 404, 'Фойдаланувчи топилмади.')
     }
     return res
       .status(200)
-      .json({ message: 'User has been deleted successfully.' })
+      .json({ message: 'Фойдаланувчи муваффақиятли ўчирилди.' })
   } catch (error) {
     return sendErrorResponse(
       res,
       500,
-      'Server Error. Please Try Again Later!',
+      'Сервер хатолиги. Илтимос, кейинроқ уриниб кўринг!',
       error
     )
   }

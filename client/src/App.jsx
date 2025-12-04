@@ -15,6 +15,7 @@ import { Workers } from './pages/Workers'
 import { StatsPage } from './pages/StatsPage'
 import { ViewOrders } from './pages/Orders'
 import { ClientProductsView } from './pages/ProductsClient'
+import { Boxes } from './pages/Boxes'
 
 export default function App() {
   const { setUser, user, netErr } = useContext(ContextData)
@@ -63,6 +64,8 @@ export default function App() {
     isAdmin && { path: 'user', element: <UserManagement /> },
     { path: 'static', element: <StatsPage /> },
     { path: 'static/products', element: <ClientProductsView /> },
+    { path: 'static/clients', element: <ViewOrders /> },
+    { path: 'box', element: <Boxes /> },
     { path: 'orders', element: <ViewOrders /> },
     { path: 'admin', element: <Admins /> },
     { path: 'workers', element: <Workers /> },

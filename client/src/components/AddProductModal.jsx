@@ -314,8 +314,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                 <button
                   onClick={handleClearClient}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${dark
-                      ? 'text-red-400 hover:text-red-300 bg-red-900 hover:bg-red-800'
-                      : 'text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100'
+                    ? 'text-red-400 hover:text-red-300 bg-red-900 hover:bg-red-800'
+                    : 'text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100'
                     }`}
                 >
                   <X size={16} />
@@ -378,8 +378,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                           key={client._id}
                           onClick={() => handleClientSelect(client)}
                           className={`p-3 cursor-pointer border-b ${dark
-                              ? `${dropdownItemHover} border-gray-700`
-                              : `${dropdownItemHover} border-gray-100`
+                            ? `${dropdownItemHover} border-gray-700`
+                            : `${dropdownItemHover} border-gray-100`
                             } last:border-b-0`}
                         >
                           <div className='flex justify-between items-start'>
@@ -470,8 +470,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                   <button
                     onClick={() => removeRow(i)}
                     className={`flex items-center gap-2 transition-all px-3 py-2 rounded-lg text-sm font-medium ${dark
-                        ? 'text-red-400 hover:bg-red-900'
-                        : 'text-red-600 hover:bg-red-50'
+                      ? 'text-red-400 hover:bg-red-900'
+                      : 'text-red-600 hover:bg-red-50'
                       }`}
                   >
                     <Trash2 size={16} /> Ўчириш
@@ -498,30 +498,28 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                 </div>
 
                 {/* 💰 Нархи */}
-                {user.role === 'admin' && (
-                  <div className='space-y-2'>
-                    <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
-                      <DollarSign size={16} className='text-green-500' />
-                      Нархи <span className='text-red-500'>*</span>
-                    </label>
-                    <div className='relative'>
-                      <input
-                        type='text'
-                        value={p.price}
-                        onChange={e =>
-                          handleChange(i, 'price', e.target.value)
-                        }
-                        className={`w-full border rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
-                        placeholder='0'
-                        required
-                      />
-                      <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-sm ${dark ? 'text-gray-400' : 'text-gray-500'
-                        }`}>
-                        {p.priceType == "uz" ? "сўм" : "$"}
-                      </span>
-                    </div>
+                <div className='space-y-2'>
+                  <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
+                    <DollarSign size={16} className='text-green-500' />
+                    Нархи <span className='text-red-500'>*</span>
+                  </label>
+                  <div className='relative'>
+                    <input
+                      type='text'
+                      value={p.price}
+                      onChange={e =>
+                        handleChange(i, 'price', e.target.value)
+                      }
+                      className={`w-full border rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
+                      placeholder='0'
+                      required
+                    />
+                    <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-sm ${dark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                      {p.priceType == "uz" ? "сўм" : "$"}
+                    </span>
                   </div>
-                )}
+                </div>
 
                 {/* 📦 Миқдор */}
                 <div className='space-y-2'>
@@ -624,8 +622,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
           <button
             onClick={addRow}
             className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl transition-all font-medium w-full sm:w-auto ${dark
-                ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              ? 'bg-gray-700 hover:bg-gray-600 text-white'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               }`}
           >
             <Plus size={18} />
@@ -636,8 +634,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
             <button
               onClick={() => setOpen(false)}
               className={`px-6 py-3 rounded-xl border transition-all font-medium w-full sm:w-auto ${dark
-                  ? 'border-gray-600 hover:bg-gray-700 text-white'
-                  : 'border-gray-300 hover:bg-gray-50 text-gray-700'
+                ? 'border-gray-600 hover:bg-gray-700 text-white'
+                : 'border-gray-300 hover:bg-gray-50 text-gray-700'
                 }`}
             >
               Бекор қилиш
@@ -667,7 +665,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
         <div className={`text-center text-sm pt-2 ${textMuted}`}>
           <p>
             Ҳар бир маҳсулот учун номи мажбурий.{' '}
-            {user.role === 'admin' && 'Нархи ҳам мажбурий.'}
+            Нархи ҳам мажбурий.
           </p>
         </div>
       </div>

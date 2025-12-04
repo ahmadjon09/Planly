@@ -7,6 +7,7 @@ const InputSchema = new mongoose.Schema(
         priceType: { type: String, enum: ["uz", "en"], default: "uz" },
         ID: { type: Number, required: true },
         stock: { type: Number, default: 1 },
+        count: { type: Number, default: 0 },
         unit: {
             type: String,
             enum: ['дона', 'кг', 'метр', 'литр', 'м²', 'м³', 'сет', 'упаковка'],

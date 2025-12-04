@@ -27,13 +27,12 @@ import { LoadingState } from '../components/loading-state'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export const ProductsPage = () => {
-  const { user, dark, setDark } = useContext(ContextData)
+  const { user, dark } = useContext(ContextData)
   const { type } = useParams()
 
   const apiEndpoint = type === 'ready' ? '/products/ready' : '/products/raw'
 
   const { data, error, isLoading, mutate } = useSWR(apiEndpoint, Fetch, {
-    refreshInterval: 5000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true
   })

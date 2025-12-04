@@ -11,7 +11,7 @@ import {
   UpdateProduct
 } from '../controllers/product.js'
 import isExisted from '../middlewares/isExisted.js'
-import { DeleteInProduct } from '../controllers/client.js'
+import { DeleteClient, DeleteInProduct, UpdateInProduct } from '../controllers/client.js'
 
 const router = express.Router()
 
@@ -23,7 +23,9 @@ router.get('/raw', isExisted, GetAllNotReadyProducts)
 router.get('/one/:id', isExisted, GetOneProduct)
 router.post('/create', isExisted, CreateNewProduct)
 router.put('/:id', isExisted, UpdateProduct)
+router.put('/in/:id', isExisted, UpdateInProduct)
 router.delete('/:id', isExisted, DeleteProduct)
 router.delete('/in/:id', isExisted, DeleteInProduct)
+router.delete('/client/:id', isExisted, DeleteClient)
 
 export default router
