@@ -1059,7 +1059,7 @@ export const ViewOrders = () => {
                         <div className='flex-1'>
                           <p className={`font-medium ${textColor}`}>{product.product?.title || ""}</p>
                           <p className={`text-sm ${textMuted}`}>{product.amount} {product.unit}</p>
-                          <p className='text-green-600'>{product.product.price} {product.product.priceType == "en" ? "$" : "сўм"}</p>
+                          {product.product && <p className='text-green-600'>{product.product.price} {product.product.priceType == "en" ? "$" : "сўм"}</p>}
                         </div>
 
                         {user.role === 'admin' && product.editing ? (

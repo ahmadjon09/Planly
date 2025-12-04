@@ -3,8 +3,8 @@ import Cookies from 'js-cookie'
 
 const origin = window.location.origin;
 // const BASE_URL = `https://planly-beta.onrender.com/api`
-// const BASE_URL = `http://localhost:7777/api`
-const BASE_URL = `${origin}/api`
+const BASE_URL = `http://localhost:7777/api`
+// const BASE_URL = `${origin}/api`
 
 localStorage.setItem('base_api', BASE_URL)
 
