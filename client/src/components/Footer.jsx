@@ -2,6 +2,7 @@ import { ArrowUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useContext } from 'react'
 import { ContextData } from '../contextData/Context'
+import { telegram } from '../assets/js/i'
 
 export const Footer = () => {
   const { dark } = useContext(ContextData)
@@ -65,7 +66,7 @@ export const Footer = () => {
           <b className="hover:underline">
             {' '}
             <a
-              href="https://t.me/cc_ZYN"
+              href={telegram}
               target="_blank"
               rel="noopener noreferrer"
             >

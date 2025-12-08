@@ -9,25 +9,26 @@ import {
   Ruler,
   User,
   Phone,
-  MapPin,
   Search,
-  ChevronLeft
+  Hash,
 } from 'lucide-react'
 import { useState, useContext, useEffect } from 'react'
 import Fetch from '../middlewares/fetcher'
 import { ContextData } from '../contextData/Context'
 
-export default function AddProductModal({ open, setOpen, mutate }) {
+export default function AddProductModal({ open, setOpen, mutate, type }) {
   const { user, dark } = useContext(ContextData)
+  const productType = type
+
   const [products, setProducts] = useState([
     {
       title: '',
       price: '',
       stock: '',
       unit: 'дона',
-      ready: false,
-      ID: '',
-      priceType: 'uz'
+      ready: productType === 'ready',
+      priceType: 'en', // Default 'en' (dollar)
+      count: '' // Faqat unit "дона" bo'lmaganda ishlatiladi
     }
   ])
 
@@ -41,8 +42,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
   const [clientData, setClientData] = useState({
     clientId: '',
     name: '',
-    phoneNumber: '',
-    address: ''
+    phoneNumber: ''
   })
 
   const availableUnits = [
@@ -53,15 +53,28 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     'м²',
     'м³',
     'сет',
-    'упаковка'
+    'упаковка',
+    'пакет',
+    'коробка'
   ]
 
-  // 🔍 Clientlarni yuklash - products/clients endpointidan
+  // 🔍 Clientlarni yuklash
   useEffect(() => {
     if (open) {
       fetchClients()
     }
   }, [open])
+
+  // URL'dan type parametrini o'qish
+  useEffect(() => {
+    if (productType === 'ready') {
+      setProducts(prev => prev.map(p => ({
+        ...p,
+        ready: true,
+        priceType: 'en'
+      })))
+    }
+  }, [productType, open])
 
   const fetchClients = async () => {
     try {
@@ -69,7 +82,6 @@ export default function AddProductModal({ open, setOpen, mutate }) {
       setClients((response.data?.data || []).filter(c => c.clietn === false));
     } catch (error) {
       console.error('Clientlarni yuklashda xatolik:', error)
-      // Agar products/clients ishlamasa, oddiy clients endpointiga murojaat qilamiz
       try {
         const backupResponse = await Fetch.get('/clients')
         setClients(backupResponse.data || [])
@@ -79,7 +91,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     }
   }
 
-  // 🔄 Number filter function - faqat raqamlar va nuqta/rulon
+  // 🔄 Number filter function
   const filterNumbers = (value) => {
     return value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
   }
@@ -89,10 +101,17 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     const newProducts = [...products]
 
     // Agar number field bo'lsa, faqat raqamlarga filter qo'llaymiz
-    if (field === 'price' || field === 'stock') {
+    if (field === 'price' || field === 'stock' || field === 'count') {
       newProducts[i][field] = filterNumbers(value)
     } else {
       newProducts[i][field] = value
+    }
+
+    // Agar unit "дона" ga o'zgarsa, count ni tozalash
+    if (field === 'unit') {
+      if (value === 'дона') {
+        newProducts[i].count = ''
+      }
     }
 
     setProducts(newProducts)
@@ -112,8 +131,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     setClientData({
       clientId: client._id,
       name: client.name,
-      phoneNumber: client.phoneNumber,
-      address: client.address || ''
+      phoneNumber: client.phoneNumber
     })
     setShowClientDropdown(false)
     setSearchTerm('')
@@ -125,13 +143,12 @@ export default function AddProductModal({ open, setOpen, mutate }) {
     setClientData({
       clientId: '',
       name: '',
-      phoneNumber: '',
-      address: ''
+      phoneNumber: ''
     })
     setSearchTerm('')
   }
 
-  // ➕ Add/remove rows
+  // ➕ Yangi product qator qo'shish
   const addRow = () =>
     setProducts([
       ...products,
@@ -140,67 +157,109 @@ export default function AddProductModal({ open, setOpen, mutate }) {
         price: '',
         stock: '',
         unit: 'дона',
-        ready: false,
-        ID: '',
-        priceType: 'uz'
+        ready: productType === 'ready' ? true : false,
+        priceType: 'en',
+        count: ''
       }
     ])
 
+  // ❌ Product qatorini o'chirish
   const removeRow = i => setProducts(products.filter((_, idx) => idx !== i))
 
-  // 💾 Submit
-  const handleSubmit = async () => {
-    // Validate required fields
+  // ✅ Form validation
+  const validateForm = () => {
+    // Client validation
+    if (!clientData.name.trim() || !clientData.phoneNumber.trim()) {
+      alert('❌ Клиент исми ва телефон рақамини киритинг')
+      return false
+    }
+
+    // Products validation
     for (let i = 0; i < products.length; i++) {
       const p = products[i]
+
+      // Title required
       if (!p.title.trim()) {
         alert(`❌ ${i + 1}-маҳсулот учун номини киритинг`)
-        return
+        return false
       }
-      if (user.role === 'admin') {
-        if (!p.price || p.price === '' || Number(p.price) <= 0) {
-          alert(`❌ ${i + 1}-маҳсулот учун нархини тўғри киритинг`)
-          return
-        }
+
+      // Price majburiy
+      if (!p.price || Number(p.price) <= 0) {
+        alert(`❌ ${i + 1}-маҳсулот учун нархини тўғри киритинг`)
+        return false
+      }
+
+      // Stock required
+      if (!p.stock || Number(p.stock) <= 0) {
+        alert(`❌ ${i + 1}-маҳсулот учун миқдорни киритинг`)
+        return false
+      }
+
+      // Agar unit "дона" bo'lmasa, count required
+      if (p.unit !== 'дона' && (!p.count || Number(p.count) <= 0)) {
+        alert(`❌ ${i + 1}-маҳсулот учун дона сонини киритинг (${p.unit})`)
+        return false
       }
     }
 
-    // Validate client fields
-    if (!clientData.name.trim() || !clientData.phoneNumber.trim()) {
-      alert('❌ Клиент исми ва телефон рақамини киритинг')
-      return
-    }
+    return true
+  }
+
+  // 💾 Formani yuborish
+  const handleSubmit = async () => {
+    if (!validateForm()) return
 
     setLoading(true)
     try {
-      // Payload tayyorlash - number fieldlarni convert qilamiz
+      // Payload tayyorlash - count faqat unit "дона" bo'lmaganda yuboriladi
       const payload = {
         ...(clientData.clientId ? { clientId: clientData.clientId } : {
           client: {
             name: clientData.name,
-            phoneNumber: clientData.phoneNumber,
-            address: clientData.address
+            phoneNumber: clientData.phoneNumber
           }
         }),
-        products: products.map(p => ({
-          title: p.title,
-          price: p.price ? Number(p.price) : 0,
-          stock: p.stock ? Number(p.stock) : 1,
-          unit: p.unit,
-          ready: p.ready,
-          priceType: p.priceType
-        }))
+        products: products.map(p => {
+          // Asosiy product ma'lumotlari
+          const baseProduct = {
+            title: p.title,
+            price: p.price ? Number(p.price) : 0,
+            stock: p.stock ? Number(p.stock) : 1,
+            unit: p.unit,
+            ready: p.ready,
+            priceType: p.priceType
+          }
+
+          // Agar unit "дона" bo'lmaganda, faqat count ni yuboramiz
+          if (p.unit !== 'дона' && p.count) {
+            return {
+              ...baseProduct,
+              count: Number(p.count)
+            }
+          }
+
+          return baseProduct
+        })
       }
 
       console.log('Payload:', payload)
 
-      await Fetch.post('/products/create', payload)
+      const response = await Fetch.post('/products/create', payload)
+
+      // Muvaffaqiyatli
       mutate()
       setOpen(false)
       resetForm()
+
+      alert(`✅ ${products.length} та маҳсулот муваффақиятли қўшилди`)
+
     } catch (err) {
-      console.error(err)
-      alert('❌ Маҳсулот қўшишда хатолик юз берди')
+      console.error('Xatolik:', err)
+      const errorMsg = err.response?.data?.message ||
+        err.message ||
+        '❌ Маҳсулот қўшишда хатолик юз берди'
+      alert(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -214,16 +273,15 @@ export default function AddProductModal({ open, setOpen, mutate }) {
         price: '',
         stock: '',
         unit: 'дона',
-        ready: false,
-        ID: '',
-        priceType: 'uz'
+        ready: productType === 'ready' ? true : false,
+        priceType: 'en',
+        count: ''
       }
     ])
     setClientData({
       clientId: '',
       name: '',
-      phoneNumber: '',
-      address: ''
+      phoneNumber: ''
     })
     setSelectedClient(null)
     setSearchTerm('')
@@ -246,7 +304,6 @@ export default function AddProductModal({ open, setOpen, mutate }) {
   const dropdownBg = dark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'
   const dropdownItemHover = dark ? 'hover:bg-gray-700' : 'hover:bg-blue-50'
   const buttonSecondary = dark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-  const checkboxBg = dark ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-200'
 
   if (!open) return null
 
@@ -265,6 +322,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
               </h2>
               <p className={`text-sm ${textMuted} mt-1`}>
                 Бир нечта маҳсулотни бир вақтниң ўзида қўшиш имкони
+                {productType === 'ready' && ' 🟢 Тайёр маҳсулот'}
+                {productType === 'raw' && ' 🟡 Хом ашё'}
               </p>
             </div>
           </div>
@@ -306,9 +365,6 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                   <div>
                     <h4 className={`font-semibold ${textColor}`}>{selectedClient.name}</h4>
                     <p className={`text-sm ${textMuted}`}>{selectedClient.phoneNumber}</p>
-                    {selectedClient.address && (
-                      <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{selectedClient.address}</p>
-                    )}
                   </div>
                 </div>
                 <button
@@ -371,7 +427,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                   {showClientDropdown && filteredClients.length > 0 && (
                     <div
                       className={`absolute z-10 w-full mt-1 border rounded-xl shadow-lg max-h-60 overflow-y-auto ${dropdownBg}`}
-                      onMouseDown={(e) => e.preventDefault()} // 👈 dropdown bosilganda blur bo'lmasin
+                      onMouseDown={(e) => e.preventDefault()}
                     >
                       {filteredClients.map(client => (
                         <div
@@ -386,9 +442,6 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                             <div>
                               <div className={`font-medium ${dark ? 'text-white' : 'text-gray-800'}`}>{client.name}</div>
                               <div className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-600'}`}>{client.phoneNumber}</div>
-                              {client.address && (
-                                <div className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{client.address}</div>
-                              )}
                             </div>
                             {client.products && (
                               <div className={`text-xs px-2 py-1 rounded-full ${dark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'
@@ -463,6 +516,9 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                   </div>
                   <h3 className={`font-semibold ${textColor}`}>
                     Маҳсулот #{i + 1}
+                    <span className={`ml-2 text-sm ${p.ready ? 'text-green-500' : 'text-yellow-500'}`}>
+                      {p.ready ? '🟢 Тайёр' : '🟡 Хом ашё'}
+                    </span>
                   </h3>
                 </div>
 
@@ -479,7 +535,7 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                 )}
               </div>
 
-              {/* Asosiy maydonlar */}
+              {/* Asosiy maydonlar - 4 ustunli */}
               <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4'>
                 {/* 🔹 Номи */}
                 <div className='space-y-2'>
@@ -507,25 +563,23 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     <input
                       type='text'
                       value={p.price}
-                      onChange={e =>
-                        handleChange(i, 'price', e.target.value)
-                      }
+                      onChange={e => handleChange(i, 'price', e.target.value)}
                       className={`w-full border rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                       placeholder='0'
                       required
                     />
                     <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-sm ${dark ? 'text-gray-400' : 'text-gray-500'
                       }`}>
-                      {p.priceType == "uz" ? "сўм" : "$"}
+                      {p.priceType === "uz" ? "сўм" : "$"}
                     </span>
                   </div>
                 </div>
 
-                {/* 📦 Миқдор */}
+                {/* 📦 Миқдор (Stock) */}
                 <div className='space-y-2'>
                   <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
                     <Package size={16} className='text-purple-500' />
-                    Миқдор
+                    Миқдор ({p.unit}) <span className='text-red-500'>*</span>
                   </label>
                   <input
                     type='text'
@@ -533,7 +587,11 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                     onChange={e => handleChange(i, 'stock', e.target.value)}
                     className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
                     placeholder='1'
+                    required
                   />
+                  <p className={`text-xs ${textMuted}`}>
+                    {p.unit} сони (умумий миқдор)
+                  </p>
                 </div>
 
                 {/* ⚖️ Бирлик */}
@@ -556,7 +614,34 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                 </div>
               </div>
 
-              {/* Narx turi va ready status */}
+              {/* Count input - faqat unit "дона" bo'lmaganda */}
+              {p.unit !== 'дона' && (
+                <div className='space-y-2'>
+                  <label className={`text-sm font-semibold flex items-center gap-2 ${textColor}`}>
+                    <Hash size={16} className='text-indigo-500' />
+                    Умумий миқдори<span className='text-red-500'>*</span>
+                  </label>
+                  <div className='relative'>
+                    <input
+                      type='text'
+                      value={p.count}
+                      onChange={e => handleChange(i, 'count', e.target.value)}
+                      className={`w-full border rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all ${inputBg}`}
+                      placeholder='Умумий миқдори...'
+                      required
+                    />
+                    <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-sm ${dark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                      дона
+                    </span>
+                  </div>
+                  {/* <p className={`text-xs ${textMuted}`}>
+                    1 {p.unit} = {p.count || '?'} дона
+                  </p> */}
+                </div>
+              )}
+
+              {/* Narx turi va Ready checkbox */}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {/* 💵 Narx turi */}
                 <div className='space-y-2'>
@@ -599,6 +684,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                   <div className='flex-1'>
                     <label className={`text-sm font-semibold cursor-pointer ${textColor}`}>
                       Маҳсулот тайёр
+                      {productType === 'ready' && <span className='ml-2 text-xs text-green-500'> (Default ready)</span>}
+                      {productType === 'raw' && <span className='ml-2 text-xs text-yellow-500'> (Default raw)</span>}
                     </label>
                     <p className={`text-xs ${textMuted}`}>
                       Белгиланса, маҳсулот тайёр деб ҳисобланади
@@ -613,6 +700,8 @@ export default function AddProductModal({ open, setOpen, mutate }) {
                   />
                 </div>
               </div>
+
+
             </div>
           ))}
         </div>
@@ -663,10 +752,20 @@ export default function AddProductModal({ open, setOpen, mutate }) {
 
         {/* Footer info */}
         <div className={`text-center text-sm pt-2 ${textMuted}`}>
-          <p>
-            Ҳар бир маҳсулот учун номи мажбурий.{' '}
-            Нархи ҳам мажбурий.
-          </p>
+          <div className={`p-3 rounded-lg ${dark ? 'bg-blue-900/30' : 'bg-blue-50'}`}>
+            <p className='font-semibold mb-1'>📝 Эслатма:</p>
+            <ul className='text-xs space-y-1 text-left'>
+              <li>• Барча майдонлар мажбурий ёки рўйхатга олинади</li>
+              <li>• <span className='font-semibold'>Нарх киритиш ҳамма учун мажбурий</span></li>
+              <li>• <span className='font-semibold'>Бирлик "дона" бўлмаган ҳолда</span>, ҳар бир бўлим учун дона сони киритиш мажбурий</li>
+              <li>• Default нарх тури: <span className='font-bold'>Доллар ($)</span></li>
+              <li>• Default тайёрлик:
+                <span className={`font-bold ${productType === 'ready' ? 'text-green-500' : 'text-yellow-500'}`}>
+                  {productType === 'ready' ? ' Тайёр' : ' Хом ашё'}
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

@@ -151,7 +151,7 @@ export const UserManagement = () => {
             <div className='mb-4'>
               <Shield className='h-12 w-12 text-red-500 mx-auto' />
             </div>
-            <h2 className={`text-xl font-bold text-red-600 mb-2 ${textColor}`}>Рухсат Етак</h2>
+            {/* <h2 className={`text-xl font-bold text-red-600 mb-2 ${textColor}`}>Ру</h2> */}
             <p className={`mb-4 text-sm ${textMuted}`}>
               Сизда бошқа фойдаланувчиларни таҳрирлаш ҳуқуқи мавжуд эмас
             </p>
@@ -452,8 +452,8 @@ export const UserManagement = () => {
                 type='button'
                 onClick={() => navigate(-1)}
                 className={`rounded-lg border cursor-pointer flex justify-center items-center gap-2 py-3 font-medium transition-colors text-sm ${dark
-                    ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-white'
-                    : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+                  ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-white'
+                  : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
                   }`}
               >
                 <X className='h-4 w-4' />

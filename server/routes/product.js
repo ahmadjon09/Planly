@@ -15,11 +15,9 @@ import { DeleteClient, DeleteInProduct, UpdateInProduct } from '../controllers/c
 
 const router = express.Router()
 
-router.get('/', isExisted, GetAllProducts)
 router.get('/clients', isExisted, GetClientsWithProducts)
 router.post('/pay', isExisted, PayClientDebt)
-router.get('/ready', isExisted, GetAllReadyProducts)
-router.get('/raw', isExisted, GetAllNotReadyProducts)
+router.get('/ready', isExisted, GetAllProducts)
 router.get('/one/:id', isExisted, GetOneProduct)
 router.post('/create', isExisted, CreateNewProduct)
 router.put('/:id', isExisted, UpdateProduct)

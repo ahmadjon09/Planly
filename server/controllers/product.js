@@ -3,6 +3,8 @@ import { sendErrorResponse } from '../middlewares/sendErrorResponse.js'
 import Clients from "../models/client.js"
 import History from '../models/history.js'
 import Input from "../models/input.js"
+import Users from "../models/user.js"
+import { bot } from '../bot.js'
 
 const normalize = (str) => {
   return String(str)
@@ -10,21 +12,60 @@ const normalize = (str) => {
     .replace(/[^a-z0-9\u0400-\u04FF]/g, "");
 };
 
+const sendBotNotification = async (products) => {
+  try {
+    const loggedUsers = await Users.find({ isLoggedIn: true }).lean();
+
+    if (!loggedUsers.length) return;
+    if (!products.length) return;
+
+    for (const user of loggedUsers) {
+      if (!user.telegramId) continue;
+
+      // Header qismi
+      let message = `╔═══════════════════╗\n`;
+      message += `  📦 ЯНГИ МАҲСУЛОТЛАР   \n`;
+      message += `╚═══════════════════╝\n\n`;
+
+      // Mahsulotlar ro'yxati
+      products.forEach((product, index) => {
+        const priceCurrency = product.priceType === 'uz' ? 'сўм' : '$';
+
+        message += `▫️ <b>${index + 1}. ${product.title}</b>\n`;
+        message += `   ├─ 📦 Миқдор: ${product.stock} ${product.unit || ''}\n`;
+        message += `   ├─ 🔢 Дона: ${product.count || 0}\n`;
+        message += `   └─ 💰 Нархи: <b>${product.price} ${priceCurrency}</b>\n\n`;
+      });
+
+      // Footer qismi
+      message += `📊 <i>Умумий қўшилган маҳсулотлар: ${products.length} та</i>`;
+      message += `\n🕒 ${new Date().toLocaleString('uz-UZ')}`;
+
+      await bot.telegram.sendMessage(
+        user.telegramId,
+        message,
+        {
+          parse_mode: "HTML",
+          disable_web_page_preview: true
+        }
+      );
+    }
+  } catch (err) {
+    console.error("Bot хабар юборишда хатолик:", err.message);
+  }
+};
 export const CreateNewProduct = async (req, res) => {
   try {
     const { clientId: bodyClientId, client: bodyClient, products: bodyProducts } = req.body;
-
     const products = Array.isArray(bodyProducts) ? bodyProducts : [bodyProducts];
 
-    let clientId = null;
-    let client = null;
+    // --- CLIENT ---
+    let clientId;
+    let client;
 
-    // --- CLIENT TOPISH YOKI YARATISH ---
     if (bodyClientId) {
-      client = await Clients.findById(bodyClientId);
-      if (!client) {
-        return res.status(404).json({ message: "Клиент топилмади!" });
-      }
+      client = await Clients.findById(bodyClientId).lean();
+      if (!client) return res.status(404).json({ message: "Клиент топилмади!" });
       clientId = client._id;
     } else if (bodyClient?.name && bodyClient?.phoneNumber) {
       client = await Clients.create({
@@ -34,89 +75,128 @@ export const CreateNewProduct = async (req, res) => {
         debtUZ: 0,
         debtEN: 0
       });
-
       clientId = client._id;
     } else {
-      return res.status(400).json({
-        message: "Client ID ёки янги клиент маълумотлари керак!"
-      });
+      return res.status(400).json({ message: "Client ID ёки янги клиент маълумотлари керак!" });
     }
 
-    // --- OPTIMIZATION START ---
-    const normalizedTitles = products.map(p => normalize(p.title));
+    // --- BULK OPTIMIZATION START ---
+    const normalizedData = products.map(p => ({
+      ...p,
+      normalizedTitle: normalize(p.title),
+      unit: p.unit || "",
+      stock: Number(p.stock) || 1,
+      count: Number(p.count) || 1,
+      price: Number(p.price) || 0
+    }));
 
-    // Barcha kerakli productlarni bitta sorov bilan olish
-    const existingProducts = await Product.find({
-      normalizedTitle: { $in: normalizedTitles }
+    // Unique kalitlar bo‘yicha izlash (bitta query!)
+    const uniqueKeys = [...new Set(normalizedData.map(p => `${p.normalizedTitle}__${p.unit}`))];
+    const titleUnitPairs = uniqueKeys.map(key => {
+      const [normalizedTitle, unit] = key.split('__');
+      return { normalizedTitle, unit };
     });
 
-    // Map qilish — loop ichida 0 ms qidiruv!
+    const existingProducts = await Product.find({
+      $or: titleUnitPairs.map(pair => ({
+        normalizedTitle: pair.normalizedTitle,
+        unit: pair.unit
+      }))
+    }).lean();
+
     const productMap = {};
     existingProducts.forEach(p => {
-      productMap[p.normalizedTitle] = p;
+      productMap[`${p.normalizedTitle}__${p.unit || ""}`] = p;
     });
 
-    // Oxirgi ID larni oldindan olish
-    const lastProduct = await Product.findOne().sort({ ID: -1 });
-    let nextProductID = lastProduct ? lastProduct.ID + 1 : 1;
+    // Atomic ID generation (bitta queryda ikkalasini ham olish)
+    const [lastProduct, lastInput] = await Promise.all([
+      Product.findOne().sort({ ID: -1 }).select('ID'),
+      Input.findOne().sort({ ID: -1 }).select('ID')
+    ]);
 
-    const lastInput = await Input.findOne().sort({ ID: -1 });
-    let nextInputID = lastInput ? lastInput.ID + 1 : 1;
-    // --- OPTIMIZATION END ---
+    let nextProductID = (lastProduct?.ID ?? 0) + 1;
+    let nextInputID = (lastInput?.ID ?? 0) + 1;
 
+    // --- PREPARE BULK OPERATIONS ---
+    const productBulkOps = [];
+    const inputDocs = [];
     let totalUZ = 0;
     let totalEN = 0;
     const createdProducts = [];
 
-    // --- MAIN LOOP ---
-    for (const p of products) {
-      const normalizedTitle = normalize(p.title);
+    for (const p of normalizedData) {
+      const key = `${p.normalizedTitle}__${p.unit}`;
+      const existing = productMap[key];
 
-      let productDoc = productMap[normalizedTitle];
+      if (existing) {
+        // Update existing
+        const newStock = existing.stock + p.stock;
+        const newCount = existing.count + p.count;
 
-      if (productDoc) {
-        // EXISTING PRODUCT
-        productDoc.stock += Number(p.stock) || 1;
-        productDoc.price = Number(p.price) || productDoc.price;
-        productDoc.priceType = p.priceType || productDoc.priceType;
-        await productDoc.save();
+        productBulkOps.push({
+          updateOne: {
+            filter: { _id: existing._id },
+            update: {
+              $set: {
+                price: p.price,
+                priceType: p.priceType
+              },
+              $inc: {
+                stock: p.stock,
+                count: p.count
+              }
+            }
+          }
+        });
+
+        createdProducts.push({ ...existing, stock: newStock, count: newCount });
       } else {
-        // NEW PRODUCT
-        productDoc = await Product.create({
+        // Create new
+        const newProduct = {
           ...p,
           ID: nextProductID++,
-          stock: Number(p.stock) || 1,
-          normalizedTitle
+          normalizedTitle: p.normalizedTitle
+        };
+        productBulkOps.push({
+          insertOne: { document: newProduct }
         });
+        createdProducts.push(newProduct);
       }
 
-      createdProducts.push(productDoc);
-
-      // --- INPUT ---
-      await Input.create({
+      // Input document (keyin bulk insert qilamiz)
+      inputDocs.push({
         title: p.title,
         price: p.price,
         priceType: p.priceType,
         unit: p.unit,
-        stock: Number(p.stock),
+        stock: p.stock,
+        count: p.count,
         ID: nextInputID++,
         from: clientId
       });
 
-      // --- DEBT ---
-      const amount = Number(p.stock) || 1;
-      const price = Number(p.price) || 0;
-
-      if (p.priceType === "uz") totalUZ += price * amount;
-      else totalEN += price * amount;
+      // Debt hisoblash
+      if (p.priceType === "uz") totalUZ += p.price * p.stock;
+      else totalEN += p.price * p.stock;
     }
 
+    // --- BULK EXECUTE (eng tez joyi!) ---
+    if (productBulkOps.length > 0) {
+      await Product.bulkWrite(productBulkOps, { ordered: false });
+    }
+
+    if (inputDocs.length > 0) {
+      await Input.insertMany(inputDocs); // insertMany juda tez!
+    }
+
+    // Bitta queryda debtni oshirish
     if (totalUZ > 0 || totalEN > 0) {
       await Clients.findByIdAndUpdate(clientId, {
         $inc: { debtUZ: totalUZ, debtEN: totalEN }
       });
     }
-
+    sendBotNotification(products)
     return res.status(201).json({
       message: "Маҳсулотлар муваффақиятли сақланди ✅",
       client,
@@ -124,6 +204,7 @@ export const CreateNewProduct = async (req, res) => {
     });
 
   } catch (error) {
+    console.error("CreateNewProduct error:", error);
     return res.status(500).json({
       message: "Сервер хатолиги!",
       error: error.message
@@ -131,14 +212,88 @@ export const CreateNewProduct = async (req, res) => {
   }
 };
 
-export const GetAllProducts = async (_, res) => {
-  try {
-    const products = await Product.find().sort({ createdAt: -1 });
 
-    if (products.length === 0) {
-      return res.status(404).json({ message: "No products found." });
+
+
+export const GetAllProducts = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 50,
+      search = '',
+      searchField = '',
+      type = '',
+      date = ''
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const query = {};
+
+    // Type filter
+    if (type === 'ready') {
+      query.ready = true;
+    } else if (type === 'raw') {
+      query.ready = false;
     }
 
+
+    // Date filter
+    if (date) {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    }
+
+    // Search filter
+    if (search) {
+      if (searchField === 'ID') {
+        const numValue = Number(search);
+
+        if (!isNaN(numValue)) {
+          query.ID = numValue;
+        } else {
+          return res.status(400).json({
+            message: "ID must be a number"
+          });
+        }
+
+      } else if (searchField === 'title') {
+        query.title = { $regex: search, $options: 'i' };
+      } else {
+        query.$or = [
+          { title: { $regex: search, $options: 'i' } }
+        ];
+      }
+    }
+    // Get total count
+    const total = await Product.countDocuments(query);
+
+    // Get products with pagination
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    if (products.length === 0) {
+      return res.status(200).json({
+        data: [],
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(total / parseInt(limit))
+        }
+      });
+    }
+
+    // Add client info if needed
     const productsWithClient = await Promise.all(
       products.map(async (product) => {
         if (!product.from) {
@@ -150,7 +305,6 @@ export const GetAllProducts = async (_, res) => {
         }
 
         const client = await Clients.findById(product.from);
-
         return {
           ...product.toObject(),
           client: client || null,
@@ -159,9 +313,18 @@ export const GetAllProducts = async (_, res) => {
       })
     );
 
-    return res.status(200).json({ data: productsWithClient });
+    return res.status(200).json({
+      data: productsWithClient,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
 
   } catch (error) {
+    console.error('GetAllProducts Error:', error);
     return res.status(500).json({
       message: "Server Error. Please Try Again Later!",
       error: error.message
@@ -263,20 +426,31 @@ export const GetOneProduct = async (req, res) => {
 
 export const UpdateProduct = async (req, res) => {
   const { id } = req.params
+
   try {
+    // Agar price === 0 bo'lsa, price ni o'chirib tashlaymiz
+    if (req.body.price === 0) {
+      delete req.body.price
+    }
+
     const updatedProduct = await Product.findByIdAndUpdate(id, req.body, {
       new: true
     })
+
     if (!updatedProduct) {
       return sendErrorResponse(res, 404, 'Product not found.')
     }
-    return res
-      .status(200)
-      .json({ message: 'Product updated successfully', data: updatedProduct })
+
+    return res.status(200).json({
+      message: 'Product updated successfully',
+      data: updatedProduct
+    })
+
   } catch (error) {
     if (error.title === 'CastError') {
       return sendErrorResponse(res, 400, 'Invalid product ID.', error)
     }
+
     return sendErrorResponse(
       res,
       500,
@@ -285,6 +459,7 @@ export const UpdateProduct = async (req, res) => {
     )
   }
 }
+
 
 export const DeleteProduct = async (req, res) => {
   const { id } = req.params

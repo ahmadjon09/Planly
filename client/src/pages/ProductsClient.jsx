@@ -1,4 +1,4 @@
-import { useState, useContext, useMemo, useEffect, useRef } from 'react'
+import { useState, useContext, useMemo, useEffect } from 'react'
 import useSWR from 'swr'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -39,7 +39,7 @@ export const ClientProductsView = () => {
         revalidateOnFocus: true,
         revalidateOnReconnect: true
     })
-    const { user, dark, setDark } = useContext(ContextData)
+    const { user, dark } = useContext(ContextData)
 
     const [searchPhone, setSearchPhone] = useState('')
     const [searchName, setSearchName] = useState('')
@@ -48,6 +48,7 @@ export const ClientProductsView = () => {
     const [editingProduct, setEditingProduct] = useState(null)
     const [loading, setLoading] = useState(null)
     const [showEditModal, setShowEditModal] = useState(false)
+    const [deleting, setDeleting] = useState(null) // Yangi state for delete loading
 
     // Qarz to'lash state lari
     const [debtUZ, setDebtUZ] = useState('')
@@ -55,7 +56,7 @@ export const ClientProductsView = () => {
     const [debtLUZ, setDebtLUZ] = useState(false)
     const [debtLEN, setDebtLEN] = useState(false)
 
-    // Pagination state lari - localStorage bilan saqlash
+    // Pagination state lari
     const [currentClientPage, setCurrentClientPage] = useState(() => {
         const saved = localStorage.getItem('clientProductsView_clientPage')
         return saved ? parseInt(saved) : 1
@@ -69,7 +70,6 @@ export const ClientProductsView = () => {
         return saved ? parseInt(saved) : 1
     })
 
-    // Selected client ID ni saqlash
     const [selectedClientId, setSelectedClientId] = useState(() => {
         return localStorage.getItem('clientProductsView_selectedClientId')
     })
@@ -101,7 +101,7 @@ export const ClientProductsView = () => {
         }
     }, [data, selectedClientId])
 
-    // LocalStorage ga pagination va selectedClient ni saqlash
+    // LocalStorage ga saqlash
     useEffect(() => {
         localStorage.setItem('clientProductsView_clientPage', currentClientPage)
     }, [currentClientPage])
@@ -127,7 +127,6 @@ export const ClientProductsView = () => {
     // Component unmount bo'lganda cleanup
     useEffect(() => {
         return () => {
-            // Faqat kerakli ma'lumotlarni saqlash
             localStorage.setItem('clientProductsView_clientPage', currentClientPage)
             if (selectedClient) {
                 localStorage.setItem('clientProductsView_selectedClientId', selectedClient._id)
@@ -146,7 +145,6 @@ export const ClientProductsView = () => {
             const nameMatch = client.name
                 ?.toLowerCase()
                 .includes(searchName.toLowerCase())
-
             return phoneMatch && nameMatch
         })
     }, [clients, searchPhone, searchName])
@@ -170,7 +168,7 @@ export const ClientProductsView = () => {
 
     const totalProductPages = Math.ceil((selectedClient?.products?.length || 0) / productsPerPage)
 
-    // Calculate product balances by unit for a single client
+    // Calculate product balances
     const calculateClientProductBalances = (products) => {
         const balances = {}
         let totalReadyProducts = 0
@@ -185,7 +183,6 @@ export const ClientProductsView = () => {
             const price = Number(product.price) || 0
             const priceType = product.priceType || 'uz'
 
-            // Product balances by unit
             if (!balances[title]) {
                 balances[title] = {}
             }
@@ -194,14 +191,12 @@ export const ClientProductsView = () => {
             }
             balances[title][unit] += stock
 
-            // Count ready/raw products
             if (product.ready) {
                 totalReadyProducts += 1
             } else {
                 totalRawProducts += 1
             }
 
-            // Calculate total value
             if (priceType === 'uz') {
                 totalValueUZ += price * stock
             } else {
@@ -219,20 +214,17 @@ export const ClientProductsView = () => {
         }
     }
 
-    // Calculate overall balances for all products (aggregated by unit)
+    // Calculate overall balances
     const calculateOverallBalances = (products) => {
         const overallBalances = {}
-
         products.forEach(product => {
             const unit = product.unit || 'дона'
             const stock = Number(product.stock) || 0
-
             if (!overallBalances[unit]) {
                 overallBalances[unit] = 0
             }
             overallBalances[unit] += stock
         })
-
         return overallBalances
     }
 
@@ -254,10 +246,9 @@ export const ClientProductsView = () => {
         }
     }
 
-    // Format currency with better UX
+    // Format currency
     const formatCurrency = (amount, currency = 'UZS') => {
         if (!amount && amount !== 0) return '0'
-
         return new Intl.NumberFormat('uz-UZ', {
             style: 'currency',
             currency: currency,
@@ -265,51 +256,69 @@ export const ClientProductsView = () => {
         }).format(amount)
     }
 
-    // Format number with thousands separator
+    // Format number
     const formatNumber = (number) => {
         if (!number && number !== 0) return '0'
         return new Intl.NumberFormat('uz-UZ').format(number)
     }
 
-    // Allow only numbers and dots for decimal input
+    // Allow only numbers and dots
     const handleDecimalInput = (value, setter) => {
-        // Allow only numbers and dots
         const cleanedValue = value.replace(/[^\d.]/g, '')
-
-        // Ensure only one dot
         const parts = cleanedValue.split('.')
         if (parts.length > 2) {
-            // If more than one dot, keep only the first part and first decimal
             setter(parts[0] + '.' + parts.slice(1).join(''))
         } else {
             setter(cleanedValue)
         }
     }
 
-    // Handle product delete
     const handleDelete = async (productId) => {
-        const confirmed = window.confirm('❌ Сиз ростдан ҳам бу маҳсулотни ўчирмоқчимисиз?')
-        if (!confirmed) return
+        const confirmed = window.confirm('❌ Сиз ростдан ҳам бу маҳсулотни ўчирмоқчимисиз?');
+        if (!confirmed) return;
 
         try {
-            setLoading(productId)
-            await Fetch.delete(`/products/in/${productId}`)
-            await mutate()
-        } catch (err) {
-            console.error('Delete error:', err)
-            alert('❌ Маҳсулотни ўчиришда хатолик юз берди')
-        } finally {
-            setLoading(null)
-        }
-    }
+            setDeleting(productId);
+            console.log('Deleting product with ID:', productId);
 
-    // Handle input change for editing - allow only numbers and dots for numeric fields
+            // Backend'ga DELETE so'rov yuborish
+            const response = await Fetch.delete(`orders/product/${productId}`);
+
+            console.log('Delete response:', response);
+
+            // Mutate bilan yangilash (SWR yoki React Query)
+            if (mutate) await mutate();
+
+            // Foydalanuvchiga xabar
+            alert('✅ Маҳсулот муваффақиятли ўчирилди');
+        } catch (err) {
+            console.error('Delete error details:', err);
+
+            // Axios xatolikni aniq ko‘rsatish
+            if (err.response) {
+                console.error('Response status:', err.response.status);
+                console.error('Response data:', err.response.data);
+                alert(
+                    `❌ Хатолик: ${err.response.status} - ${err.response.data?.message || 'Server xatosi'}`
+                );
+            } else if (err.request) {
+                console.error('Request error:', err.request);
+                alert('❌ Серверга уланишда хатолик');
+            } else {
+                console.error('Error message:', err.message);
+                alert(`❌ Хатолик: ${err.message}`);
+            }
+        } finally {
+            setDeleting(null);
+        }
+    };
+
+
+
+    // Handle input change for editing
     const handleInputChange = (field, value) => {
         if (field === 'price' || field === 'stock') {
-            // Allow only numbers and dots for price and stock
             const cleanedValue = value.replace(/[^\d.]/g, '')
-
-            // Ensure only one dot
             const parts = cleanedValue.split('.')
             const formattedValue = parts.length > 2
                 ? parts[0] + '.' + parts.slice(1).join('')
@@ -354,7 +363,6 @@ export const ClientProductsView = () => {
     const handleUpdateProduct = async () => {
         if (!editingProduct) return
 
-        // Validation
         if (!editingProduct.price || parseFloat(editingProduct.price) <= 0) {
             alert('❌ Нархни киритинг')
             return
@@ -399,10 +407,8 @@ export const ClientProductsView = () => {
             mutate()
             alert(`${data.message} ✅`)
         } catch (err) {
-            console.error('Cancel error:', err)
-            alert('❌ Клиентни бекор ўчиришда хатолик юз берди.')
-        } finally {
-            setDeleting(null)
+            console.error('Delete client error:', err)
+            alert('❌ Клиентни ўчиришда хатолик юз берди.')
         }
     }
 
@@ -468,7 +474,7 @@ export const ClientProductsView = () => {
         }
     }
 
-    // Handle debt input changes - allow only numbers and dots
+    // Handle debt input changes
     const handleDebtUZChange = (value) => {
         handleDecimalInput(value, setDebtUZ)
     }
@@ -480,7 +486,6 @@ export const ClientProductsView = () => {
     // History pagination hisoblash
     const getCurrentHistory = () => {
         if (!selectedClient || !selectedClient.history) return []
-
         const startIndex = (currentHistoryPage - 1) * historyPerPage
         const endIndex = startIndex + historyPerPage
         return selectedClient.history.slice(startIndex, endIndex)
@@ -616,7 +621,7 @@ export const ClientProductsView = () => {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     onClick={handleBackToClients}
-                                    className={`flex items-center gap-2 ${dark ? 'text-blue-400 hover:text-blue-300 bg-blue-900 hover:bg-blue-800'
+                                    className={`fixed top-16 left-5 cursor-pointer z-50 flex items-center gap-2 ${dark ? 'text-blue-400 hover:text-blue-300 bg-blue-900 hover:bg-blue-800'
                                         : 'text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100'
                                         } px-4 py-2 rounded-xl transition-all duration-300`}
                                 >
@@ -1158,10 +1163,10 @@ export const ClientProductsView = () => {
                                                                                 whileHover={{ scale: 1.05 }}
                                                                                 whileTap={{ scale: 0.95 }}
                                                                                 onClick={() => handleDelete(product._id)}
-                                                                                disabled={loading === product._id}
+                                                                                disabled={deleting === product._id}
                                                                                 className='flex items-center gap-2 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors duration-200'
                                                                             >
-                                                                                {loading === product._id ? (
+                                                                                {deleting === product._id ? (
                                                                                     <Loader2 className='animate-spin' size={16} />
                                                                                 ) : (
                                                                                     <Trash2 size={16} />
@@ -1384,14 +1389,7 @@ export const ClientProductsView = () => {
                                         </span>
                                     </div>
 
-                                    <div className={`flex justify-between items-center p-3 rounded-xl ${dark ? 'bg-yellow-900' : 'bg-yellow-50'
-                                        }`}>
-                                        <span className={textMuted}>Ҳолати:</span>
-                                        <span className={`font-semibold ${selectedProduct.ready ? 'text-green-600' : 'text-yellow-600'
-                                            }`}>
-                                            {selectedProduct.ready ? 'Тайёр' : 'Хом ашё'}
-                                        </span>
-                                    </div>
+                                 
 
                                     <div className={`flex justify-between items-center p-3 rounded-xl ${dark ? 'bg-gray-700' : 'bg-gray-50'
                                         }`}>
@@ -1476,38 +1474,6 @@ export const ClientProductsView = () => {
                                             </select>
                                         </div>
                                     </div>
-
-                                    {/* <div>
-                                        <label className={`block text-sm font-medium mb-2 ${textMuted}`}>
-                                            Миқдор
-                                        </label>
-                                        <div className='flex gap-2 items-center'>
-                                            <input
-                                                type='text'
-                                                value={editingProduct.stock}
-                                                onChange={(e) => handleInputChange('stock', e.target.value)}
-                                                className={`flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
-                                                    }`}
-                                                placeholder='0'
-                                            />
-                                            <span className={textMuted}>{editingProduct.unit}</span>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-sm font-medium mb-2 ${textMuted}`}>
-                                            Ҳолати
-                                        </label>
-                                        <select
-                                            value={editingProduct.ready}
-                                            onChange={(e) => handleInputChange('ready', e.target.value)}
-                                            className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${dark ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
-                                                }`}
-                                        >
-                                            <option value={true}>Тайёр маҳсулот</option>
-                                            <option value={false}>Хом ашё</option>
-                                        </select>
-                                    </div> */}
 
                                     <div className='pt-4'>
                                         <div className='grid grid-cols-2 gap-3'>

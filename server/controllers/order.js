@@ -15,6 +15,7 @@ import User from '../models/user.js'
 import Product from '../models/product.js'
 import { sendErrorResponse } from '../middlewares/sendErrorResponse.js'
 import Client from "../models/client.js"
+import { bot } from '../bot.js'
 
 export const GetOrderStats = async (req, res) => {
   try {
@@ -259,6 +260,7 @@ export const GetOrderStats = async (req, res) => {
     })
   }
 }
+
 export const AllOrders = async (_, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 })
@@ -299,6 +301,73 @@ export const AllOrders = async (_, res) => {
   }
 }
 
+const sendOrderNotification = async (order) => {
+  try {
+    const loggedUsers = await User.find({ isLoggedIn: true }).lean();
+    if (!loggedUsers.length) return;
+    if (!order.products || !order.products.length) return;
+
+    // Product IDларни йиғиб, уларни базадан олиш
+    const productIds = order.products.map(p => p.product);
+    const productsMap = {};
+    const productsFromDB = await Product.find({ _id: { $in: productIds } }).lean();
+    productsFromDB.forEach(p => { productsMap[p._id.toString()] = p; });
+
+    // Client ma'lumotini olish
+    let clientInfo = null;
+    if (order.client) {
+      clientInfo = await Client.findById(order.client).lean();
+    }
+
+    for (const user of loggedUsers) {
+      if (!user.telegramId) continue;
+
+      // Header
+      let message = `╔═══════════════════╗\n`;
+      message += `  📝 ЯНГИ БУЮРТМА          \n`;
+      message += `╚═══════════════════╝\n\n`;
+
+      // Client haqida
+      if (clientInfo) {
+        message += `👤 Мижоз: <b>${clientInfo.name || "Noma'lum"}</b>\n`;
+        if (clientInfo.phoneNumber) {
+          message += `📞 Телефон: <b>${clientInfo.phoneNumber}</b>\n`;
+        }
+        message += `\n`;
+      }
+
+      // Mahsulotlar ro'yxati
+      order.products.forEach((p, idx) => {
+        const productData = productsMap[p.product.toString()];
+        const title = productData?.title || "Noma'lum mahsulot";
+        const priceCurrency = productData?.priceType === 'uz' ? 'сўм' : '$';
+
+        message += `▫️ <b>${idx + 1}. ${title}</b>\n`;
+        message += `   ├─ 📦 Миқдор: ${p.amount} ${p.unit || productData?.unit || ''}\n`;
+        message += `   ├─ 🔢 Дона: ${p.count || 0}\n`;
+        message += `   └─ 💰 Нархи: <b>Нарх белгиланмаган</b>\n\n`;
+      });
+
+      // Footer
+      message += `📊 <i>Умумий маҳсулотлар: ${order.products.length} та</i>`;
+      message += `\n🕒 ${new Date().toLocaleString('uz-UZ')}`;
+
+      await bot.telegram.sendMessage(
+        user.telegramId,
+        message,
+        {
+          parse_mode: "HTML",
+          disable_web_page_preview: true
+        }
+      );
+    }
+
+  } catch (err) {
+    console.error("Bot хабар юборишда хатолик:", err.message);
+  }
+};
+
+
 
 export const NewOrder = async (req, res) => {
   try {
@@ -319,10 +388,8 @@ export const NewOrder = async (req, res) => {
         phoneNumber: client.phoneNumber,
         clientn: true
       });
-
       client = newClient._id;
     }
-
 
     const productIds = products.map((p) => p.product);
     const foundProducts = await Product.find({ _id: { $in: productIds } });
@@ -331,6 +398,7 @@ export const NewOrder = async (req, res) => {
       return sendErrorResponse(res, 404, "Айрим маҳсулотлар топилмади!");
     }
 
+    // Ombrda yetarlilik tekshiruvi
     for (const item of products) {
       const product = foundProducts.find(
         (p) => p._id.toString() === item.product
@@ -344,6 +412,7 @@ export const NewOrder = async (req, res) => {
       }
     }
 
+    // Buyurtma products tayyorlash
     const orderProducts = products.map((item) => {
       const dbProduct = foundProducts.find(
         (p) => p._id.toString() === item.product
@@ -351,22 +420,31 @@ export const NewOrder = async (req, res) => {
 
       return {
         product: item.product,
-        amount: item.amount,
+        amount: Number(item.amount) || 0,
+        count: Number(item.count) || 0,        // 🔹 count qo‘shildi
         unit: item.unit || dbProduct.unit,
         price: 0
       };
     });
 
+    // Stock va countni kamaytirish
     await Promise.all(
       products.map(async (item) => {
         const p = foundProducts.find(
           (fp) => fp._id.toString() === item.product
         );
-        p.stock -= item.amount;
+
+        const stockAmount = Number(item.amount) || 0;
+        const countAmount = Number(item.count) || 0;
+
+        p.stock = Math.max(0, p.stock - stockAmount);
+        p.count = Math.max(0, (p.count || 0) - countAmount);
+
         await p.save();
       })
     );
 
+    // Yangi buyurtma yaratish
     const newOrder = new Order({
       customer,
       client: client || clientId,
@@ -378,11 +456,12 @@ export const NewOrder = async (req, res) => {
     });
 
     await newOrder.save();
-
+    sendOrderNotification(newOrder);
     return res.status(201).json({
       message: "Буюртма муваффақиятли яратилди ✅",
       data: newOrder
     });
+
   } catch (error) {
     console.error("❌ Буюртма яратишда хатолик:", error);
     sendErrorResponse(
@@ -392,6 +471,7 @@ export const NewOrder = async (req, res) => {
     );
   }
 };
+
 
 
 export const CancelOrder = async (req, res) => {
@@ -407,15 +487,20 @@ export const CancelOrder = async (req, res) => {
       return sendErrorResponse(res, 400, "Тўлов қилинган буюртмани бекор қилиш мумкин эмас!")
     }
 
-
     const restoreTasks = order.products.map(async item => {
       const product = await Product.findById(item.product)
       if (product) {
-        product.stock += item.amount
-        await product.save()
+        const amount = Number(item.amount) || 0;
+        const count = Number(item.count) || 0;
+
+        product.stock += amount;
+        product.count = (product.count || 0) + count;
+
+        await product.save();
       }
     })
     await Promise.all(restoreTasks)
+
 
     const canceledOrder = await Order.findByIdAndDelete(id)
 
@@ -450,6 +535,7 @@ export const UpdateOrder = async (req, res) => {
       updatedProducts = products.map(item => {
         const price = Number(item.price) || 0;
         const amount = Number(item.amount) || 0;
+        const count = Number(item.count) || 0; // 🔹 count qo‘shildi
         const priceType = item.priceType === "en" ? "en" : "uz";
 
         const productTotal = price * amount;
@@ -460,6 +546,7 @@ export const UpdateOrder = async (req, res) => {
         return {
           product: item.product,
           amount,
+          count,                // 🔹 count saqlanadi
           unit: item.unit || 'дона',
           price,
           priceType
@@ -501,4 +588,5 @@ export const UpdateOrder = async (req, res) => {
     sendErrorResponse(res, 500, "Сервер хатолиги! Илтимос, кейинроқ қайта уриниб кўринг.");
   }
 };
+
 

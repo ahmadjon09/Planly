@@ -18,6 +18,10 @@ const OrderSchema = new mongoose.Schema({
         required: true,
         default: 1
       },
+      count: {
+        type: String,
+        default: 0
+      },
       unit: {
         type: String,
         enum: ['дона', 'кг', 'метр', 'литр', 'м²', 'м³', 'сет', 'упаковка'],
@@ -45,7 +49,7 @@ const OrderSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-})
+}, { timestamps: true })
 
 const Order = mongoose.model('Order', OrderSchema)
 export default Order

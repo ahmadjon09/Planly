@@ -178,7 +178,9 @@ export const Admins = () => {
                   Фаол админлар
                 </p>
                 <p className={`text-3xl font-bold mt-2 ${textColor}`}>
-                  {admins.length}
+                  {Array.isArray(admins)
+                    ? admins.filter(a => a.isLoggedIn).length
+                    : 0}
                 </p>
               </div>
               <div className={dark ? 'bg-green-900 p-3 rounded-xl' : 'bg-green-100 p-3 rounded-xl'}>
@@ -307,19 +309,7 @@ export const Admins = () => {
                               {admin.phoneNumber}
                             </span>
                           </a>
-                          {admin.telegramId && (
-                            <a
-                              href={`mailto:${admin.telegramId}`}
-                              className='flex items-center gap-3 transition-colors text-sm group'
-                            >
-                              <div className={`p-2 rounded-lg transition-colors ${dark ? 'bg-gray-700 group-hover:bg-gray-600 text-gray-300' : 'bg-gray-100 group-hover:bg-gray-200 text-gray-600 hover:text-gray-700'}`}>
-                                <Mail className='h-4 w-4' />
-                              </div>
-                              <span className={`group-hover:underline ${textMuted}`}>
-                                {admin.telegramId}
-                              </span>
-                            </a>
-                          )}
+
                         </div>
                       </td>
 

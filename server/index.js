@@ -10,6 +10,7 @@ import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import { getSystemHealth } from './controllers/health.js'
 import { fixPriceTypes } from './middlewares/Checker.js'
+import { bot } from './bot.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
