@@ -2,8 +2,7 @@ import { Telegraf, Markup } from "telegraf";
 import bcrypt from "bcryptjs";
 import Users from "./models/user.js";
 import dotenv from "dotenv";
-import fs from "fs/promises";
-import path from "path";
+
 
 dotenv.config();
 
@@ -45,7 +44,9 @@ const STYLES = {
         ARROW_RIGHT: "➡️",
         SHIELD_CHECK: "✅",
         CLOCK: "⏰",
-        DATABASE: "💾"
+        DATABASE: "💾",
+        TRASH: "🗑️",
+        HOURGLASS: "⏳"
     },
 
     // 🎯 HTML Format функциялари
@@ -114,6 +115,28 @@ setInterval(() => {
     }
 }, 10 * 60 * 1000);
 
+// ===== ⏰ LOADING AUTO-DELETE КОНФИГ =====
+const LOADING_AUTO_DELETE_TIMEOUT = 1000; // 3 секунд - faqat loading хабарлари
+
+// Loading хабарларни автожа ўчириш функцияси (фақат loading учун)
+const scheduleLoadingAutoDelete = async (ctx, messageId) => {
+    try {
+        setTimeout(async () => {
+            try {
+                await ctx.deleteMessage(messageId);
+                console.log(`${STYLES.ICONS.TRASH} Loading auto-deleted: ${messageId}`);
+            } catch (err) {
+                // Хабарни ўчиришда хатолик (аллақачон ўчирилган бўлиши)
+                if (err.response && err.response.error_code !== 400) {
+                    console.log(`${STYLES.ICONS.INFO} Loading message already deleted: ${messageId}`);
+                }
+            }
+        }, LOADING_AUTO_DELETE_TIMEOUT);
+    } catch (err) {
+        console.error(`${STYLES.ICONS.ERROR} Loading auto-delete error:`, err.message);
+    }
+};
+
 // ===== 🎨 STYLEЛИ ЁРДАМЧИ ФУНКСИЯЛАР =====
 const getRandomLoadingText = () => {
     const texts = STYLES.ANIMATIONS.LOADING_TEXTS;
@@ -127,6 +150,10 @@ const sendLoading = async (ctx, customText = null) => {
             parse_mode: "HTML",
             reply_markup: { remove_keyboard: true },
         });
+
+        // Faqat loading хабарни auto-delete қилиш
+        scheduleLoadingAutoDelete(ctx, msg.message_id);
+
         return msg.message_id;
     } catch (err) {
         console.error(`${STYLES.ICONS.ERROR} Loading хатоси:`, err.message);
@@ -176,7 +203,7 @@ const createMainMenu = () => {
             Markup.button.callback(`${STYLES.ICONS.HELP} Ёрдам`, "help")
         ],
         [
-            Markup.button.callback(`${STYLES.ICONS.ADMIN} Бошқарув панели`, "admin_panel"),
+            // Markup.button.callback(`${STYLES.ICONS.ADMIN} Бошқарув панели`, "admin_panel"),
             Markup.button.callback(`${STYLES.ICONS.CHART} Статистика`, "stats")
         ]
     ]);
@@ -186,7 +213,6 @@ const createLoginMenu = () => {
     return Markup.inlineKeyboard([
         [
             Markup.button.callback(`${STYLES.ICONS.PHONE} Телефон рақам киритиш`, "enter_phone"),
-            // Markup.button.callback(`${STYLES.ICONS.WARNING} Бекор қилиш`, "cancel_login")
         ]
     ]);
 };
@@ -208,7 +234,7 @@ const createBackButton = () => {
 // ===== 📱 TELEFON ВАЛИДАЦИЯСИ =====
 const isValidPhone = (phone) => {
     const cleaned = phone.replace(/\s/g, "");
-    return /^\+998(33|88|90|91|93|94|95|97|98|99|10)\d{7}$/.test(cleaned);
+    return /^\+998\d{9}$/.test(cleaned);
 };
 
 const formatPhone = (phone) => {
@@ -479,7 +505,8 @@ ${STYLES.ICONS.CLOCK} <i>Профил янгиланди:</i> <code>${new Date()
 
         case "refresh":
             if (!user) {
-                return ctx.answerCbQuery("❌ Аввал тизимга киринг!", { show_alert: true });
+                await ctx.answerCbQuery("❌ Аввал тизимга киринг!", { show_alert: true });
+                return;
             }
 
             await ctx.answerCbQuery("✅ Янгиланди!", { show_alert: false });
@@ -505,7 +532,8 @@ ${STYLES.HTML.LIST_ITEM("<b>/logout</b> - Тизимдан чиқиш")}
 ${STYLES.HTML.SUBTITLE("Техник қўллаб-қувватлаш")}
 <i>Муаммо юзага келса, бош администратор билан боғланинг.</i>
 
-${STYLES.ICONS.BELL} <i>Ёрдам керак бўлса, доим биз билан боғланинг!</i>
+${STYLES.ICONS.BELL} <i>Ёрдам керак бўлса, доим биз билан боғланинг!</i>\n
+${STYLES.HTML.LINK("🛠️ Бот Админи", "https://t.me/+998956718883")}
             `.trim();
 
             await ctx.editMessageText(helpText, { parse_mode: "HTML", ...createMainMenu() });
@@ -548,7 +576,8 @@ ${STYLES.ICONS.BELL} <i>Ёрдам керак бўлса, доим биз бил
 
         case "admin_panel":
             if (!user) {
-                return ctx.answerCbQuery("❌ Рухсат йўқ!", { show_alert: true });
+                await ctx.answerCbQuery("❌ Рухсат йўқ!", { show_alert: true });
+                return;
             }
 
             await ctx.editMessageText(
@@ -559,19 +588,23 @@ ${STYLES.ICONS.BELL} <i>Ёрдам керак бўлса, доим биз бил
 
         case "stats":
             if (!user) {
-                return ctx.answerCbQuery("❌ Статистика учун кириш керак!", { show_alert: true });
+                await ctx.answerCbQuery("❌ Статистика учун кириш керак!", { show_alert: true });
+                return;
             }
 
             const totalUsers = await Users.countDocuments();
-            const activeUsers = await Users.countDocuments({ isLoggedIn: true });
+            const activeAdmins = await Users.countDocuments({
+                isLoggedIn: true,
+                role: "admin"
+            });
+
             const adminUsers = await Users.countDocuments({ role: "admin" });
 
             const statsText = `
 ${STYLES.HTML.CARD("📊 СТАТИСТИКА", `
-${STYLES.HTML.KEY_VALUE("Жами фойдаланувчилар", totalUsers.toString())}
-${STYLES.HTML.KEY_VALUE("Фаол фойдаланувчилар", `${activeUsers} (${Math.round((activeUsers / totalUsers) * 100)}%)`)}
-${STYLES.HTML.KEY_VALUE("Администраторлар", adminUsers.toString())}
-${STYLES.HTML.KEY_VALUE("Ўртача фаоллик", STYLES.HTML.PROGRESS_BAR(Math.round((activeUsers / totalUsers) * 100)))}
+${STYLES.HTML.KEY_VALUE("Жами администраторлар", adminUsers.toString())}
+${STYLES.HTML.KEY_VALUE("Фаол администраторлар", `${activeAdmins} (${Math.round((activeAdmins / adminUsers) * 100)}%)`)}
+${STYLES.HTML.KEY_VALUE("Ўртача фаоллик", STYLES.HTML.PROGRESS_BAR(Math.round((activeAdmins / adminUsers) * 100)))}
 `)}
 
 ${STYLES.ICONS.DATABASE} <i>Маълумотлар базаси ҳолати:</i> <b>Яхши</b>
@@ -676,6 +709,7 @@ bot.launch()
         const startTime = new Date().toLocaleTimeString('uz-UZ');
         console.log(`${STYLES.ICONS.CALENDAR} Иш вақти: ${startTime}`);
         console.log(`${STYLES.ICONS.INFO} Сессионлар: ${sessions.size} та`);
+        console.log(`${STYLES.ICONS.HOURGLASS} Loading auto-delete актив: ${LOADING_AUTO_DELETE_TIMEOUT}ms`);
     })
     .catch((err) => {
         console.error(`${STYLES.ICONS.ERROR} Ботни ишга туширишда хато:`, err);

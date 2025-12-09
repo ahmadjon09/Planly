@@ -173,7 +173,8 @@ export const Workers = () => {
                   Фаол ходимлар
                 </p>
                 <p className={`text-3xl font-bold mt-2 ${textColor}`}>
-                  {workers.length}
+                  {/* {workers.length} */}
+                  ---
                 </p>
               </div>
               <div className={dark ? 'bg-green-900 p-3 rounded-xl' : 'bg-green-100 p-3 rounded-xl'}>
