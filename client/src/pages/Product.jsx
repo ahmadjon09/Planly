@@ -224,7 +224,7 @@ export const ProductsPage = () => {
   const pagination = data?.data?.pagination || {}
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-6 transition-colors duration-300`}>
+    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-2 transition-colors duration-300`}>
       <div className='mx-auto space-y-6'>
         {/* Header Section */}
         <motion.div
@@ -266,7 +266,7 @@ export const ProductsPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className={`rounded-2xl shadow-xl p-6 border ${cardBg} ${borderColor}`}
+          className={`rounded-2xl shadow-xl p-3 border ${cardBg} ${borderColor}`}
         >
           <div className='flex flex-col md:flex-row gap-6'>
             <div className='flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
@@ -551,8 +551,8 @@ export const ProductsPage = () => {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className={`px-8 py-6 border-t ${borderColor} ${dark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                <div className='flex items-center justify-between'>
+              <div className={`px-6 py-6 border-t ${borderColor} ${dark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className='flex flex-wrap items-center justify-between'>
                   <div className={`text-sm ${textMuted}`}>
                     Кўрсатилган: {(page - 1) * 50 + 1}-{Math.min(page * 50, pagination.total)}/{pagination.total}
                   </div>
@@ -563,7 +563,7 @@ export const ProductsPage = () => {
                       disabled={page <= 1}
                       className={`flex items-center gap-1 px-4 py-2 rounded-lg ${page <= 1
                         ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                        : `${dark ? "hover:bg-gray-700" : "hover:bg-gray-200"} ${textColor}`
                         } ${textColor}`}
                     >
                       <ChevronLeft size={18} />
@@ -587,7 +587,7 @@ export const ProductsPage = () => {
                           <button
                             key={pageNum}
                             onClick={() => handlePageChange(pageNum)}
-                            className={`w-10 cursor-pointer h-10 rounded-lg flex items-center justify-center ${page === pageNum
+                            className={`w-6 cursor-pointer h-6 rounded-lg flex items-center justify-center ${page === pageNum
                               ? 'bg-blue-500 text-white'
                               : `${dark ? "hover:bg-gray-700" : "hover:bg-gray-200"} ${textColor}`
                               }`}

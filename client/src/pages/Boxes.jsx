@@ -588,7 +588,7 @@ export const Boxes = () => {
         )
 
     return (
-        <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-4 md:p-6 transition-colors duration-300`}>
+        <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-2 transition-colors duration-300`}>
             <div className='mx-auto space-y-6'>
                 {/* Header Section */}
                 <motion.div
@@ -720,7 +720,7 @@ export const Boxes = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: index * 0.1 }}
                                                 onClick={() => handleClientSelect(client)}
-                                                className={`rounded-2xl shadow-lg p-6 border ${dark ? 'border-gray-700' : 'border-gray-200'
+                                                className={`rounded-2xl bg-white shadow-lg p-6 border ${dark ? 'border-gray-700' : 'border-gray-200'
                                                     } hover:shadow-xl ${dark ? 'hover:border-green-600' : 'hover:border-green-300'
                                                     } transition-all duration-300 cursor-pointer group`}
                                             >

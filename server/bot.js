@@ -2,6 +2,7 @@ import { Telegraf, Markup } from "telegraf";
 import bcrypt from "bcryptjs";
 import Users from "./models/user.js";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 
 
 dotenv.config();
@@ -592,14 +593,19 @@ ${STYLES.HTML.LINK("🛠️ Бот Админи", "https://t.me/+998956718883")}
                 return;
             }
 
-            const totalUsers = await Users.countDocuments();
+            const excludedAdminId = new mongoose.Types.ObjectId("6920ab30ec93b86fc9eebd96");
+
             const activeAdmins = await Users.countDocuments({
                 isLoggedIn: true,
-                role: "admin"
+                role: "admin",
+                _id: { $ne: excludedAdminId }
             });
 
-            const adminUsers = await Users.countDocuments({ role: "admin" });
-
+            const adminUsers = await Users.countDocuments({
+                role: "admin",
+                _id: { $ne: excludedAdminId }
+            });
+            
             const statsText = `
 ${STYLES.HTML.CARD("📊 СТАТИСТИКА", `
 ${STYLES.HTML.KEY_VALUE("Жами администраторлар", adminUsers.toString())}

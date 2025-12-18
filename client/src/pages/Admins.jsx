@@ -100,7 +100,7 @@ export const Admins = () => {
   const ownerRowBg = dark ? 'bg-red-900 hover:bg-red-800' : 'bg-red-50 hover:bg-red-100'
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-6 transition-colors duration-300`}>
+    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-2 transition-colors duration-300`}>
       <div className='mx-auto'>
         {/* Header Section */}
         <motion.div

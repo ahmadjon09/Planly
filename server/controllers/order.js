@@ -350,7 +350,10 @@ const sendOrderNotification = async (order) => {
 
       // Footer
       message += `📊 <i>Умумий маҳсулотлар: ${order.products.length} та</i>`;
-      message += `\n🕒 ${new Date().toLocaleString('uz-UZ')}`;
+      message += `\n🕒 ${new Date().toLocaleString('uz-UZ', {
+        timeZone: 'Asia/Tashkent'
+      })
+        }`;
 
       await bot.telegram.sendMessage(
         user.telegramId,

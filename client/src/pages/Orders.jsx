@@ -501,7 +501,7 @@ export const ViewOrders = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-4 md:p-6 transition-colors duration-300`}>
+    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} p-2 transition-colors duration-300`}>
       <div className='mx-auto space-y-6'>
         {/* Header Section */}
         <motion.div

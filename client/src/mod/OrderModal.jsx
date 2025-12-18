@@ -420,7 +420,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className={`fixed inset-0 ${darkModeClasses.bg.overlay} flex items-center justify-center z-50 p-4`}
+          className={`fixed inset-0 ${darkModeClasses.bg.overlay} flex items-center justify-center z-50 p-2`}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -436,7 +436,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
               <X size={24} />
             </button>
 
-            <div className='p-6'>
+            <div className='p-4'>
               <div className='flex items-center gap-3 mb-6'>
                 <div className={`${dark ? 'bg-blue-900' : 'bg-blue-100'} p-3 rounded-xl`}>
                   <Package size={28} className='text-blue-600' />
@@ -476,7 +476,7 @@ export const AddNewOrder = ({ isOpen, onClose }) => {
 
               <form onSubmit={handleSubmit} className='space-y-8'>
                 {/* Mijoz ma'lumotlari */}
-                <div className={`bg-gradient-to-br ${darkModeClasses.bg.gradient} rounded-2xl border ${dark ? 'border-gray-600' : 'border-blue-200'} p-6`}>
+                <div className={`bg-gradient-to-br ${darkModeClasses.bg.gradient} rounded-2xl border ${dark ? 'border-gray-600' : 'border-blue-200'} p-4`}>
                   <div className='flex items-center justify-between mb-6'>
                     <h3 className={`text-lg font-semibold ${darkModeClasses.text.primary} flex items-center gap-2`}>
                       <Users size={20} className='text-blue-600' />
