@@ -37,7 +37,7 @@ export const Nav = () => {
     const allDropdowns = [
       { name: 'Тайёр маҳсулотлар', path: '/products/ready', icon: <Circle color='blue' size={18} /> },
       { name: 'Хом ашё', path: '/products/raw', icon: <Circle color='red' size={18} /> },
-      { name: "Қолдиқ товарлар", path: "/box", icon: <Boxes size={18} /> }
+      // { name: "Қолдиқ товарлар", path: "/box", icon: <Boxes size={18} /> }
     ];
 
     if (ability === "both") {
