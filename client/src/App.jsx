@@ -18,9 +18,6 @@ import { ClientProductsView } from './pages/ProductsClient'
 import { Boxes } from './pages/Boxes'
 
 export default function App() {
-  if (window.location.hostname === "aksam.uz") {
-    window.location.href = "https://www.aksam.uz";
-  }
   const { setUser, user, netErr } = useContext(ContextData)
   const [isLoading, setIsLoading] = useState(false)
   const token = Cookies.get('user_token')
