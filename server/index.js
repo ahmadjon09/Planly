@@ -9,8 +9,8 @@ import UserRoutes from './routes/user.js'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import { getSystemHealth } from './controllers/health.js'
-import { fixPriceTypes } from './middlewares/Checker.js'
 import { bot } from './bot.js'
+import os from 'os'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -72,19 +72,34 @@ const keepServerAlive = () => {
 keepServerAlive();
 
 
+const getLocalIP = () => {
+  const interfaces = os.networkInterfaces()
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address
+      }
+    }
+  }
+  return 'localhost'
+}
 
 const startApp = async () => {
   const PORT = process.env.PORT || 3000
   try {
     await mongoose.connect(process.env.MONGODB_URL)
-    console.log('✔️  MongoDB connected')
-    app.listen(PORT, () =>
-      console.log(`✔️  Server is running on port: ${PORT}
-👍 Server is running on http://localhost:${PORT}
-    `)
-    )
+    console.log('✔️ MongoDB connected')
+
+    app.listen(PORT, () => {
+      const ip = getLocalIP()
+      console.log(`
+✔️ Server is running!
+🌐 Local:   http://localhost:${PORT}
+📡 Network: http://${ip}:${PORT}
+`)
+    })
   } catch (error) {
-    console.log(error)
+    console.log('❌ Server error:', error)
   }
 }
 
