@@ -89,9 +89,8 @@ export const Login = () => {
             {error && <p className='text-red-500 text-base mt-2'>{error}</p>}
             <button
               type='submit'
-              className={`bg-green-600 py-2 text-white rounded-xl transition duration-300 ease-in-out transform hover:scale-105 ${
-                isLoading ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              className={`bg-green-600 py-2 text-white rounded-xl transition duration-300 ease-in-out transform hover:scale-105 ${isLoading ? 'cursor-not-allowed opacity-50' : ''
+                }`}
               disabled={isLoading}
             >
               {isLoading ? 'Загрузка...' : 'Войти'}

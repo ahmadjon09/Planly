@@ -47,26 +47,37 @@ app.use((req, res) => {
   }
 })
 
+
 const keepServerAlive = () => {
-  setInterval(() => {
-    axios
-      .get(process.env.RENDER_URL)
-      .then(() => console.log('🔄 Server active'))
-      .catch(() => console.log('⚠️ Ping failed'))
-  }, 10 * 60 * 1000)
+  const pingInterval = 12 * 60 * 1000;
+
+  const checkAndPing = () => {
+    const now = new Date();
+    const hourTashkent = (now.getUTCHours() + 5) % 24;
+
+    if (hourTashkent >= 8 || hourTashkent < 3) {
+      axios
+        .get(process.env.RENDER_URL)
+        .then(() => console.log('🔄 Server active (Tashkent time)'))
+        .catch(() => console.log('⚠️ Ping failed'))
+    } else {
+      console.log('💤 Keep-alive uyqu rejimida (Tashkent time)')
+    }
+  }
+
+  checkAndPing();
+  setInterval(checkAndPing, pingInterval);
 }
 
-keepServerAlive()
-const checker = () => {
-  setInterval(() => fixPriceTypes(), 10 * 60 * 1000)
-}
+keepServerAlive();
+
+
 
 const startApp = async () => {
   const PORT = process.env.PORT || 3000
   try {
     await mongoose.connect(process.env.MONGODB_URL)
     console.log('✔️  MongoDB connected')
-    checker()
     app.listen(PORT, () =>
       console.log(`✔️  Server is running on port: ${PORT}
 👍 Server is running on http://localhost:${PORT}
