@@ -20,8 +20,6 @@ const app = express()
 
 app.use(cors())
 app.use(express.json())
-app.use(express.static(path.join(__dirname, '../client/dist')))
-app.use(express.static(path.join(__dirname, 'public')))
 app.get('/api/status', (req, res) => {
   setImmediate(() => {
     res.json({
@@ -31,6 +29,9 @@ app.get('/api/status', (req, res) => {
   })
 })
 app.get('/api/', (_, res) => res.send('Server is running!'))
+app.get('/', (req, res) => {
+  res.redirect('https://aksam.uz')
+})
 app.use('/api/users', UserRoutes)
 app.use('/api/products', ProductRoutes)
 app.use('/api/orders', OrderRoutes)
@@ -41,11 +42,7 @@ app.get('/api/system', (req, res) => {
 app.get('/api/about', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
-app.use((req, res) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'))
-  }
-})
+
 
 
 const keepServerAlive = () => {
