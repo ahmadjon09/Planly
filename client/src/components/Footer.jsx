@@ -66,11 +66,11 @@ export const Footer = () => {
           <b className="hover:underline">
             {' '}
             <a
-              href={telegram}
+              href={"https://www.vebox.uz"}
               target="_blank"
               rel="noopener noreferrer"
             >
-              ZYN
+              VEBOX
             </a>
           </b>
         </p>

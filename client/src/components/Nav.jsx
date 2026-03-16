@@ -17,7 +17,8 @@ import {
   Circle,
   PieChart,
   Moon,
-  Sun
+  Sun,
+  Box
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { ContextData } from '../contextData/Context'
@@ -110,6 +111,7 @@ export const Nav = () => {
         hasDropdown: true,
         dropdownItems: [
           { name: 'Умумий қарзлар', path: '/static', icon: <PieChart size={18} /> },
+          { name: 'Умумий гуруҳлар', path: '/static/pro-group', icon: <Box size={18} /> },
           { name: 'Таминотчилар', path: '/static/products', icon: <Users size={18} /> },
           { name: 'Клиентлар', path: '/static/clients', icon: <Users size={18} /> }
         ]

@@ -3,6 +3,7 @@ import cors from 'cors'
 import mongoose from 'mongoose'
 import axios from 'axios'
 import ProductRoutes from './routes/product.js'
+import productGroupRoute from './routes/v2.route.js'
 import OrderRoutes from './routes/order.js'
 import path from 'path'
 import UserRoutes from './routes/user.js'
@@ -33,6 +34,7 @@ app.get('/', (req, res) => {
   res.redirect('https://aksam.uz')
 })
 app.use('/api/users', UserRoutes)
+app.use('/api/product-groups', productGroupRoute)
 app.use('/api/products', ProductRoutes)
 app.use('/api/orders', OrderRoutes)
 app.use('/api/health', getSystemHealth)
