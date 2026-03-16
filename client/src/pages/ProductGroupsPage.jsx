@@ -16,9 +16,12 @@ import {
     HelpCircle,
     Filter,
     CheckCircle,
-    X
+    X,
+    PlusCircle
 } from 'lucide-react';
 import Fetch from "../middlewares/fetcher";
+
+const PAGE_SIZE = 30; // ҳар сафар кўрсатиладиган маҳсулотлар сони
 
 export const ProductGroupsPage = () => {
     // Состояния для поиска
@@ -27,10 +30,13 @@ export const ProductGroupsPage = () => {
     const [queryParams, setQueryParams] = useState({});
 
     // Состояния для UI
-    const [expandedGroups, setExpandedGroups] = useState({}); // { "pattern_readyTrue": true/false, "pattern_readyFalse": ... }
+    const [expandedGroups, setExpandedGroups] = useState({}); // { "pattern_readyTrue": true/false }
     const [expandedUngrouped, setExpandedUngrouped] = useState({ readyTrue: false, readyFalse: false });
-    const [activeTab, setActiveTab] = useState('readyTrue'); // 'readyTrue' или 'readyFalse'
+    const [activeTab, setActiveTab] = useState('readyTrue');
     const [showInstructions, setShowInstructions] = useState(false);
+
+    // Состояния для "load more" (нечата маҳсулот кўрсатилган)
+    const [visibleCounts, setVisibleCounts] = useState({}); // { "groupKey": number }
 
     // SWR запрос
     const { data, error, isLoading, mutate } = useSWR(
@@ -55,8 +61,10 @@ export const ProductGroupsPage = () => {
             key: keyInput.trim(),
             single: singleMode ? 'true' : undefined,
         });
+        // Янги қидирувда ҳамма ҳолатларни тозалаймиз
         setExpandedGroups({});
         setExpandedUngrouped({ readyTrue: false, readyFalse: false });
+        setVisibleCounts({});
     };
 
     const handleClear = () => {
@@ -65,15 +73,34 @@ export const ProductGroupsPage = () => {
         setQueryParams({});
         setExpandedGroups({});
         setExpandedUngrouped({ readyTrue: false, readyFalse: false });
+        setVisibleCounts({});
     };
 
     const toggleGroup = (pattern, ready) => {
         const key = `${pattern}_${ready}`;
         setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+        // Агар гуруҳни очаётган бўлсак, visibleCount ни бошланғич қийматга ўрнатадиган бўлсак бўлади, лекин биз уни сақлаб қоламиз
+        // Агар илгари кўрсатилмаган бўлса, PAGE_SIZE га тенглаштирамиз
+        if (!visibleCounts[key]) {
+            setVisibleCounts(prev => ({ ...prev, [key]: PAGE_SIZE }));
+        }
     };
 
     const toggleUngrouped = (ready) => {
         setExpandedUngrouped(prev => ({ ...prev, [ready]: !prev[ready] }));
+        // Гуруҳланмаганлар учун ҳам visibleCount ишлайди
+        const key = `ungrouped_${ready}`;
+        if (!visibleCounts[key]) {
+            setVisibleCounts(prev => ({ ...prev, [key]: PAGE_SIZE }));
+        }
+    };
+
+    // "Кўпроқ кўрсатиш" функцияси
+    const loadMore = (groupKey) => {
+        setVisibleCounts(prev => ({
+            ...prev,
+            [groupKey]: (prev[groupKey] || PAGE_SIZE) + PAGE_SIZE
+        }));
     };
 
     const formatNumber = (num) => {
@@ -127,10 +154,15 @@ export const ProductGroupsPage = () => {
     // Активная вкладка
     const activeSection = activeTab === 'readyTrue' ? readyTrue : readyFalse;
 
-    // Функция для рендера группы
+    // Функция для рендера группы (с таблицей)
     const renderGroup = (group, ready) => {
         const groupKey = `${group.pattern}_${ready}`;
         const isExpanded = expandedGroups[groupKey];
+        const visibleCount = visibleCounts[groupKey] || PAGE_SIZE;
+        const products = group.products || [];
+        const totalProducts = products.length;
+        const displayedProducts = products.slice(0, visibleCount);
+        const hasMore = totalProducts > visibleCount;
 
         return (
             <div key={groupKey} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
@@ -189,47 +221,64 @@ export const ProductGroupsPage = () => {
                     </div>
                 </div>
 
-                {/* Развернутая информация */}
+                {/* Развернутая информация (таблица) */}
                 {isExpanded && (
                     <div className="border-t border-gray-200 p-5 bg-gray-50">
                         <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                             <Package className="h-4 w-4" />
-                            Гуруҳдаги маҳсулотлар ({group.products.length})
+                            Гуруҳдаги маҳсулотлар ({totalProducts})
                         </h3>
 
-                        <div className="space-y-3">
-                            {group.products.map((product) => (
-                                <div key={product._id} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-medium text-gray-800 break-words">
-                                                {product.title || 'Номсиз маҳсулот'}
-                                            </h4>
-                                            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-sm text-gray-600">
-                                                <span className="flex items-center gap-1">
-                                                    <Layers className="h-3.5 w-3.5" />
-                                                    Захира: {formatNumber(product.stock)} {product.unit || 'дона'}
-                                                </span>
-                                                <span className="flex items-center gap-1">
-                                                    <DollarSign className="h-3.5 w-3.5" />
-                                                    Нарх: {formatNumber(product.price)} {product.priceType === 'en' ? '$' : 'сўм'}
-                                                </span>
-                                                {product.count !== undefined && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Hash className="h-3.5 w-3.5" />
-                                                        Сони: {formatNumber(product.count)}
-                                                    </span>
-                                                )}
-                                                <span className="flex items-center gap-1">
-                                                    <span className={`w-2 h-2 rounded-full ${product.priceType === 'en' ? 'bg-green-500' : 'bg-blue-500'}`} />
-                                                    {product.priceType === 'en' ? 'Export' : 'Uz'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                        {/* Таблица */}
+                        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                            <div className="max-h-96 overflow-y-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">№</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Маҳсулот номи</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Захира</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Нарх</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Сони</th>
+
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {displayedProducts.map((product, idx) => (
+                                            <tr key={product._id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 text-sm text-gray-500">{idx + 1}</td>
+                                                <td className="px-4 py-2 text-sm text-gray-800 break-words max-w-xs">
+                                                    {product.title || 'Номсиз'}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600">
+                                                    {formatNumber(product.stock)} {product.unit || 'дона'}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600">
+                                                    {formatNumber(product.price)} {product.priceType === 'en' ? '$' : 'сўм'}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600">
+                                                    {product.count !== undefined ? formatNumber(product.count) : '-'}
+                                                </td>
+
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        {/* Кнопка "Кўпроқ кўрсатиш" */}
+                        {hasMore && (
+                            <div className="mt-4 text-center">
+                                <button
+                                    onClick={() => loadMore(groupKey)}
+                                    className="inline-flex items-center gap-2 bg-white hover:bg-gray-100 text-blue-600 font-medium py-2 px-6 rounded-lg border border-gray-300 transition-colors"
+                                >
+                                    <PlusCircle className="h-4 w-4" />
+                                    Яна {Math.min(PAGE_SIZE, totalProducts - visibleCount)} та кўрсатиш
+                                </button>
+                            </div>
+                        )}
 
                         {/* Дополнительная статистика группы */}
                         <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
@@ -260,10 +309,15 @@ export const ProductGroupsPage = () => {
         );
     };
 
-    // Рендер непривязанных продуктов
+    // Рендер непривязанных продуктов (таблица)
     const renderUngrouped = (products, ready) => {
         if (!products || products.length === 0) return null;
+        const key = `ungrouped_${ready}`;
         const isExpanded = expandedUngrouped[ready];
+        const visibleCount = visibleCounts[key] || PAGE_SIZE;
+        const totalProducts = products.length;
+        const displayedProducts = products.slice(0, visibleCount);
+        const hasMore = totalProducts > visibleCount;
 
         return (
             <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 mt-4">
@@ -287,19 +341,59 @@ export const ProductGroupsPage = () => {
 
                 {isExpanded && (
                     <div className="border-t border-gray-200 p-5 bg-gray-50">
-                        <div className="space-y-3">
-                            {products.map((product) => (
-                                <div key={product._id} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                                    <h4 className="font-medium text-gray-800">{product.title || 'Номсиз маҳсулот'}</h4>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-sm text-gray-600">
-                                        <span>Захира: {formatNumber(product.stock)} {product.unit || 'дона'}</span>
-                                        <span>Нарх: {formatNumber(product.price)} {product.priceType === 'en' ? '$' : 'сўм'}</span>
-                                        {product.count !== undefined && <span>Сони: {formatNumber(product.count)}</span>}
-                                        <span>Тип: {product.priceType === 'en' ? 'Export' : 'Uz'}</span>
-                                    </div>
-                                </div>
-                            ))}
+                        <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            Гуруҳланмаган маҳсулотлар ({totalProducts})
+                        </h3>
+
+                        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                            <div className="max-h-96 overflow-y-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">№</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Маҳсулот номи</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Захира</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Нарх</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Сони</th>
+
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {displayedProducts.map((product, idx) => (
+                                            <tr key={product._id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 text-sm text-gray-500">{idx + 1}</td>
+                                                <td className="px-4 py-2 text-sm text-gray-800 break-words max-w-xs">
+                                                    {product.title || 'Номсиз'}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600">
+                                                    {formatNumber(product.stock)} {product.unit || 'дона'}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600">
+                                                    {formatNumber(product.price)} {product.priceType === 'en' ? '$' : 'сўм'}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600">
+                                                    {product.count !== undefined ? formatNumber(product.count) : '-'}
+                                                </td>
+
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        {hasMore && (
+                            <div className="mt-4 text-center">
+                                <button
+                                    onClick={() => loadMore(key)}
+                                    className="inline-flex items-center gap-2 bg-white hover:bg-gray-100 text-blue-600 font-medium py-2 px-6 rounded-lg border border-gray-300 transition-colors"
+                                >
+                                    <PlusCircle className="h-4 w-4" />
+                                    Яна {Math.min(PAGE_SIZE, totalProducts - visibleCount)} та кўрсатиш
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -454,7 +548,7 @@ export const ProductGroupsPage = () => {
                             }`}
                     >
                         <X className="h-4 w-4" />
-                        Тайёр эмас
+                        Хом ашё
                     </button>
                 </div>
 
@@ -538,6 +632,10 @@ export const ProductGroupsPage = () => {
                                 <p className="bg-blue-50 p-3 rounded-lg text-sm">
                                     Эслатма: ҳар бир маҳсулот фақат бир марта гуруҳланади (агар бир неча калитга мос келса, биринчиси
                                     олинади).
+                                </p>
+                                <p className="bg-green-50 p-3 rounded-lg text-sm">
+                                    <strong>Янги:</strong> маҳсулотлар жадвал кўринишида кўрсатилади. Дастлаб 30 та маҳсулот чиқади,
+                                    &quot;Кўпроқ кўрсатиш&quot; тугмасини босиб яна 30 та қўшишингиз мумкин. Жадвал ичида скролл мавжуд.
                                 </p>
                             </div>
                             <div className="mt-6 flex justify-end">
